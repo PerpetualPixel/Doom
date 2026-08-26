@@ -1667,6 +1667,53 @@ for (const { file, set } of SHEET_MAP) {
   img.src = "sprites/" + file;
 }
 
+// -----------------------------------------------------
+// Optional first-person weapon art from local Guns/gifs/.
+// Canvas renders only a GIF's first frame, so each weapon
+// uses an idle frame plus a firing frame that swaps in
+// while shooting. Procedural weapon art is the fallback.
+// Background keying needs pixel access (http); on file://
+// the raw image is drawn as-is.
+// -----------------------------------------------------
+const GUN_ART_FILES = [   // [idle, fire] per weapon slot 0-6
+  ["DevDoom1993-Fists_anim1.gif", null],
+  ["TheDoomPistol1.gif", null],
+  ["200px-TheDoomShotgun1.gif", "200px-TheDoomShotgun2.gif"],
+  ["TheDoomChain1.gif", "TheDoomChain7.gif"],
+  ["200px-DevDoom1993-RocketLauncher_anim_a.gif", "200px-DevDoom1993-RocketLauncher_anim_b.gif"],
+  ["200px-DevDoom1993-PlasmaRifle_anim_0.gif", "200px-DevDoom1993-PlasmaRifle_b_0.gif"],
+  ["200px-DevDoom1993-BFG-2704_anim1.gif", null],
+];
+const gunArt = GUN_ART_FILES.map(() => ({ idle: null, fire: null }));
+function loadGunImage(file, slot, key) {
+  const img = new Image();
+  img.onload = () => {
+    let out = img;
+    try {   // key out a solid background color if the file has one
+      const c = document.createElement("canvas");
+      c.width = img.width; c.height = img.height;
+      const g = c.getContext("2d");
+      g.drawImage(img, 0, 0);
+      const d = g.getImageData(0, 0, c.width, c.height);
+      const p = d.data;
+      if (p[3] > 200) {
+        const kr = p[0], kg = p[1], kb = p[2];
+        for (let i = 0; i < p.length; i += 4)
+          if (Math.abs(p[i] - kr) < 12 && Math.abs(p[i + 1] - kg) < 12 && Math.abs(p[i + 2] - kb) < 12) p[i + 3] = 0;
+        g.putImageData(d, 0, 0);
+      }
+      out = c;
+    } catch {}
+    gunArt[slot][key] = out;
+  };
+  img.onerror = () => {};
+  img.src = "Guns/gifs/" + file;
+}
+GUN_ART_FILES.forEach(([idle, fire], i) => {
+  loadGunImage(idle, i, "idle");
+  if (fire) loadGunImage(fire, i, "fire");
+});
+
 // ---------------------------------------------------------
 // Audio. Real files from SFX/ and Doom OST/ when available,
 // synthesized WebAudio otherwise.
@@ -2830,6 +2877,26 @@ function renderWeapon() {
   const bobY = Math.abs(Math.cos(player.bob)) * 6;
   const gx = W / 2 + bobX, gy = VIEW_H + bobY - (muzzle > 0 ? 6 : 0);
   const w = player.weapon;
+  // real weapon art when the local Guns/gifs/ frames are loaded
+  const art = gunArt[w];
+  const img = (muzzle > 0 && art.fire) ? art.fire : art.idle;
+  if (img) {
+    ctx.imageSmoothingEnabled = false;
+    const scale = Math.min(340 / img.width, 260 / img.height);
+    const dw = img.width * scale, dh = img.height * scale;
+    const dx = W / 2 - dw / 2 + bobX, dy = VIEW_H - dh + bobY + (muzzle > 0 ? -4 : 2);
+    if (muzzle > 0 && !art.fire && w !== 0) {   // generic flash when there is no firing frame
+      const col = w === 6 ? ["rgba(80,255,80,0.9)", "rgba(200,255,180,0.9)"]
+               : ["rgba(255,220,80,0.9)", "rgba(255,255,200,0.9)"];
+      ctx.fillStyle = col[0];
+      ctx.beginPath(); ctx.ellipse(W / 2 + bobX, dy + 8, 20, 26, 0, 0, 7); ctx.fill();
+      ctx.fillStyle = col[1];
+      ctx.beginPath(); ctx.ellipse(W / 2 + bobX, dy + 10, 9, 13, 0, 0, 7); ctx.fill();
+    }
+    ctx.drawImage(img, dx, dy, dw, dh);
+    ctx.imageSmoothingEnabled = true;
+    return;
+  }
   ctx.save();
   ctx.translate(gx, gy);
   if (muzzle > 0 && w !== 0) {   // muzzle flash (BFG/plasma get a green/blue tint)
