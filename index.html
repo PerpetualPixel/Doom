@@ -449,7 +449,7 @@ const LEVELS = [
       "#..%%%%%%%%%%%%%%%%%%%%%%%%#",
       "#..%%%%%%%%%%%%%%%%%%%%%%%%#",
       "#..........................#",
-      "#...g..............p.......#",
+      "#...g........N.....p.......#",
       "#..........................#",
       "#RRRRRRRRRRRRDRRRRRRRRRRRRR#",
       "#..........................#",
@@ -540,7 +540,7 @@ const LEVELS = [
       "#......#.........#.........#",
       "#......................g...#",
       "#......#.........#.........#",
-      "#..m...#.........#....o....#",
+      "#..m...#....N....#....o....#",
       "#......#.........#.........#",
       "#......#.........#.........#",
       "#########K##################",
@@ -711,7 +711,7 @@ const LEVELS = [
       "#..o.......b...............#",
       "#..BBBB..CCCC..CCCCC.......#",
       "#..........................#",
-      "#.....g..........o.........#",
+      "#.....g....N.....o.........#",
       "#..CCCCCCCCCCCCCCCCCCCC....#",
       "#..C..................C....#",
       "#..C....X......h.d....C....#",
@@ -802,7 +802,7 @@ const LEVELS = [
       "#..%%%%%%%%%%%%%%%%%%%.....#",
       "#..%%%%%%%%%%%%%%%%%%%.m...#",
       "#..........................#",
-      "#.....g..........o.........#",
+      "#.....g....N.....o.........#",
       "#..........................#",
       "#....BBBBB.................#",
       "#....B...B.......h.........#",
@@ -834,7 +834,7 @@ const LEVELS = [
       "#..........................#",
       "#BBBBBBBBBBBLBBBBBBBBBBBBBB#",
       "#..........................#",
-      "#......m.........g.........#",
+      "#......m....N....g.........#",
       "#..........................#",
       "#.......~~~~~~~~~~.........#",
       "#.......~~~X~~~~~~....h....#",
@@ -1704,6 +1704,12 @@ for (const { file, set } of SHEET_MAP) {
   img.onerror = () => {};
   img.src = "sprites/" + file;
 }
+// hell knight fallback art: tinted reuse of the baron drawings until
+// (or unless) the custom sheet below loads
+sprites.knightIdle = sprites.baronIdle;
+sprites.knightAttack = sprites.baronAttack;
+sprites.knightPain = sprites.baronPain;
+
 // custom monster art (user-made): frames applied per file; corpse
 // frames are left behind on the floor when the monster dies
 const CUSTOM_ART = [
@@ -1721,6 +1727,11 @@ const CUSTOM_ART = [
       sprites.soulIdle = fr[0]; sprites.soulPain = fr[0];
       sprites.soulAttack = fr[Math.min(1, fr.length - 1)];
       if (fr.length > 2) sprites.soulCorpse = fr[2];
+  } },
+  { file: "KnightCustom.jpg", apply: fr => {   // idle | wounded | corpse
+      sprites.knightIdle = fr[0]; sprites.knightAttack = fr[0];
+      sprites.knightPain = fr[Math.min(1, fr.length - 1)];
+      if (fr.length > 2) sprites.knightCorpse = fr[2];
   } },
 ];
 for (const { file, apply } of CUSTOM_ART) {
@@ -1818,6 +1829,7 @@ const SFX_FILES = {
   zombieSight: "dsposit1.wav", zombieDie: "dspodth1.wav",
   cacoSight: "dscacsit.wav",   cacoDie: "dscacdth.wav",
   soulSight: "dssklatk.wav",   soulDie: "dsskldth.wav",
+  knightSight: "dskntsit.wav", knightDie: "dskntdth.wav",
   cyberSight: "dscybsit.wav",  cyberDie: "dscybdth.wav",
   spiderSight: "dsspisit.wav", spiderDie: "dsspidth.wav",
   rocket: "dsrlaunc.wav",      rocketHit: "dsrxplod.wav",
@@ -1851,8 +1863,9 @@ const SYNTH_ALIAS = {
   switch: "pickup", noway: "growl",
   barrel: "boom", teleport: "boom",
   zombieSight: "sight", cacoSight: "sight", cyberSight: "sight", spiderSight: "sight",
-  soulSight: "hit",
+  knightSight: "sight", soulSight: "hit",
   zombieDie: "die", cacoDie: "die", soulDie: "die", cyberDie: "die", spiderDie: "die",
+  knightDie: "die",
   rocket: "fireball", rocketHit: "boom",
   shotgun: "shoot", sgcock: "pickup", punch: "hit", plasma: "fireball", bfg: "boom",
 };
@@ -2088,6 +2101,7 @@ const ENEMY_DROPS = {   // clearing a fight always pays something
   pinky:  { chance: 0.5, spr: "shellbox",  give: { shells: 4 } },
   caco:   { chance: 0.6, spr: "shellbox",  give: { shells: 4 } },
   baron:  { chance: 1.0, spr: "rocketbox", give: { rockets: 2 } },
+  knight: { chance: 1.0, spr: "shellbox",  give: { shells: 4 } },
   cyber:  { chance: 1.0, spr: "cellpack",  give: { cells: 40 } },
   spider: { chance: 1.0, spr: "cellpack",  give: { cells: 40 } },
 };
@@ -2136,6 +2150,10 @@ const ENEMY_TYPES = {
   baron:    { hp: 320, speed: 1.5, dmg: 22, ranged: true,  cool: 1.7, pspeed: 6, scale: 1.35,
               idle: "baronIdle", attack: "baronAttack", pain: "baronPain", ball: "greenball", atkSfx: "fireball",
               sfxSight: "baronSight", sfxPain: "baronPain", sfxDie: "baronDie", sfxAct: "baronAct" },
+  knight:   { hp: 200, speed: 1.7, dmg: 18, ranged: true,  cool: 1.5, pspeed: 6.5, scale: 1.3,
+              idle: "knightIdle", attack: "knightAttack", pain: "knightPain", corpse: "knightCorpse",
+              ball: "greenball", atkSfx: "fireball",
+              sfxSight: "knightSight", sfxPain: "pinkyPain", sfxDie: "knightDie", sfxAct: "baronAct" },
   zombie:   { hp: 30,  speed: 1.8, dmg: 7,  ranged: true,  cool: 1.3, pspeed: 11, scale: 0.95,
               idle: "zombieIdle", attack: "zombieAttack", pain: "zombiePain", ball: "tracer", atkSfx: "shoot",
               sfxSight: "zombieSight", sfxPain: "impPain", sfxDie: "zombieDie", sfxAct: "impAct" },
@@ -2182,6 +2200,7 @@ function loadLevel() {
     else if (ch === "i") enemies.push(makeEnemy("imp", cx, cy));
     else if (ch === "p") enemies.push(makeEnemy("pinky", cx, cy));
     else if (ch === "n") enemies.push(makeEnemy("baron", cx, cy));
+    else if (ch === "N") enemies.push(makeEnemy("knight", cx, cy));
     else if (ch === "g") enemies.push(makeEnemy("zombie", cx, cy));
     else if (ch === "o") enemies.push(makeEnemy("caco", cx, cy));
     else if (ch === "m") enemies.push(makeEnemy("lostsoul", cx, cy));
