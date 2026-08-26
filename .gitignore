@@ -1,0 +1,5 @@
+# Local audio assets (id Software's copyrighted sounds/music).
+# The game auto-detects them locally and falls back to synthesized
+# audio when absent, so the hosted build works without them.
+SFX/
+Doom OST/

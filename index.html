@@ -39,9 +39,9 @@
   <p>
     <span class="key">CLICK</span> to enter the map (locks mouse)<br>
     <span class="key">WASD</span> move &nbsp; <span class="key">MOUSE / ARROWS</span> turn &nbsp; <span class="key">SHIFT</span> run<br>
-    <span class="key">CLICK / SPACE</span> fire &nbsp; <span class="key">E</span> open doors &nbsp; <span class="key">M</span> map<br>
+    <span class="key">CLICK / SPACE</span> fire &nbsp; <span class="key">E</span> use doors / switches &nbsp; <span class="key">M</span> map<br>
     <span class="key">N</span> music on/off &nbsp; <span class="key">R</span> restart<br><br>
-    Kill all the demons.
+    Three levels. Find the exit switch in each.
   </p>
 </div>
 <script>
@@ -49,7 +49,10 @@
 
 // ============================================================
 // DOOM.html — a single-file Doom-style raycaster.
-// No assets: all textures, sprites and sounds are generated.
+// Textures and sprites are generated procedurally. Audio uses
+// the local "SFX/" and "Doom OST/" folders when present and
+// falls back to synthesized WebAudio when they are not
+// (e.g. on the hosted version, which ships no audio files).
 // ============================================================
 
 const W = 640, H = 400;          // internal render resolution
@@ -66,35 +69,118 @@ const fb = new Uint32Array(frame.data.buffer);   // ABGR little-endian
 const zBuffer = new Float64Array(W);
 
 // ---------------------------------------------------------
-// Map: 0 empty, 1-5 wall texture ids
+// Levels. Grid homages of the Knee-Deep in the Dead openers
+// (the real maps aren't tile-based, so these recreate the
+// layout beats, not the exact geometry).
+// Legend: # stone  B hell brick  T tech  D door  C computer
+//         X exit switch  . floor  P player  i imp  p pinky
+//         h medkit  a ammo
 // ---------------------------------------------------------
-const MAP_W = 24, MAP_H = 24;
-const MAP = [
-  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-  1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,3,0,0,0,0,0,1,
-  1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,3,0,0,0,0,0,1,
-  1,0,0,2,2,0,0,4,0,0,0,2,2,0,0,0,0,3,0,0,3,3,0,1,
-  1,0,0,2,2,0,0,1,0,0,0,2,2,0,0,0,0,3,0,0,0,3,0,1,
-  1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,3,0,0,0,3,0,1,
-  1,1,1,4,1,1,1,1,0,0,0,0,0,0,0,0,0,3,3,4,3,3,0,1,
-  1,0,0,0,0,0,0,0,0,0,5,5,5,0,0,0,0,0,0,0,0,0,0,1,
-  1,0,0,0,0,0,0,0,0,0,5,0,5,0,0,0,0,0,0,0,0,0,0,1,
-  1,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,0,0,0,1,
-  1,0,0,5,5,4,5,5,0,0,5,0,5,0,0,0,0,0,2,2,2,2,0,1,
-  1,0,0,5,0,0,0,5,0,0,5,5,5,0,0,0,0,0,2,0,0,2,0,1,
-  1,0,0,5,0,0,0,5,0,0,0,0,0,0,0,0,0,0,4,0,0,2,0,1,
-  1,0,0,5,0,0,0,5,0,0,0,0,0,0,0,0,0,0,2,0,0,2,0,1,
-  1,0,0,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0,2,2,2,2,0,1,
-  1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
-  1,3,3,3,3,3,0,0,0,0,0,0,0,0,1,1,1,4,1,1,0,0,0,1,
-  1,3,0,0,0,3,0,0,0,0,0,0,0,0,1,0,0,0,0,1,0,0,0,1,
-  1,3,0,0,0,3,0,0,0,0,0,0,0,0,1,0,0,0,0,1,0,0,0,1,
-  1,3,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,1,0,0,0,1,
-  1,3,0,0,0,3,0,0,0,0,0,0,0,0,1,0,0,0,0,1,0,0,0,1,
-  1,3,3,3,3,3,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,1,
-  1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
-  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+const LEVELS = [
+  {
+    name: "E1M1: HANGAR",
+    music: "03. E1M1 - At Doom's Gate.mp3",
+    rows: [
+      "############################",
+      "#P........T.......T........#",
+      "#.........T..a....T....h...#",
+      "#...##....T.......T........#",
+      "#...##....D.......D........#",
+      "#.........T.......T........#",
+      "#.....i...T....p..T...i....#",
+      "#.........T.......T........#",
+      "#####D################D#####",
+      "#.........T.......B........#",
+      "#..a......T...a...B....a...#",
+      "#..####...T.......B..BB....#",
+      "#.i.......D...p...D...i....#",
+      "#..####...T.......B..BB....#",
+      "#.........T.......B........#",
+      "#....h....T...a...B......h.#",
+      "#.........T.......B........#",
+      "#####D################D#####",
+      "#..........................#",
+      "#..i............p..........#",
+      "#.....##..........##.......#",
+      "#.....##....a.....##....X..#",
+      "#.....##..........##.......#",
+      "#...p......................#",
+      "#...........h..............#",
+      "############################",
+    ],
+  },
+  {
+    name: "E1M2: NUCLEAR PLANT",
+    music: "04. E1M2 - The Imp's Song.mp3",
+    rows: [
+      "##############################",
+      "#P...........................#",
+      "#.a.........................a#",
+      "#............................#",
+      "#...TTTTTTTTTTDTTTTTTTTTTT...#",
+      "#...T....................T...#",
+      "#...T..i.............i...T...#",
+      "#...T....................T...#",
+      "#...T...CCCCCCCCCCCCCC...T...#",
+      "#...T...C............C...T...#",
+      "#...T...C..p......p..C...T...#",
+      "#...T...C............C...T...#",
+      "#...T...C.....a......C...T...#",
+      "#...T...C.....X......C...T...#",
+      "#...D...C............C...D...#",
+      "#...T...C....h.......C...T...#",
+      "#...T...C............C...T...#",
+      "#...T...C............C...T...#",
+      "#...T...C.a........a.C...T...#",
+      "#...T...CCCCCCDCCCCCCC...T...#",
+      "#...T....................T...#",
+      "#...T..i..........i......T...#",
+      "#...T....................T...#",
+      "#...TTTTTTTTTTDTTTTTTTTTTT...#",
+      "#............................#",
+      "#..h....................p....#",
+      "#...........a................#",
+      "##############################",
+    ],
+  },
+  {
+    name: "E1M3: TOXIN REFINERY",
+    music: "05. E1M3 - Dark Halls.mp3",
+    rows: [
+      "##############################",
+      "#P............#..............#",
+      "#.............#...a..........#",
+      "#..BB.........#..............#",
+      "#..BB....i....#......p.......#",
+      "#.............#..............#",
+      "#......a......#..............#",
+      "#.............D..............#",
+      "#.............#..............#",
+      "#....i........#.........i....#",
+      "#.............#..............#",
+      "#..........h..#....p.........#",
+      "#.............#..............#",
+      "#######D#############D########",
+      "#.............#..............#",
+      "#..a..........#..............#",
+      "#....BBBB.....#..............#",
+      "#....B..B.....#..............#",
+      "#....B..B..i..#....CCCCCCCC..#",
+      "#....BBBB.....#....C......C..#",
+      "#.............D....C......C..#",
+      "#..p..........#....D...X..C..#",
+      "#.............#....C......C..#",
+      "#......i......#....C...h..C..#",
+      "#.............#....CCCCCCCC..#",
+      "#....a........#..............#",
+      "#..........p..#......a.......#",
+      "##############################",
+    ],
+  },
 ];
+const TILE_CHARS = { "#": 1, "B": 2, "T": 3, "D": 4, "C": 5, "X": 9 };
+
+let MAP = [], MAP_W = 0, MAP_H = 0, levelIdx = 0;
 const mapAt = (x, y) => (x < 0 || y < 0 || x >= MAP_W || y >= MAP_H) ? 1 : MAP[y * MAP_W + x];
 
 // Doors: any tile 4 can be opened with E. Keyed by cell index.
@@ -203,6 +289,20 @@ const textures = [null,
     noiseOver(g, 0.2);
   }),
 ];
+// 9: exit switch
+textures[9] = makeTexture(g => {
+  g.fillStyle = "#3a3f45"; g.fillRect(0, 0, TEX, TEX);
+  g.strokeStyle = "#1a1d20"; g.lineWidth = 3;
+  g.strokeRect(6, 6, 52, 52);
+  g.fillStyle = "#22262a"; g.fillRect(14, 10, 36, 20);
+  g.fillStyle = "#d02020";
+  g.font = "bold 13px monospace"; g.textAlign = "center";
+  g.fillText("EXIT", 32, 25);
+  g.fillStyle = "#15171a"; g.fillRect(22, 36, 20, 20);
+  g.fillStyle = "#20c040"; g.fillRect(26, 40, 12, 12);
+  g.fillStyle = "#0a5a1a"; g.fillRect(26, 46, 12, 6);
+  noiseOver(g, 0.2, 150);
+});
 const floorTex = makeTexture(g => {
   g.fillStyle = "#3a3733"; g.fillRect(0, 0, TEX, TEX);
   g.strokeStyle = "#26241f"; g.lineWidth = 2;
@@ -232,17 +332,13 @@ function makeSprite(draw) {
 function drawImp(g, attacking, hurt) {
   const skin = hurt ? "#d06a4a" : "#8b5a3c";
   const dark = hurt ? "#a04830" : "#5e3a24";
-  // legs
   g.fillStyle = dark;
   g.fillRect(22, 46, 7, 16); g.fillRect(35, 46, 7, 16);
-  // torso
   g.fillStyle = skin;
   g.beginPath(); g.ellipse(32, 36, 13, 14, 0, 0, 7); g.fill();
-  // spikes on shoulders
   g.fillStyle = "#e8e0d0";
   g.beginPath(); g.moveTo(18, 30); g.lineTo(14, 22); g.lineTo(22, 27); g.closePath(); g.fill();
   g.beginPath(); g.moveTo(46, 30); g.lineTo(50, 22); g.lineTo(42, 27); g.closePath(); g.fill();
-  // arms
   g.fillStyle = skin;
   if (attacking) {
     g.fillRect(10, 24, 6, 14);
@@ -255,17 +351,13 @@ function drawImp(g, attacking, hurt) {
   } else {
     g.fillRect(12, 34, 7, 14); g.fillRect(45, 34, 7, 14);
   }
-  // head
   g.fillStyle = skin;
   g.beginPath(); g.ellipse(32, 18, 9, 9, 0, 0, 7); g.fill();
-  // horns
   g.fillStyle = "#e8e0d0";
   g.beginPath(); g.moveTo(24, 14); g.lineTo(20, 5); g.lineTo(27, 10); g.closePath(); g.fill();
   g.beginPath(); g.moveTo(40, 14); g.lineTo(44, 5); g.lineTo(37, 10); g.closePath(); g.fill();
-  // eyes
   g.fillStyle = hurt ? "#fff" : "#ffdd33";
   g.fillRect(27, 15, 4, 3); g.fillRect(34, 15, 4, 3);
-  // mouth
   g.fillStyle = "#301008"; g.fillRect(28, 22, 9, 3);
   g.fillStyle = "#fff";
   g.fillRect(28, 22, 2, 2); g.fillRect(32, 22, 2, 2); g.fillRect(35, 22, 2, 2);
@@ -275,24 +367,19 @@ function drawPinky(g, attacking, hurt) {
   const dark = hurt ? "#d06060" : "#96455e";
   g.fillStyle = dark;
   g.fillRect(18, 48, 9, 14); g.fillRect(37, 48, 9, 14);
-  // massive body
   g.fillStyle = skin;
   g.beginPath(); g.ellipse(32, 34, 18, 18, 0, 0, 7); g.fill();
-  // huge jaw
   g.fillStyle = dark;
   g.beginPath(); g.ellipse(32, 40, 13, attacking ? 11 : 8, 0, 0, 7); g.fill();
   g.fillStyle = "#2a0a10";
   g.beginPath(); g.ellipse(32, 40, 10, attacking ? 8 : 5, 0, 0, 7); g.fill();
-  // teeth
   g.fillStyle = "#fff";
   for (let i = 0; i < 5; i++) {
     g.beginPath(); g.moveTo(24 + i * 4, 34); g.lineTo(26 + i * 4, 40); g.lineTo(28 + i * 4, 34); g.closePath(); g.fill();
   }
-  // eyes
   g.fillStyle = hurt ? "#fff" : "#7fff5a";
   g.fillRect(22, 22, 5, 4); g.fillRect(37, 22, 5, 4);
   g.fillStyle = "#000"; g.fillRect(24, 23, 2, 2); g.fillRect(39, 23, 2, 2);
-  // little arms
   g.fillStyle = skin;
   g.fillRect(10, 30, 6, 10); g.fillRect(48, 30, 6, 10);
 }
@@ -323,7 +410,8 @@ const sprites = {
 };
 
 // ---------------------------------------------------------
-// Sound (WebAudio, synthesized)
+// Audio. Real files from SFX/ and Doom OST/ when available,
+// synthesized WebAudio otherwise.
 // ---------------------------------------------------------
 let audio = null;
 function initAudio() {
@@ -337,11 +425,57 @@ function noiseBuffer(dur) {
   for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
   return buf;
 }
-function sfx(kind) {
+
+const SFX_FILES = {
+  shoot: "dspistol.wav",
+  impPain: "dspopain.wav",   pinkyPain: "dsdmpain.wav",
+  impDie: "dsbgdth1.wav",    pinkyDie: "dssgtdth.wav",
+  impSight: "dsbgsit1.wav",  pinkySight: "dssgtsit.wav",
+  impAct: "dsbgact.wav",     pinkyAct: "dsdmact.wav",
+  bite: "dssgtatk.wav",
+  fireball: "dsfirsht.wav",  fireballHit: "dsfirxpl.wav",
+  playerPain: "dsplpain.wav", playerDie: "dspldeth.wav",
+  pickup: "dsitemup.wav",
+  door: "dsdoropn.wav",      doorClose: "dsdorcls.wav",
+  switch: "dsswtchn.wav",    noway: "dsnoway.wav",
+};
+const sfxLib = {};
+for (const [k, f] of Object.entries(SFX_FILES)) {
+  const a = new Audio("SFX/" + f);
+  a.preload = "auto";
+  sfxLib[k] = { el: a, ok: false };
+  a.addEventListener("canplaythrough", () => { sfxLib[k].ok = true; }, { once: true });
+}
+function sfx(kind, vol = 1) {
+  const s = sfxLib[kind];
+  if (s && s.ok) {
+    const c = s.el.cloneNode();
+    c.volume = Math.max(0.05, Math.min(1, vol * 0.9));
+    c.play().catch(() => {});
+    return;
+  }
+  synthSfx(kind, vol);
+}
+
+// synthesized fallbacks (used when the wav files aren't present)
+const SYNTH_ALIAS = {
+  impPain: "hit", pinkyPain: "hit", bite: "hit",
+  impDie: "die", pinkyDie: "die", playerDie: "die",
+  playerPain: "pain",
+  impSight: "sight", pinkySight: "sight",
+  impAct: "growl", pinkyAct: "growl",
+  fireballHit: "fireball",
+  switch: "pickup", noway: "growl",
+};
+function synthSfx(kind, vol = 1) {
   if (!audio || audio.state !== "running") return;
+  kind = SYNTH_ALIAS[kind] || kind;
   const t = audio.currentTime;
+  const master = audio.createGain();
+  master.gain.value = Math.max(0.05, Math.min(1, vol));
+  master.connect(audio.destination);
   const out = audio.createGain();
-  out.connect(audio.destination);
+  out.connect(master);
   if (kind === "shoot") {
     const src = audio.createBufferSource(); src.buffer = noiseBuffer(0.25);
     const f = audio.createBiquadFilter(); f.type = "lowpass";
@@ -381,21 +515,13 @@ function sfx(kind) {
     out.gain.setValueAtTime(0.2, t); out.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
     src.start(t); src.stop(t + 0.3);
   } else if (kind === "door") {
-    // mechanical grind sliding up
     const src = audio.createBufferSource(); src.buffer = noiseBuffer(0.5);
     const f = audio.createBiquadFilter(); f.type = "bandpass"; f.Q.value = 4;
     f.frequency.setValueAtTime(120, t); f.frequency.exponentialRampToValueAtTime(900, t + 0.45);
     src.connect(f); f.connect(out);
     out.gain.setValueAtTime(0.35, t); out.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
     src.start(t); src.stop(t + 0.5);
-    const o = audio.createOscillator(); o.type = "sawtooth";
-    o.frequency.setValueAtTime(70, t); o.frequency.linearRampToValueAtTime(110, t + 0.45);
-    const og = audio.createGain(); og.gain.setValueAtTime(0.08, t);
-    og.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
-    o.connect(og); og.connect(audio.destination);
-    o.start(t); o.stop(t + 0.5);
   } else if (kind === "doorClose") {
-    // descending grind + heavy thunk
     const src = audio.createBufferSource(); src.buffer = noiseBuffer(0.4);
     const f = audio.createBiquadFilter(); f.type = "bandpass"; f.Q.value = 4;
     f.frequency.setValueAtTime(800, t); f.frequency.exponentialRampToValueAtTime(110, t + 0.35);
@@ -406,10 +532,9 @@ function sfx(kind) {
     o.frequency.setValueAtTime(90, t + 0.35); o.frequency.exponentialRampToValueAtTime(45, t + 0.5);
     const og = audio.createGain(); og.gain.setValueAtTime(0.0001, t);
     og.gain.setValueAtTime(0.5, t + 0.35); og.gain.exponentialRampToValueAtTime(0.001, t + 0.55);
-    o.connect(og); og.connect(audio.destination);
+    o.connect(og); og.connect(master);
     o.start(t); o.stop(t + 0.55);
   } else if (kind === "sight") {
-    // demon spots you: harsh rising-falling screech
     const o = audio.createOscillator(); o.type = "sawtooth";
     o.frequency.setValueAtTime(160, t);
     o.frequency.exponentialRampToValueAtTime(420, t + 0.12);
@@ -428,17 +553,41 @@ function sfx(kind) {
 }
 
 // ---------------------------------------------------------
-// Music: original synthesized metal-style loop (not the id
-// Software tracks - those are copyrighted). Toggle with N.
+// Music. Plays the local OST mp3s when present; otherwise an
+// original synthesized loop (the id Software tracks are
+// copyrighted, so the hosted build ships no music files).
 // ---------------------------------------------------------
-let musicOn = true, musicGain = null, musicNext = 0, musicStep = 0;
-const RIFF = [   // 16 eighth-notes, A minor chug (frequencies in Hz, 0 = rest)
+const OST_DIR = "Doom OST/";
+const MUSIC_INTER = "14. E2M3; INTER - Intermission From Doom.mp3";
+const MUSIC_VICTORY = "23. VICTOR - The End Of Doom.mp3";
+let musicOn = true, musicRealOk = true;
+const musicEl = new Audio();
+musicEl.loop = true;
+musicEl.volume = 0.45;
+musicEl.addEventListener("error", () => { musicRealOk = false; });
+function playMusic(file) {
+  if (!musicRealOk) return;   // synth loop covers it
+  musicEl.src = encodeURI(OST_DIR + file);
+  musicEl.loop = true;
+  if (musicOn) musicEl.play().catch(() => { musicRealOk = false; });
+}
+function toggleMusic() {
+  musicOn = !musicOn;
+  if (musicRealOk) {
+    if (musicOn) musicEl.play().catch(() => {});
+    else musicEl.pause();
+  }
+}
+
+// synth fallback loop: original A-minor chug, not the OST
+let musicGain = null, musicNext = 0, musicStep = 0;
+const RIFF = [
   110.00, 110.00, 164.81, 110.00, 98.00, 110.00, 130.81, 110.00,
   110.00, 110.00, 146.83, 130.81, 110.00, 98.00, 82.41, 110.00,
 ];
 function musicScheduleStep(step, t) {
   const freq = RIFF[step];
-  if (freq) {          // palm-muted bass chug
+  if (freq) {
     const o = audio.createOscillator(); o.type = "sawtooth";
     o.frequency.value = freq;
     const o2 = audio.createOscillator(); o2.type = "square";
@@ -450,7 +599,7 @@ function musicScheduleStep(step, t) {
     o.connect(f); o2.connect(f); f.connect(g); g.connect(musicGain);
     o.start(t); o.stop(t + 0.2); o2.start(t); o2.stop(t + 0.2);
   }
-  if (step % 4 === 0) { // kick on quarter notes
+  if (step % 4 === 0) {
     const o = audio.createOscillator(); o.type = "sine";
     o.frequency.setValueAtTime(130, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.1);
     const g = audio.createGain();
@@ -458,7 +607,7 @@ function musicScheduleStep(step, t) {
     o.connect(g); g.connect(musicGain);
     o.start(t); o.stop(t + 0.13);
   }
-  if (step % 2 === 1) { // hats on the offbeats
+  if (step % 2 === 1) {
     const src = audio.createBufferSource(); src.buffer = noiseBuffer(0.03);
     const f = audio.createBiquadFilter(); f.type = "highpass"; f.frequency.value = 6000;
     const g = audio.createGain();
@@ -468,7 +617,7 @@ function musicScheduleStep(step, t) {
   }
 }
 setInterval(() => {
-  if (!audio || audio.state !== "running" || !musicOn || gameState !== "play") { musicNext = 0; return; }
+  if (!audio || audio.state !== "running" || !musicOn || musicRealOk || gameState !== "play") { musicNext = 0; return; }
   if (!musicGain) {
     musicGain = audio.createGain();
     musicGain.gain.value = 0.35;
@@ -487,46 +636,69 @@ setInterval(() => {
 // ---------------------------------------------------------
 const player = { x: 0, y: 0, ang: 0, hp: 100, ammo: 0, kills: 0, hurtFlash: 0, pickFlash: 0, bob: 0 };
 let enemies = [], pickups = [], projectiles = [];
-let gameState = "title";   // title | play | dead | won
+let gameState = "title";   // title | play | intermission | dead | victory
 let fireCooldown = 0, muzzle = 0, showMap = false, faceTimer = 0, faceLook = 0;
+let totalEnemies = 0;
 
 const ENEMY_TYPES = {
-  imp:   { hp: 60,  speed: 1.6, dmg: 12, ranged: true,  idle: "impIdle",   attack: "impAttack",   pain: "impPain",   scale: 1.0 },
-  pinky: { hp: 150, speed: 2.6, dmg: 25, ranged: false, idle: "pinkyIdle", attack: "pinkyAttack", pain: "pinkyPain", scale: 1.15 },
+  imp:   { hp: 60,  speed: 1.6, dmg: 12, ranged: true,  idle: "impIdle",   attack: "impAttack",   pain: "impPain",   scale: 1.0,
+           sfxSight: "impSight", sfxPain: "impPain", sfxDie: "impDie", sfxAct: "impAct" },
+  pinky: { hp: 150, speed: 2.6, dmg: 25, ranged: false, idle: "pinkyIdle", attack: "pinkyAttack", pain: "pinkyPain", scale: 1.15,
+           sfxSight: "pinkySight", sfxPain: "pinkyPain", sfxDie: "pinkyDie", sfxAct: "pinkyAct" },
 };
+function makeEnemy(type, x, y) {
+  return {
+    type, x, y, ...structuredClone(ENEMY_TYPES[type]),
+    state: "idle", stateT: 0, attackT: 0, dead: false,
+  };
+}
+function distToPlayer(x, y) { return Math.hypot(x - player.x, y - player.y); }
+function volAt(dist) { return Math.max(0.15, Math.min(1, 1.3 - dist / 12)); }
 
-function spawnLevel() {
-  player.x = 2.5; player.y = 2.5; player.ang = 0;
-  player.hp = 100; player.ammo = 48; player.kills = 0;
-  player.hurtFlash = 0; player.pickFlash = 0;
-  projectiles = [];
+function loadLevel() {
+  const L = LEVELS[levelIdx];
+  MAP_W = L.rows[0].length;
+  MAP_H = L.rows.length;
+  MAP = new Array(MAP_W * MAP_H).fill(0);
+  enemies = []; pickups = []; projectiles = [];
   doors.clear();
-  enemies = [
-    { type: "imp",   x: 5.5,  y: 5.5 },
-    { type: "imp",   x: 11.5, y: 4.5 },
-    { type: "imp",   x: 20.0, y: 2.5 },
-    { type: "imp",   x: 5.0,  y: 12.0 },
-    { type: "imp",   x: 16.5, y: 17.5 },
-    { type: "imp",   x: 21.5, y: 12.5 },
-    { type: "pinky", x: 11.0, y: 9.5 },
-    { type: "pinky", x: 3.0,  y: 18.5 },
-    { type: "pinky", x: 20.0, y: 21.0 },
-    { type: "imp",   x: 10.0, y: 21.5 },
-    { type: "imp",   x: 19.5, y: 8.0 },
-  ].map(e => ({
-    ...e, ...structuredClone(ENEMY_TYPES[e.type]),
-    state: "idle", stateT: 0, attackT: 0, dead: false, deathT: 0,
-  }));
-  pickups = [
-    { kind: "medkit", x: 4.5,  y: 4.0  },
-    { kind: "ammo",   x: 12.5, y: 2.0  },
-    { kind: "ammo",   x: 5.5,  y: 12.5 },
-    { kind: "medkit", x: 11.0, y: 11.5 },
-    { kind: "ammo",   x: 16.5, y: 19.0 },
-    { kind: "medkit", x: 21.5, y: 17.0 },
-    { kind: "ammo",   x: 2.5,  y: 22.0 },
-    { kind: "ammo",   x: 22.0, y: 7.5  },
-  ];
+  for (let y = 0; y < MAP_H; y++) for (let x = 0; x < MAP_W; x++) {
+    const ch = L.rows[y][x];
+    if (TILE_CHARS[ch]) { MAP[y * MAP_W + x] = TILE_CHARS[ch]; continue; }
+    const cx = x + 0.5, cy = y + 0.5;
+    if      (ch === "P") { player.x = cx; player.y = cy; player.ang = 0; }
+    else if (ch === "i") enemies.push(makeEnemy("imp", cx, cy));
+    else if (ch === "p") enemies.push(makeEnemy("pinky", cx, cy));
+    else if (ch === "h") pickups.push({ kind: "medkit", x: cx, y: cy });
+    else if (ch === "a") pickups.push({ kind: "ammo", x: cx, y: cy });
+  }
+  player.kills = 0;
+  player.hurtFlash = 0; player.pickFlash = 0;
+  totalEnemies = enemies.length;
+  fireCooldown = 0; muzzle = 0;
+}
+function startGame() {
+  levelIdx = 0;
+  player.hp = 100; player.ammo = 48;
+  loadLevel();
+  gameState = "play";
+  playMusic(LEVELS[levelIdx].music);
+}
+function exitLevel() {
+  sfx("switch");
+  gameState = "intermission";
+  playMusic(MUSIC_INTER);
+}
+function nextLevel() {
+  levelIdx++;
+  if (levelIdx >= LEVELS.length) {
+    gameState = "victory";
+    playMusic(MUSIC_VICTORY);
+    return;
+  }
+  loadLevel();
+  gameState = "play";
+  playMusic(LEVELS[levelIdx].music);
 }
 
 // ---------------------------------------------------------
@@ -536,21 +708,36 @@ const keys = {};
 addEventListener("keydown", e => {
   keys[e.code] = true;
   if (e.code === "KeyM") showMap = !showMap;
-  if (e.code === "KeyN") musicOn = !musicOn;
-  if (e.code === "KeyE" && gameState === "play") tryUseDoor();
-  if (e.code === "KeyR" && (gameState === "dead" || gameState === "won")) { spawnLevel(); gameState = "play"; }
+  if (e.code === "KeyN") toggleMusic();
+  if (e.code === "KeyE") {
+    if (gameState === "play") tryUse();
+    else if (gameState === "intermission") nextLevel();
+  }
+  if (e.code === "Space" && gameState === "intermission") nextLevel();
+  if (e.code === "KeyR") {
+    if (gameState === "dead") {
+      player.hp = 100; player.ammo = 48;
+      loadLevel();
+      gameState = "play";
+      playMusic(LEVELS[levelIdx].music);
+    } else if (gameState === "victory") {
+      startGame();
+    }
+  }
   if (["Space", "ArrowUp", "ArrowDown"].includes(e.code)) e.preventDefault();
 });
 addEventListener("keyup", e => keys[e.code] = false);
 
 canvas.addEventListener("click", () => {
   initAudio();
-  if (gameState === "title") { spawnLevel(); gameState = "play"; overlay.classList.add("hidden"); }
+  if (gameState === "title") { startGame(); overlay.classList.add("hidden"); }
+  else if (gameState === "intermission") nextLevel();
   if (document.pointerLockElement !== canvas) canvas.requestPointerLock();
 });
 overlay.addEventListener("click", () => {
   initAudio();
-  spawnLevel(); gameState = "play"; overlay.classList.add("hidden");
+  startGame();
+  overlay.classList.add("hidden");
   canvas.requestPointerLock();
 });
 addEventListener("mousemove", e => {
@@ -579,11 +766,12 @@ function moveWithCollision(obj, dx, dy, radius) {
   if (!solidCell((nx + Math.sign(dx) * radius) | 0, obj.y | 0)) obj.x = nx;
   if (!solidCell(obj.x | 0, (ny + Math.sign(dy) * radius) | 0)) obj.y = ny;
 }
-function tryUseDoor() {
+function tryUse() {
   const cs = Math.cos(player.ang), sn = Math.sin(player.ang);
   for (const reach of [0.6, 1.1]) {
     const cx = (player.x + cs * reach) | 0, cy = (player.y + sn * reach) | 0;
     const t = mapAt(cx, cy);
+    if (t === 9) { exitLevel(); return; }
     if (t === 4) {
       const key = cy * MAP_W + cx;
       let d = doors.get(key);
@@ -592,8 +780,9 @@ function tryUseDoor() {
       else if (d.state === "open") { d.state = "closing"; sfx("doorClose"); }
       return;
     }
-    if (t !== 0) return;   // a wall blocks the reach
+    if (t !== 0) { sfx("noway", 0.6); return; }   // a plain wall blocks the reach
   }
+  sfx("noway", 0.4);
 }
 function updateDoors(dt) {
   for (const [key, d] of doors) {
@@ -604,7 +793,11 @@ function updateDoors(dt) {
       d.timer -= dt;
       if (d.timer <= 0) {
         if (cellOccupied(key)) d.timer = 1;
-        else { d.state = "closing"; sfx("doorClose"); }
+        else {
+          d.state = "closing";
+          const cx = key % MAP_W + 0.5, cy = ((key / MAP_W) | 0) + 0.5;
+          sfx("doorClose", volAt(distToPlayer(cx, cy)));
+        }
       }
     } else if (d.state === "closing") {
       if (cellOccupied(key)) { d.state = "opening"; continue; }
@@ -648,7 +841,6 @@ function update(dt) {
       player.ammo--; fireCooldown = 0.34; muzzle = 0.08;
       sfx("shoot");
       faceTimer = 0.6;
-      // find closest enemy near the aim ray
       let best = null, bestDist = Infinity;
       for (const e of enemies) {
         if (e.dead) continue;
@@ -657,7 +849,7 @@ function update(dt) {
         let da = Math.atan2(dy, dx) - player.ang;
         while (da >  Math.PI) da -= 2 * Math.PI;
         while (da < -Math.PI) da += 2 * Math.PI;
-        const halfWidth = Math.atan2(0.35, dist);   // enemy body radius
+        const halfWidth = Math.atan2(0.35, dist);
         if (Math.abs(da) < halfWidth && dist < bestDist && hasLOS(player.x, player.y, e.x, e.y)) {
           best = e; bestDist = dist;
         }
@@ -666,19 +858,18 @@ function update(dt) {
         best.hp -= 20 + (Math.random() * 14 | 0);
         if (best.hp <= 0) {
           best.state = "dying"; best.stateT = 0;
-          sfx("die");
+          sfx(best.sfxDie, volAt(bestDist));
         } else {
           best.state = "pain"; best.stateT = 0;
-          sfx("hit");
+          sfx(best.sfxPain, volAt(bestDist));
         }
       }
     } else {
-      fireCooldown = 0.34;  // dry click pacing
+      fireCooldown = 0.34;
     }
   }
 
   // --- enemies ---
-  let alive = 0;
   for (const e of enemies) {
     if (e.dead) continue;
     e.stateT += dt;
@@ -686,7 +877,6 @@ function update(dt) {
       if (e.stateT > 0.45) { e.dead = true; player.kills++; }
       continue;
     }
-    alive++;
     if (e.state === "pain") {
       if (e.stateT > 0.3) { e.state = "chase"; e.stateT = 0; }
       continue;
@@ -696,7 +886,7 @@ function update(dt) {
     const los = dist < 14 && hasLOS(e.x, e.y, player.x, player.y);
 
     if (e.state === "idle") {
-      if (los && dist < 10) { e.state = "chase"; e.stateT = 0; sfx("sight"); }
+      if (los && dist < 10) { e.state = "chase"; e.stateT = 0; sfx(e.sfxSight, volAt(dist)); }
       continue;
     }
     if (e.state === "attack") {
@@ -709,17 +899,18 @@ function update(dt) {
       e.state = "attack"; e.stateT = 0; e.attackT = 1.6 + Math.random();
       const pa = Math.atan2(dy, dx) + (Math.random() - 0.5) * 0.12;
       projectiles.push({ x: e.x, y: e.y, vx: Math.cos(pa) * 6, vy: Math.sin(pa) * 6, dmg: e.dmg });
-      sfx("fireball");
+      sfx("fireball", volAt(dist));
     } else if (!e.ranged && dist < 1.1 && e.attackT <= 0) {
       e.state = "attack"; e.stateT = 0; e.attackT = 1.0;
       player.hp -= e.dmg;
       player.hurtFlash = 0.35; faceTimer = 0.8;
-      sfx("pain");
+      sfx("bite");
+      sfx("playerPain", 0.9);
     } else if (dist > (e.ranged ? 3.5 : 0.8)) {
-      if (dist < 9 && Math.random() < dt * 0.18) sfx("growl");
+      if (dist < 9 && Math.random() < dt * 0.18) sfx(e.sfxAct, volAt(dist) * 0.7);
       const step = e.speed * dt;
       let vx = dx / dist, vy = dy / dist;
-      if (!los) {   // simple wall-follow wiggle when no line of sight
+      if (!los) {
         const wob = Math.sin(performance.now() / 400 + e.x * 7) * 0.8;
         const tx = vx * Math.cos(wob) - vy * Math.sin(wob);
         vy = vx * Math.sin(wob) + vy * Math.cos(wob);
@@ -733,11 +924,16 @@ function update(dt) {
   for (let i = projectiles.length - 1; i >= 0; i--) {
     const p = projectiles[i];
     p.x += p.vx * dt; p.y += p.vy * dt;
-    if (solidCell(p.x | 0, p.y | 0)) { projectiles.splice(i, 1); continue; }
+    if (solidCell(p.x | 0, p.y | 0)) {
+      sfx("fireballHit", volAt(distToPlayer(p.x, p.y)) * 0.8);
+      projectiles.splice(i, 1);
+      continue;
+    }
     if (Math.hypot(p.x - player.x, p.y - player.y) < 0.4) {
       player.hp -= p.dmg;
       player.hurtFlash = 0.35; faceTimer = 0.8;
-      sfx("pain");
+      sfx("fireballHit");
+      sfx("playerPain", 0.9);
       projectiles.splice(i, 1);
     }
   }
@@ -762,8 +958,11 @@ function update(dt) {
   player.pickFlash = Math.max(0, player.pickFlash - dt);
   faceTimer = Math.max(0, faceTimer - dt);
 
-  if (player.hp <= 0) { player.hp = 0; gameState = "dead"; sfx("die"); }
-  else if (alive === 0 && enemies.every(e => e.dead)) gameState = "won";
+  if (player.hp <= 0) {
+    player.hp = 0;
+    gameState = "dead";
+    sfx("playerDie");
+  }
 }
 
 // ---------------------------------------------------------
@@ -929,29 +1128,24 @@ function renderWeapon() {
   const gx = W / 2 + bobX, gy = VIEW_H + bobY - (muzzle > 0 ? 6 : 0);
   ctx.save();
   ctx.translate(gx, gy);
-  // muzzle flash
   if (muzzle > 0) {
     ctx.fillStyle = "rgba(255,220,80,0.9)";
     ctx.beginPath(); ctx.ellipse(0, -86, 22, 30, 0, 0, 7); ctx.fill();
     ctx.fillStyle = "rgba(255,255,200,0.9)";
     ctx.beginPath(); ctx.ellipse(0, -84, 10, 16, 0, 0, 7); ctx.fill();
   }
-  // barrel
   ctx.fillStyle = "#23262b";
   ctx.fillRect(-9, -80, 18, 46);
   ctx.fillStyle = "#3a3f46";
   ctx.fillRect(-7, -80, 5, 46);
-  // slide / body
   ctx.fillStyle = "#2e3238";
   ctx.fillRect(-16, -40, 32, 24);
   ctx.fillStyle = "#41464e";
   ctx.fillRect(-16, -40, 32, 6);
-  // grip
   ctx.fillStyle = "#4a3524";
   ctx.beginPath();
   ctx.moveTo(-12, -16); ctx.lineTo(14, -16); ctx.lineTo(24, 4); ctx.lineTo(-2, 4);
   ctx.closePath(); ctx.fill();
-  // hand
   ctx.fillStyle = "#c8906a";
   ctx.beginPath(); ctx.ellipse(6, -4, 16, 12, -0.4, 0, 7); ctx.fill();
   ctx.restore();
@@ -967,13 +1161,10 @@ function drawDigits(text, x, y, size, color) {
 function renderFace(cx, cy) {
   const hp = player.hp;
   const pain = faceTimer > 0;
-  // head
   ctx.fillStyle = hp > 60 ? "#c8906a" : hp > 30 ? "#c07858" : "#a85a48";
   ctx.fillRect(cx - 16, cy - 20, 32, 40);
-  // hair
   ctx.fillStyle = "#6a4a28";
   ctx.fillRect(cx - 16, cy - 20, 32, 8);
-  // eyes: look around, wide when in pain
   faceLook = pain ? 0 : Math.sin(performance.now() / 900) * 3;
   ctx.fillStyle = "#fff";
   ctx.fillRect(cx - 11, cy - 8, 9, pain ? 8 : 6);
@@ -981,18 +1172,15 @@ function renderFace(cx, cy) {
   ctx.fillStyle = "#223";
   ctx.fillRect(cx - 8 + faceLook, cy - 7, 3, pain ? 6 : 4);
   ctx.fillRect(cx + 5 + faceLook, cy - 7, 3, pain ? 6 : 4);
-  // brow at low hp
   if (hp <= 60) {
     ctx.strokeStyle = "#3a2a18"; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(cx - 12, cy - 12); ctx.lineTo(cx - 3, cy - 9); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(cx + 12, cy - 12); ctx.lineTo(cx + 3, cy - 9); ctx.stroke();
   }
-  // mouth
   ctx.fillStyle = "#502820";
   if (pain)         ctx.fillRect(cx - 6, cy + 8, 12, 7);
   else if (hp > 60) ctx.fillRect(cx - 8, cy + 10, 16, 3);
   else              { ctx.fillRect(cx - 8, cy + 9, 16, 3); ctx.fillRect(cx - 10, cy + 7, 3, 3); }
-  // blood at low hp
   if (hp <= 30) {
     ctx.fillStyle = "#a01010";
     ctx.fillRect(cx - 14, cy - 2, 4, 10);
@@ -1001,7 +1189,6 @@ function renderFace(cx, cy) {
 }
 
 function renderHUD() {
-  // bar
   ctx.fillStyle = "#2a2a2a";
   ctx.fillRect(0, VIEW_H, W, HUD_H);
   ctx.fillStyle = "#151515";
@@ -1017,9 +1204,9 @@ function renderHUD() {
   drawDigits(player.hp + "%", 170, mid + 10, 30, player.hp > 30 ? "#e03030" : "#ff6060");
   renderFace(320, mid);
   drawDigits("KILLS", 380, mid - 14, 13, "#888");
-  drawDigits(`${player.kills}/${enemies.length}`, 380, mid + 10, 30, "#e03030");
-  drawDigits("ARMS", 520, mid - 14, 13, "#888");
-  drawDigits("1 2 3", 520, mid + 10, 22, "#c8a020");
+  drawDigits(`${player.kills}/${totalEnemies}`, 380, mid + 10, 30, "#e03030");
+  drawDigits("LEVEL", 520, mid - 14, 13, "#888");
+  drawDigits(LEVELS[levelIdx] ? LEVELS[levelIdx].name.split(":")[0] : "", 520, mid + 10, 26, "#c8a020");
 
   // crosshair
   ctx.fillStyle = "rgba(255,255,255,0.7)";
@@ -1030,14 +1217,16 @@ function renderHUD() {
 }
 
 function renderMinimap() {
-  const s = 6, ox = 10, oy = 10;
+  const s = Math.min(6, ((VIEW_H - 20) / MAP_H) | 0), ox = 10, oy = 10;
   ctx.fillStyle = "rgba(0,0,0,0.55)";
   ctx.fillRect(ox - 2, oy - 2, MAP_W * s + 4, MAP_H * s + 4);
   for (let y = 0; y < MAP_H; y++) for (let x = 0; x < MAP_W; x++) {
     const t = MAP[y * MAP_W + x];
     if (t) {
       const d = t === 4 ? doorAt(x, y) : null;
-      ctx.fillStyle = t === 4 ? (d && d.open > 0.8 ? "#4a6a30" : "#c8a020") : "#8a8a8a";
+      ctx.fillStyle =
+        t === 4 ? (d && d.open > 0.8 ? "#4a6a30" : "#c8a020") :
+        t === 9 ? "#d02020" : "#8a8a8a";
       ctx.fillRect(ox + x * s, oy + y * s, s - 1, s - 1);
     }
   }
@@ -1055,6 +1244,9 @@ function renderMinimap() {
   ctx.moveTo(ox + player.x * s, oy + player.y * s);
   ctx.lineTo(ox + (player.x + Math.cos(player.ang) * 2) * s, oy + (player.y + Math.sin(player.ang) * 2) * s);
   ctx.stroke();
+  ctx.font = "bold 12px 'Courier New', monospace";
+  ctx.fillStyle = "#ddd";
+  ctx.fillText(LEVELS[levelIdx].name, ox, oy + MAP_H * s + 14);
 }
 
 function renderOverlays() {
@@ -1066,24 +1258,41 @@ function renderOverlays() {
     ctx.fillStyle = `rgba(220,200,60,${player.pickFlash * 0.5})`;
     ctx.fillRect(0, 0, W, VIEW_H);
   }
-  if (gameState === "dead" || gameState === "won") {
-    ctx.fillStyle = "rgba(0,0,0,0.6)";
-    ctx.fillRect(0, 0, W, H);
-    ctx.textAlign = "center";
+  if (gameState === "play") return;
+
+  ctx.fillStyle = "rgba(0,0,0,0.65)";
+  ctx.fillRect(0, 0, W, H);
+  ctx.textAlign = "center";
+  if (gameState === "dead") {
     ctx.font = "bold 52px 'Courier New', monospace";
-    if (gameState === "dead") {
-      ctx.fillStyle = "#d01010";
-      ctx.fillText("YOU DIED", W / 2, H / 2 - 20);
-    } else {
-      ctx.fillStyle = "#e0a020";
-      ctx.fillText("LEVEL CLEARED", W / 2, H / 2 - 20);
-    }
+    ctx.fillStyle = "#d01010";
+    ctx.fillText("YOU DIED", W / 2, H / 2 - 30);
     ctx.font = "bold 20px 'Courier New', monospace";
     ctx.fillStyle = "#ccc";
-    ctx.fillText(`KILLS: ${player.kills}/${enemies.length}`, W / 2, H / 2 + 20);
-    ctx.fillText("PRESS R TO RESTART", W / 2, H / 2 + 50);
-    ctx.textAlign = "left";
+    ctx.fillText(LEVELS[levelIdx].name, W / 2, H / 2 + 10);
+    ctx.fillText("PRESS R TO RESTART LEVEL", W / 2, H / 2 + 42);
+  } else if (gameState === "intermission") {
+    ctx.font = "bold 36px 'Courier New', monospace";
+    ctx.fillStyle = "#e0a020";
+    ctx.fillText(LEVELS[levelIdx].name + " FINISHED", W / 2, H / 2 - 60);
+    ctx.font = "bold 22px 'Courier New', monospace";
+    ctx.fillStyle = "#ccc";
+    ctx.fillText(`KILLS: ${player.kills} / ${totalEnemies}`, W / 2, H / 2 - 10);
+    ctx.fillText(`ITEMS LEFT: ${pickups.length}`, W / 2, H / 2 + 22);
+    ctx.fillStyle = "#e0a020";
+    ctx.fillText(levelIdx + 1 < LEVELS.length
+      ? "PRESS SPACE FOR " + LEVELS[levelIdx + 1].name
+      : "PRESS SPACE TO FINISH", W / 2, H / 2 + 70);
+  } else if (gameState === "victory") {
+    ctx.font = "bold 44px 'Courier New', monospace";
+    ctx.fillStyle = "#e0a020";
+    ctx.fillText("YOU WIN", W / 2, H / 2 - 40);
+    ctx.font = "bold 20px 'Courier New', monospace";
+    ctx.fillStyle = "#ccc";
+    ctx.fillText("KNEE-DEEP HOMAGE COMPLETE", W / 2, H / 2 + 5);
+    ctx.fillText("PRESS R TO PLAY AGAIN", W / 2, H / 2 + 40);
   }
+  ctx.textAlign = "left";
 }
 
 // ---------------------------------------------------------
