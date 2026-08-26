@@ -1170,6 +1170,40 @@ const nukeTex = makeTexture(g => {
 // Procedural sprites (imp, pinky, medkit, ammo, fireball)
 // ---------------------------------------------------------
 const SPR = 64;
+// Background keying, tolerant of JPEG noise. Handles: transparent
+// PNGs, solid-color backgrounds, white art with gray drop shadows,
+// and checkerboard "transparency" patterns baked into JPGs — every
+// background shade is sampled around the image border, so banded
+// checkers key out too without touching interior grays.
+function buildBgKeyer(d, w, h) {
+  const near = (r, g, b, k) => Math.abs(r - k[0]) < 26 && Math.abs(g - k[1]) < 26 && Math.abs(b - k[2]) < 26;
+  const bgKeys = [];
+  if (d[3] > 200) {
+    bgKeys.push([d[0], d[1], d[2]]);
+    const base = bgKeys[0];
+    if (Math.max(base[0], base[1], base[2]) - Math.min(base[0], base[1], base[2]) < 16) {
+      const sample = (x, y) => {
+        const i = (y * w + x) * 4;
+        if (d[i + 3] < 200 || bgKeys.length >= 12) return;
+        const r = d[i], g2 = d[i + 1], b2 = d[i + 2];
+        if (Math.max(r, g2, b2) - Math.min(r, g2, b2) >= 16) return;   // only desaturated shades
+        if (!bgKeys.some(k => near(r, g2, b2, k))) bgKeys.push([r, g2, b2]);
+      };
+      for (let x = 0; x < w; x += 3) { sample(x, 0); sample(x, h - 1); }
+      for (let y = 0; y < h; y += 3) { sample(0, y); sample(w - 1, y); }
+    }
+  }
+  const shadowRule = bgKeys.length === 1 && bgKeys[0][0] + bgKeys[0][1] + bgKeys[0][2] > 600;
+  return (r, g, b) => {
+    if (!bgKeys.length) return false;
+    if (bgKeys.some(k => near(r, g, b, k))) return true;
+    if (shadowRule) {   // light desaturated gray = drop shadow on white art
+      const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+      if (mx - mn < 14 && mn > 168) return true;
+    }
+    return false;
+  };
+}
 function makeSprite(draw) {
   const c = document.createElement("canvas");
   c.width = c.height = SPR;
@@ -1598,7 +1632,6 @@ sprites.redkey = keycardSprite("#d02020");
 // -----------------------------------------------------
 const SHEET_MAP = [
   { file: "Demon.png",         set: "pinky" },
-  { file: "Baron Of Hell.png", set: "baron" },
   { file: "Zombie.png",        set: "zombie" },
   { file: "Cyber Demon.png",   set: "cyber" },
   { file: "Spiderdemon.png",   set: "spider" },
@@ -1611,38 +1644,7 @@ function sliceSheet(img) {
   let data;
   try { data = g.getImageData(0, 0, c.width, c.height); } catch { return null; }
   const d = data.data, w = c.width, h = c.height;
-  // Background keying, tolerant of JPEG noise. Handles: transparent
-  // PNGs, solid-color backgrounds, white art with gray drop shadows,
-  // and checkerboard "transparency" patterns baked into JPGs — every
-  // background shade is sampled around the image border, so banded
-  // checkers key out too without touching interior grays.
-  const near = (r, g, b, k) => Math.abs(r - k[0]) < 26 && Math.abs(g - k[1]) < 26 && Math.abs(b - k[2]) < 26;
-  const bgKeys = [];
-  if (d[3] > 200) {
-    bgKeys.push([d[0], d[1], d[2]]);
-    const base = bgKeys[0];
-    if (Math.max(base[0], base[1], base[2]) - Math.min(base[0], base[1], base[2]) < 16) {
-      const sample = (x, y) => {
-        const i = (y * w + x) * 4;
-        if (d[i + 3] < 200 || bgKeys.length >= 12) return;
-        const r = d[i], g2 = d[i + 1], b2 = d[i + 2];
-        if (Math.max(r, g2, b2) - Math.min(r, g2, b2) >= 16) return;   // only desaturated shades
-        if (!bgKeys.some(k => near(r, g2, b2, k))) bgKeys.push([r, g2, b2]);
-      };
-      for (let x = 0; x < w; x += 3) { sample(x, 0); sample(x, h - 1); }
-      for (let y = 0; y < h; y += 3) { sample(0, y); sample(w - 1, y); }
-    }
-  }
-  const shadowRule = bgKeys.length === 1 && bgKeys[0][0] + bgKeys[0][1] + bgKeys[0][2] > 600;
-  const isBg = (r, g, b) => {
-    if (!bgKeys.length) return false;
-    if (bgKeys.some(k => near(r, g, b, k))) return true;
-    if (shadowRule) {   // light desaturated gray = drop shadow on white art
-      const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
-      if (mx - mn < 14 && mn > 168) return true;
-    }
-    return false;
-  };
+  const isBg = buildBgKeyer(d, w, h);
   const solid = (x, y) => {
     const i = (y * w + x) * 4;
     if (d[i + 3] < 128) return false;
@@ -1684,11 +1686,9 @@ function sliceSheet(img) {
     const sc = Math.min(SPR / cw, SPR / ch);
     og.drawImage(c, cl.x0, cy0, cw, ch, (SPR - cw * sc) / 2, SPR - ch * sc, cw * sc, ch * sc);
     const od = og.getImageData(0, 0, SPR, SPR);
-    if (bgKeys.length) {
-      const p = od.data;
-      for (let i = 0; i < p.length; i += 4)
-        if (p[i + 3] > 0 && isBg(p[i], p[i + 1], p[i + 2])) p[i + 3] = 0;
-    }
+    const p = od.data;
+    for (let i = 0; i < p.length; i += 4)
+      if (p[i + 3] > 0 && isBg(p[i], p[i + 1], p[i + 2])) p[i + 3] = 0;
     return new Uint32Array(od.data.buffer);
   });
 }
@@ -1704,6 +1704,83 @@ for (const { file, set } of SHEET_MAP) {
   img.onerror = () => {};
   img.src = "sprites/" + file;
 }
+// Component-based slicing for custom art: flood-fills each sprite as
+// its own blob, so frames may overlap in rows or columns. Small
+// fragments (blood spray etc.) merge into the nearest large sprite.
+// Returns frames sorted left-to-right.
+function sliceComponents(img) {
+  const c = document.createElement("canvas");
+  c.width = img.width; c.height = img.height;
+  const g = c.getContext("2d");
+  g.drawImage(img, 0, 0);
+  let data;
+  try { data = g.getImageData(0, 0, c.width, c.height); } catch { return null; }
+  const d = data.data, w = c.width, h = c.height;
+  const isBg = buildBgKeyer(d, w, h);
+  const solid = i => d[i * 4 + 3] >= 128 && !isBg(d[i * 4], d[i * 4 + 1], d[i * 4 + 2]);
+  const seen = new Uint8Array(w * h);
+  let comps = [];
+  for (let start = 0; start < w * h; start++) {
+    if (seen[start] || !solid(start)) continue;
+    let x0 = start % w, x1 = x0, y0 = (start / w) | 0, y1 = y0, area = 0;
+    const q = [start];
+    seen[start] = 1;
+    while (q.length) {
+      const i = q.pop();
+      const cx = i % w, cy = (i / w) | 0;
+      area++;
+      if (cx < x0) x0 = cx; if (cx > x1) x1 = cx;
+      if (cy < y0) y0 = cy; if (cy > y1) y1 = cy;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        const nx = cx + dx, ny = cy + dy;
+        if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+        const ni = ny * w + nx;
+        if (!seen[ni] && solid(ni)) { seen[ni] = 1; q.push(ni); }
+      }
+    }
+    comps.push({ x0, x1, y0, y1, area });
+  }
+  if (!comps.length) return null;
+  // merge small fragments into overlapping/nearby large components
+  const bigArea = Math.max(...comps.map(cp => cp.area));
+  const pad = 14;
+  let merged = true;
+  while (merged) {
+    merged = false;
+    outer:
+    for (let i = 0; i < comps.length; i++) for (let j = 0; j < comps.length; j++) {
+      if (i === j) continue;
+      const a = comps[i], b = comps[j];
+      if (b.area >= bigArea * 0.08) continue;   // only fragments get absorbed
+      if (a.x0 - pad < b.x1 && b.x0 - pad < a.x1 && a.y0 - pad < b.y1 && b.y0 - pad < a.y1) {
+        a.x0 = Math.min(a.x0, b.x0); a.x1 = Math.max(a.x1, b.x1);
+        a.y0 = Math.min(a.y0, b.y0); a.y1 = Math.max(a.y1, b.y1);
+        a.area += b.area;
+        comps.splice(j, 1);
+        merged = true;
+        break outer;
+      }
+    }
+  }
+  comps = comps.filter(cp => cp.area > 300)
+               .sort((a, b) => (a.x0 + a.x1) - (b.x0 + b.x1))
+               .slice(0, 4);
+  return comps.map(cp => {
+    const cw = cp.x1 - cp.x0 + 1, ch = cp.y1 - cp.y0 + 1;
+    const oc = document.createElement("canvas");
+    oc.width = oc.height = SPR;
+    const og = oc.getContext("2d");
+    og.imageSmoothingEnabled = false;
+    const sc = Math.min(SPR / cw, SPR / ch);
+    og.drawImage(c, cp.x0, cp.y0, cw, ch, (SPR - cw * sc) / 2, SPR - ch * sc, cw * sc, ch * sc);
+    const od = og.getImageData(0, 0, SPR, SPR);
+    const p = od.data;
+    for (let i = 0; i < p.length; i += 4)
+      if (p[i + 3] > 0 && isBg(p[i], p[i + 1], p[i + 2])) p[i + 3] = 0;
+    return new Uint32Array(od.data.buffer);
+  });
+}
+
 // hell knight fallback art: tinted reuse of the baron drawings until
 // (or unless) the custom sheet below loads
 sprites.knightIdle = sprites.baronIdle;
@@ -1733,11 +1810,16 @@ const CUSTOM_ART = [
       sprites.knightPain = fr[Math.min(1, fr.length - 1)];
       if (fr.length > 2) sprites.knightCorpse = fr[2];
   } },
+  { file: "BaronCustom.jpg", apply: fr => {   // idle | death recoil | gibs
+      sprites.baronIdle = fr[0]; sprites.baronAttack = fr[0];
+      sprites.baronPain = fr[Math.min(1, fr.length - 1)];
+      if (fr.length > 2) sprites.baronCorpse = fr[2];
+  } },
 ];
 for (const { file, apply } of CUSTOM_ART) {
   const img = new Image();
   img.onload = () => {
-    const frames = sliceSheet(img);
+    const frames = sliceComponents(img);
     if (frames && frames.length) apply(frames);
   };
   img.onerror = () => {};
@@ -2148,7 +2230,8 @@ const ENEMY_TYPES = {
               idle: "pinkyIdle", attack: "pinkyAttack", pain: "pinkyPain", ball: "fireball", atkSfx: "bite",
               sfxSight: "pinkySight", sfxPain: "pinkyPain", sfxDie: "pinkyDie", sfxAct: "pinkyAct" },
   baron:    { hp: 320, speed: 1.5, dmg: 22, ranged: true,  cool: 1.7, pspeed: 6, scale: 1.35,
-              idle: "baronIdle", attack: "baronAttack", pain: "baronPain", ball: "greenball", atkSfx: "fireball",
+              idle: "baronIdle", attack: "baronAttack", pain: "baronPain", corpse: "baronCorpse",
+              ball: "greenball", atkSfx: "fireball",
               sfxSight: "baronSight", sfxPain: "baronPain", sfxDie: "baronDie", sfxAct: "baronAct" },
   knight:   { hp: 200, speed: 1.7, dmg: 18, ranged: true,  cool: 1.5, pspeed: 6.5, scale: 1.3,
               idle: "knightIdle", attack: "knightAttack", pain: "knightPain", corpse: "knightCorpse",
