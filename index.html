@@ -1600,7 +1600,6 @@ const SHEET_MAP = [
   { file: "Demon.png",         set: "pinky" },
   { file: "Baron Of Hell.png", set: "baron" },
   { file: "Zombie.png",        set: "zombie" },
-  { file: "Cacodemon.png",     set: "caco" },
   { file: "Lost Soul.png",     set: "soul" },
   { file: "Cyber Demon.png",   set: "cyber" },
   { file: "Spiderdemon.png",   set: "spider" },
@@ -1613,16 +1612,29 @@ function sliceSheet(img) {
   let data;
   try { data = g.getImageData(0, 0, c.width, c.height); } catch { return null; }
   const d = data.data, w = c.width, h = c.height;
-  // solid background color to key out, if the sheet has one (with
-  // tolerance for JPEG noise; bright keys also strip gray shadows)
-  let kr = -1, kg = 0, kb = 0, brightKey = false;
+  // Background keying, tolerant of JPEG noise. Handles: transparent
+  // PNGs, solid-color backgrounds, white art with gray drop shadows,
+  // and two-tone checkerboard "transparency" patterns baked into JPGs.
+  let kr = -1, kg = 0, kb = 0, k2r = -1, k2g = 0, k2b = 0, brightKey = false;
   if (d[3] > 200) {
     kr = d[0]; kg = d[1]; kb = d[2];
     brightKey = kr + kg + kb > 600;
+    const spread0 = Math.max(kr, kg, kb) - Math.min(kr, kg, kb);
+    if (spread0 < 16) {   // desaturated corner: look for a checker second shade
+      for (let x = 1; x < Math.min(w, 80); x++) {
+        const i = x * 4;
+        if (d[i + 3] < 200) break;
+        const r = d[i], g2 = d[i + 1], b2 = d[i + 2];
+        const sp = Math.max(r, g2, b2) - Math.min(r, g2, b2);
+        if (sp < 16 && Math.abs(r - kr) > 20) { k2r = r; k2g = g2; k2b = b2; break; }
+      }
+    }
   }
+  const near = (r, g, b, xr, xg, xb) => Math.abs(r - xr) < 26 && Math.abs(g - xg) < 26 && Math.abs(b - xb) < 26;
   const isBg = (r, g, b) => {
     if (kr < 0) return false;
-    if (Math.abs(r - kr) < 30 && Math.abs(g - kg) < 30 && Math.abs(b - kb) < 30) return true;
+    if (near(r, g, b, kr, kg, kb)) return true;
+    if (k2r >= 0) return near(r, g, b, k2r, k2g, k2b);   // checkerboard: two keys, no shadow rule
     if (brightKey) {   // light desaturated gray = drop shadow on white art
       const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
       if (mx - mn < 14 && mn > 168) return true;
@@ -1651,13 +1663,24 @@ function sliceSheet(img) {
     cells[cells.length - 1].x1 = x;
   }
   return cells.filter(cl => cl.x1 - cl.x0 > 4).map(cl => {
-    const cw = cl.x1 - cl.x0 + 1, ch = band.y1 - band.y0 + 1;
+    // trim each cell vertically to its own content so short sprites
+    // (e.g. corpses) still sit on the floor
+    let cy0 = band.y1, cy1 = band.y0;
+    for (let y = band.y0; y <= band.y1; y++)
+      for (let x = cl.x0; x <= cl.x1; x++)
+        if (solid(x, y)) {
+          if (y < cy0) cy0 = y;
+          if (y > cy1) cy1 = y;
+          break;
+        }
+    if (cy1 < cy0) { cy0 = band.y0; cy1 = band.y1; }
+    const cw = cl.x1 - cl.x0 + 1, ch = cy1 - cy0 + 1;
     const oc = document.createElement("canvas");
     oc.width = oc.height = SPR;
     const og = oc.getContext("2d");
     og.imageSmoothingEnabled = false;
     const sc = Math.min(SPR / cw, SPR / ch);
-    og.drawImage(c, cl.x0, band.y0, cw, ch, (SPR - cw * sc) / 2, SPR - ch * sc, cw * sc, ch * sc);
+    og.drawImage(c, cl.x0, cy0, cw, ch, (SPR - cw * sc) / 2, SPR - ch * sc, cw * sc, ch * sc);
     const od = og.getImageData(0, 0, SPR, SPR);
     if (kr >= 0) {
       const p = od.data;
@@ -1679,16 +1702,25 @@ for (const { file, set } of SHEET_MAP) {
   img.onerror = () => {};
   img.src = "sprites/" + file;
 }
-// custom imp art: a standing frame for all live states, plus a corpse
-// frame that dead imps leave behind on the floor
-for (const [file, apply] of [
-  ["ImpCustom.jpg", f => { sprites.impIdle = f; sprites.impAttack = f; sprites.impPain = f; }],
-  ["ImpCorpse.jpg", f => { sprites.impCorpse = f; }],
-]) {
+// custom monster art (user-made): frames applied per file; corpse
+// frames are left behind on the floor when the monster dies
+const CUSTOM_ART = [
+  { file: "ImpCustom.jpg", apply: fr => {
+      sprites.impIdle = fr[0]; sprites.impPain = fr[0];
+      sprites.impAttack = fr[Math.min(1, fr.length - 1)];
+  } },
+  { file: "ImpCorpse.jpg", apply: fr => { sprites.impCorpse = fr[0]; } },
+  { file: "CacoCustom.jpg", apply: fr => {   // idle | bite | corpse
+      sprites.cacoIdle = fr[0]; sprites.cacoPain = fr[0];
+      sprites.cacoAttack = fr[Math.min(1, fr.length - 1)];
+      if (fr.length > 2) sprites.cacoCorpse = fr[2];
+  } },
+];
+for (const { file, apply } of CUSTOM_ART) {
   const img = new Image();
   img.onload = () => {
     const frames = sliceSheet(img);
-    if (frames && frames.length) apply(frames[0]);
+    if (frames && frames.length) apply(frames);
   };
   img.onerror = () => {};
   img.src = "sprites/" + file;
@@ -2100,10 +2132,11 @@ const ENEMY_TYPES = {
   zombie:   { hp: 30,  speed: 1.8, dmg: 7,  ranged: true,  cool: 1.3, pspeed: 11, scale: 0.95,
               idle: "zombieIdle", attack: "zombieAttack", pain: "zombiePain", ball: "tracer", atkSfx: "shoot",
               sfxSight: "zombieSight", sfxPain: "impPain", sfxDie: "zombieDie", sfxAct: "impAct" },
-  caco:     { hp: 200, speed: 1.1, dmg: 18, ranged: true,  cool: 1.9, pspeed: 6, scale: 1.25,
-              idle: "cacoIdle", attack: "cacoAttack", pain: "cacoPain", ball: "fireball", atkSfx: "fireball",
+  caco:     { hp: 200, speed: 1.1, dmg: 18, ranged: true,  cool: 1.9, pspeed: 6, scale: 1.25, float: -0.3,
+              idle: "cacoIdle", attack: "cacoAttack", pain: "cacoPain", corpse: "cacoCorpse",
+              ball: "fireball", atkSfx: "fireball",
               sfxSight: "cacoSight", sfxPain: "pinkyPain", sfxDie: "cacoDie", sfxAct: "baronAct" },
-  lostsoul: { hp: 50,  speed: 3.4, dmg: 10, ranged: false, cool: 0.9, scale: 0.7,
+  lostsoul: { hp: 50,  speed: 3.4, dmg: 10, ranged: false, cool: 0.9, scale: 0.7, float: -0.25,
               idle: "soulIdle", attack: "soulAttack", pain: "soulPain", ball: "fireball", atkSfx: "soulSight",
               sfxSight: "soulSight", sfxPain: "pinkyPain", sfxDie: "soulDie", sfxAct: "baronAct" },
   cyber:    { hp: 650, speed: 1.3, dmg: 38, ranged: true,  cool: 1.4, pspeed: 8, scale: 1.6,
@@ -2851,12 +2884,13 @@ function renderWorld() {
   const items = [];
   for (const e of enemies) {
     if (e.dead) continue;
-    let img, hScale = e.scale, sink = 0;
+    const hover = e.float ? e.float + Math.sin(performance.now() / 400 + e.x * 3) * 0.05 : 0;
+    let img, hScale = e.scale, sink = hover;
     if (e.state === "dying") {
       img = sprites[e.pain];
       const t = Math.min(1, e.stateT / 0.45);
       hScale = e.scale * (1 - t * 0.8);
-      sink = t * 0.5;
+      sink = t * 0.5 + hover * (1 - t);   // floaters drop to the ground as they die
     }
     else if (e.state === "attack") img = sprites[e.attack];
     else if (e.state === "pain")   img = sprites[e.pain];
