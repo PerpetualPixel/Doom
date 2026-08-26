@@ -1852,27 +1852,42 @@ function keyOutGunFrame(g, w, h) {
   try {
     const d = g.getImageData(0, 0, w, h);
     const p = d.data;
-    const counts = new Map();
-    let opaque = 0;
-    const tally = (x, y) => {
-      const i = (y * w + x) * 4;
-      if (p[i + 3] < 200) return;
+    // histogram over all opaque pixels; per color bucket track count,
+    // border presence, mean color, and bounding box
+    const buckets = new Map();
+    let opaque = 0, borderOpaque = 0;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const j = (y * w + x) * 4;
+      if (p[j + 3] < 200) continue;
       opaque++;
-      const q = ((p[i] >> 4) << 8) | ((p[i + 1] >> 4) << 4) | (p[i + 2] >> 4);
-      counts.set(q, (counts.get(q) || 0) + 1);
-    };
-    for (let x = 0; x < w; x++) { tally(x, 0); tally(x, h - 1); }
-    for (let y = 1; y < h - 1; y++) { tally(0, y); tally(w - 1, y); }
+      const border = x === 0 || y === 0 || x === w - 1 || y === h - 1;
+      if (border) borderOpaque++;
+      const q = ((p[j] >> 4) << 8) | ((p[j + 1] >> 4) << 4) | (p[j + 2] >> 4);
+      let e = buckets.get(q);
+      if (!e) { e = { n: 0, b: 0, sr: 0, sg: 0, sb: 0, x0: x, x1: x, y0: y, y1: y }; buckets.set(q, e); }
+      e.n++;
+      if (border) e.b++;
+      e.sr += p[j]; e.sg += p[j + 1]; e.sb += p[j + 2];
+      if (x < e.x0) e.x0 = x; if (x > e.x1) e.x1 = x;
+      if (y < e.y0) e.y0 = y; if (y > e.y1) e.y1 = y;
+    }
     if (!opaque) return;
-    let bestQ = -1, bestN = 0;
-    for (const [q, n] of counts) if (n > bestN) { bestN = n; bestQ = q; }
-    if (bestN < opaque * 0.4) return;   // no dominant border color: leave as-is
-    const kr = (((bestQ >> 8) & 15) << 4) | 8;
-    const kg = (((bestQ >> 4) & 15) << 4) | 8;
-    const kb = ((bestQ & 15) << 4) | 8;
-    for (let i = 0; i < p.length; i += 4)
-      if (p[i + 3] > 0 && Math.abs(p[i] - kr) < 16 && Math.abs(p[i + 1] - kg) < 16 && Math.abs(p[i + 2] - kb) < 16)
-        p[i + 3] = 0;
+    // background = color dominating the border, OR a large flat color
+    // filling its own bounding box like a backdrop rectangle (shaded
+    // gun pixels are scattered, so they never satisfy the density bar)
+    let bg = null;
+    for (const e of buckets.values()) {
+      const density = e.n / ((e.x1 - e.x0 + 1) * (e.y1 - e.y0 + 1));
+      const mr = e.sr / e.n, mg = e.sg / e.n, mb = e.sb / e.n;
+      const dark = Math.max(mr, mg, mb) < 52;
+      const borderDominant = borderOpaque > 20 && e.b >= borderOpaque * 0.4;
+      const solidBox = e.n >= opaque * 0.25 && density >= (dark ? 0.8 : 0.55);
+      if ((borderDominant || solidBox) && (!bg || e.n > bg.n)) bg = { mr, mg, mb, n: e.n };
+    }
+    if (!bg) return;
+    for (let j = 0; j < p.length; j += 4)
+      if (p[j + 3] > 0 && Math.abs(p[j] - bg.mr) < 16 && Math.abs(p[j + 1] - bg.mg) < 16 && Math.abs(p[j + 2] - bg.mb) < 16)
+        p[j + 3] = 0;
     g.putImageData(d, 0, 0);
   } catch {}   // file://: pixels unreadable, draw the frame as-is
 }
