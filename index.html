@@ -1844,26 +1844,47 @@ const GUN_ART_FILES = [   // [idle, fire] per weapon slot 0-6
   ["200px-DevDoom1993-BFG-2704_anim1.gif", null],
 ];
 const gunArt = GUN_ART_FILES.map(() => ({ idle: null, fire: null }));
+// Key out a weapon frame's background: find the dominant opaque color
+// around the frame border and clear everything near it. Works whether
+// the corner pixel is transparent or not; frames with genuinely
+// transparent backgrounds are left untouched.
+function keyOutGunFrame(g, w, h) {
+  try {
+    const d = g.getImageData(0, 0, w, h);
+    const p = d.data;
+    const counts = new Map();
+    let opaque = 0;
+    const tally = (x, y) => {
+      const i = (y * w + x) * 4;
+      if (p[i + 3] < 200) return;
+      opaque++;
+      const q = ((p[i] >> 4) << 8) | ((p[i + 1] >> 4) << 4) | (p[i + 2] >> 4);
+      counts.set(q, (counts.get(q) || 0) + 1);
+    };
+    for (let x = 0; x < w; x++) { tally(x, 0); tally(x, h - 1); }
+    for (let y = 1; y < h - 1; y++) { tally(0, y); tally(w - 1, y); }
+    if (!opaque) return;
+    let bestQ = -1, bestN = 0;
+    for (const [q, n] of counts) if (n > bestN) { bestN = n; bestQ = q; }
+    if (bestN < opaque * 0.4) return;   // no dominant border color: leave as-is
+    const kr = (((bestQ >> 8) & 15) << 4) | 8;
+    const kg = (((bestQ >> 4) & 15) << 4) | 8;
+    const kb = ((bestQ & 15) << 4) | 8;
+    for (let i = 0; i < p.length; i += 4)
+      if (p[i + 3] > 0 && Math.abs(p[i] - kr) < 16 && Math.abs(p[i + 1] - kg) < 16 && Math.abs(p[i + 2] - kb) < 16)
+        p[i + 3] = 0;
+    g.putImageData(d, 0, 0);
+  } catch {}   // file://: pixels unreadable, draw the frame as-is
+}
 function loadGunImage(file, slot, key) {
   const img = new Image();
   img.onload = () => {
-    let out = img;
-    try {   // key out a solid background color if the file has one
-      const c = document.createElement("canvas");
-      c.width = img.width; c.height = img.height;
-      const g = c.getContext("2d");
-      g.drawImage(img, 0, 0);
-      const d = g.getImageData(0, 0, c.width, c.height);
-      const p = d.data;
-      if (p[3] > 200) {
-        const kr = p[0], kg = p[1], kb = p[2];
-        for (let i = 0; i < p.length; i += 4)
-          if (Math.abs(p[i] - kr) < 12 && Math.abs(p[i + 1] - kg) < 12 && Math.abs(p[i + 2] - kb) < 12) p[i + 3] = 0;
-        g.putImageData(d, 0, 0);
-      }
-      out = c;
-    } catch {}
-    gunArt[slot][key] = out;
+    const c = document.createElement("canvas");
+    c.width = img.width; c.height = img.height;
+    const g = c.getContext("2d");
+    g.drawImage(img, 0, 0);
+    keyOutGunFrame(g, c.width, c.height);
+    gunArt[slot][key] = c;
   };
   img.onerror = () => {};
   img.src = "Guns/gifs/" + file;
@@ -1893,16 +1914,7 @@ async function loadGunAnim(file, slot) {
       c.width = image.displayWidth; c.height = image.displayHeight;
       const g = c.getContext("2d");
       g.drawImage(image, 0, 0);
-      try {   // key out a solid background color if the gif has one
-        const d2 = g.getImageData(0, 0, c.width, c.height);
-        const p = d2.data;
-        if (p[3] > 200) {
-          const kr = p[0], kg = p[1], kb = p[2];
-          for (let j = 0; j < p.length; j += 4)
-            if (Math.abs(p[j] - kr) < 12 && Math.abs(p[j + 1] - kg) < 12 && Math.abs(p[j + 2] - kb) < 12) p[j + 3] = 0;
-          g.putImageData(d2, 0, 0);
-        }
-      } catch {}
+      keyOutGunFrame(g, c.width, c.height);
       frames.push(c);
       durs.push(image.duration ? Math.max(0.03, image.duration / 1e6) : 0.1);
       image.close();
