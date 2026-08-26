@@ -251,7 +251,7 @@ const LEVELS = [
       "#..u.........T....i..........#",
       "#....TTTT....T...............#",
       "#.......T....T....TTTTTTTT...#",
-      "#..b....T....D....T......T...#",
+      "#..b....T....D....T.a..h.T...#",
       "#.......T....T....T..pp..T...#",
       "#..TTTTTT....T....T......T...#",
       "#............T....TTTDTTTT...#",
@@ -293,7 +293,7 @@ const LEVELS = [
       "#.....p..........p.........#",
       "#..........................#",
       "#....CCCC........CCCC......#",
-      "#....C..C........C..C......#",
+      "#....Ca.C........Ch.C......#",
       "#....C..C...ii...C..C......#",
       "#....CDCC........CCDC......#",
       "#..........................#",
@@ -2016,6 +2016,15 @@ const WEAPONS = [
   { name: "BFG9000",         ammoType: "cells",   rate: 1.7,  dmg: 300, rnd: 100, use: 40, proj: "bfgball", pspeed: 9, splash: 3.2, splashDmg: 160, sfx: "bfg" },
 ];
 const AMMO_MAX = { bullets: 200, shells: 50, rockets: 50, cells: 300 };
+const ENEMY_DROPS = {   // clearing a fight always pays something
+  zombie: { chance: 1.0, spr: "clip",      give: { bullets: 10 } },
+  imp:    { chance: 0.5, spr: "clip",      give: { bullets: 10 } },
+  pinky:  { chance: 0.5, spr: "shellbox",  give: { shells: 4 } },
+  caco:   { chance: 0.6, spr: "shellbox",  give: { shells: 4 } },
+  baron:  { chance: 1.0, spr: "rocketbox", give: { rockets: 2 } },
+  cyber:  { chance: 1.0, spr: "cellpack",  give: { cells: 40 } },
+  spider: { chance: 1.0, spr: "cellpack",  give: { cells: 40 } },
+};
 const WEAPON_PICKUPS = {   // map char -> weapon index + ammo it comes with
   e: { w: 2, give: { shells: 8 } },
   f: { w: 3, give: { bullets: 20 } },
@@ -2042,6 +2051,7 @@ function resetLoadout() {
 resetLoadout();
 let enemies = [], pickups = [], projectiles = [], pProjectiles = [], barrels = [], decors = [], effects = [];
 let floorMap = null;   // per-cell floor type: 0 plate, 1 water, 2 nukage, 3 teleporter pad
+let explored = null;   // automap fog of war: cells the player has actually seen
 let nukeTimer = 0, teleports = [], teleCooldown = 0;
 let gameState = "title";   // title | play | intermission | dead | victory
 let fireCooldown = 0, muzzle = 0, showMap = false, faceTimer = 0, faceLook = 0;
@@ -2090,6 +2100,7 @@ function loadLevel() {
   MAP_H = L.rows.length;
   MAP = new Array(MAP_W * MAP_H).fill(0);
   floorMap = new Uint8Array(MAP_W * MAP_H);
+  explored = new Uint8Array(MAP_W * MAP_H);
   enemies = []; pickups = []; projectiles = []; pProjectiles = []; barrels = []; decors = []; effects = [];
   doors.clear();
   const telePads = { t: [], u: [], v: [], w: [], x: [], z: [] };
@@ -2573,7 +2584,12 @@ function update(dt) {
     if (e.dead) continue;
     e.stateT += dt;
     if (e.state === "dying") {
-      if (e.stateT > 0.45) { e.dead = true; player.kills++; }
+      if (e.stateT > 0.45) {
+        e.dead = true; player.kills++;
+        const drop = ENEMY_DROPS[e.type];
+        if (drop && Math.random() < drop.chance)
+          pickups.push({ kind: "ammo", spr: drop.spr, give: drop.give, x: e.x, y: e.y });
+      }
       continue;
     }
     if (e.state === "pain") {
@@ -2758,6 +2774,8 @@ function renderWorld() {
     while (!hit) {
       if (sideX < sideY) { sideX += dX; mapX += stepX; side = 0; }
       else               { sideY += dY; mapY += stepY; side = 1; }
+      if (mapX >= 0 && mapY >= 0 && mapX < MAP_W && mapY < MAP_H)
+        explored[mapY * MAP_W + mapX] = 1;   // fog of war: seen by this ray
       const t = mapAt(mapX, mapY);
       if (!t) continue;
       if (DOOR_TILES.has(t)) {
@@ -3051,6 +3069,7 @@ function renderMinimap() {
   ctx.fillStyle = "rgba(0,0,0,0.55)";
   ctx.fillRect(ox - 2, oy - 2, MAP_W * s + 4, MAP_H * s + 4);
   for (let y = 0; y < MAP_H; y++) for (let x = 0; x < MAP_W; x++) {
+    if (!explored[y * MAP_W + x]) continue;   // fog of war
     const t = MAP[y * MAP_W + x];
     if (t) {
       const d = DOOR_TILES.has(t) ? doorAt(x, y) : null;
@@ -3060,12 +3079,17 @@ function renderMinimap() {
         t === 11 ? "#3060e0" : t === 12 ? "#d8b820" : t === 13 ? "#d02020" :
         t === 9 || t === 10 ? "#d02020" : "#8a8a8a";   // secret doors (14) stay wall-gray
       ctx.fillRect(ox + x * s, oy + y * s, s - 1, s - 1);
+    } else if (floorMap[y * MAP_W + x] === 3) {   // teleporter pad
+      ctx.fillStyle = "#40c8c8";
+      ctx.fillRect(ox + x * s + 1, oy + y * s + 1, s - 3, s - 3);
     }
   }
-  for (const e of enemies) {
-    if (e.dead) continue;
-    ctx.fillStyle = e.type === "pinky" ? "#e070a0" : "#c06030";
-    ctx.fillRect(ox + e.x * s - 2, oy + e.y * s - 2, 4, 4);
+  // discovered items (keycards deliberately not shown)
+  for (const p of pickups) {
+    if (p.kind !== "medkit" && p.kind !== "ammo" && p.kind !== "weapon") continue;
+    if (!explored[(p.y | 0) * MAP_W + (p.x | 0)]) continue;
+    ctx.fillStyle = p.kind === "medkit" ? "#e05050" : p.kind === "weapon" ? "#ff9020" : "#d8c060";
+    ctx.fillRect(ox + p.x * s - 1, oy + p.y * s - 1, 3, 3);
   }
   ctx.fillStyle = "#30d030";
   ctx.beginPath();
