@@ -309,7 +309,7 @@ const LEVELS = [
   {
     name: "E1M8: PHOBOS ANOMALY",
     music: "10. E1M8; E3M4 - Sign Of Evil.mp3",
-    next: null,   // episode ends here
+    next: 9,   // on to The Shores of Hell
     rows: [
       "############################",
       "#............T.............#",
@@ -367,6 +367,537 @@ const LEVELS = [
       "#...................#.#.#..#",
       "#...................#.#.#..#",
       "#.......t..................#",
+      "############################",
+    ],
+  },
+  {
+    name: "E2M1: DEIMOS ANOMALY",
+    music: "12. E2M1 - I Sawed The Demons.mp3",
+    rows: [
+      "############################",
+      "#P...........#.............#",
+      "#............#.....o.......#",
+      "#....t.......#.............#",
+      "#..g.........#.....u.......#",
+      "#............#.............#",
+      "#....BB......#....BB.......#",
+      "#............#.............#",
+      "#..h....a....#......m......#",
+      "#............#.............#",
+      "##############.............#",
+      "#..........................#",
+      "#...g....o.......g.........#",
+      "#..........................#",
+      "#......BB........BB........#",
+      "#......BB..%%%%..BB........#",
+      "#..........%%%%............#",
+      "#..........................#",
+      "#............X.............#",
+      "#....a..........h..........#",
+      "#.........m................#",
+      "#..........................#",
+      "#..............c...........#",
+      "############################",
+    ],
+  },
+  {
+    name: "E2M2: CONTAINMENT AREA",
+    music: "13. E2M2 - The Demons Of Adrian's Pen.mp3",
+    rows: [
+      "############################",
+      "#P.....W...W......W........#",
+      "#......W...W..WWW.W...g....#",
+      "#..WWWW....W......W........#",
+      "#..........W.WW...WWWW.....#",
+      "#..g...WW.....WW......m....#",
+      "#......WW..............WW..#",
+      "#.WW........WWWW.......WW..#",
+      "#.WW...p....W..W..g........#",
+      "#..........W..W............#",
+      "#...WWW.........WWW....a...#",
+      "#.....................WWW..#",
+      "#..o......h................#",
+      "#....WWWW........WWWW......#",
+      "#....W..............W......#",
+      "#....W....j.........W..p...#",
+      "#....W..............W......#",
+      "#....WWWWWWWDWWWWWWWW......#",
+      "#..........................#",
+      "#..g..........g............#",
+      "#....................#####J#",
+      "#...a......h.........#..X..#",
+      "#....................#.....#",
+      "############################",
+    ],
+  },
+  {
+    name: "E2M3: REFINERY",
+    music: "14. E2M3; INTER - Intermission From Doom.mp3",
+    rows: [
+      "############################",
+      "#P.........................#",
+      "#..........................#",
+      "#...RRRRRR......RRRRRR.....#",
+      "#...R....R......R....R.....#",
+      "#...R.o..R......R..g.R.....#",
+      "#...RRDRRR......RRDRRR.....#",
+      "#..........................#",
+      "#%%%%%%%%%%%%%%%%%%%%%%%%..#",
+      "#%%%%%%%%%%%%%%%%%%%%%%%%..#",
+      "#..........................#",
+      "#....m..........o..........#",
+      "#..%%%%%%%%%%%%%%%%%%%%%%%%#",
+      "#..%%%%%%%%%%%%%%%%%%%%%%%%#",
+      "#..........................#",
+      "#...g..............p.......#",
+      "#..........................#",
+      "#RRRRRRRRRRRRDRRRRRRRRRRRRR#",
+      "#..........................#",
+      "#......h...........X.......#",
+      "#..a.......................#",
+      "#..............g...........#",
+      "#..........................#",
+      "############################",
+    ],
+  },
+  {
+    name: "E2M4: DEIMOS LAB",
+    music: "15. E2M4 - They're Going To Get You.mp3",
+    rows: [
+      "############################",
+      "#P...........C.............#",
+      "#............C......o......#",
+      "#....~~~~....C.............#",
+      "#....~~~~....C....CCCCCC...#",
+      "#............C....C....C...#",
+      "#..g.........C....C.k..C...#",
+      "#............D....C....C...#",
+      "#............C....CCDCCC...#",
+      "#............C.............#",
+      "#...o........C......m......#",
+      "#............C.............#",
+      "#CCCCCCKCCCCCCCCCCCCCCCCCCC#",
+      "#..........................#",
+      "#..~~~~~~~~~~~~~~~~~~~~....#",
+      "#..~~~~~~~~~~~~~~~~~~~~.g..#",
+      "#..........................#",
+      "#.....o............o.......#",
+      "#..........................#",
+      "#........CCCDCCCC..........#",
+      "#........C..X...C....h.....#",
+      "#........C......C..........#",
+      "#........CCCCCCCC..........#",
+      "############################",
+    ],
+  },
+  {
+    name: "E2M5: COMMAND CENTER",
+    music: "09. E1M7; E2M5; E3M5 - Demons On The Prey.mp3",
+    secretNext: 17,   // secret exit leads to E2M9: FORTRESS OF MYSTERY
+    rows: [
+      "############################",
+      "#P.........................#",
+      "#..........................#",
+      "#...CCCCCCCCCCCCCCCCCC.....#",
+      "#...C................C.....#",
+      "#...C.o..............C..g..#",
+      "#...C..CCCCCCCCCC....C.....#",
+      "#...C..C........C....C.....#",
+      "#...D...C.S......C...D.....#",
+      "#...C..CCCCsCCCCC....C.....#",
+      "#...C................C.....#",
+      "#...CCCCCCCCDCCCCCCCCC.....#",
+      "#..........................#",
+      "#..g.........o.........m...#",
+      "#..........................#",
+      "#....%%%%%..........%%%%...#",
+      "#....%%%%%....p.....%%%%...#",
+      "#..........................#",
+      "#.......CCDCCC.............#",
+      "#.......C....C.....a...h...#",
+      "#.......C.X..C.............#",
+      "#.......C....C.............#",
+      "#.......CCCCCC.............#",
+      "############################",
+    ],
+  },
+  {
+    name: "E2M6: HALLS OF THE DAMNED",
+    music: "16. E2M6 - Sinister.mp3",
+    rows: [
+      "############################",
+      "#P.....#.........#.........#",
+      "#......#....m....#....g....#",
+      "#......#.........#.........#",
+      "#..a...#.........#..h......#",
+      "#......#.........#.........#",
+      "#......................o...#",
+      "#......#.........#.........#",
+      "#..g...#....p....#.....m...#",
+      "#......#.........#.........#",
+      "#......#.........#.........#",
+      "#......#....k....#..b......#",
+      "#......#.........#.........#",
+      "#......................g...#",
+      "#......#.........#.........#",
+      "#..m...#.........#....o....#",
+      "#......#.........#.........#",
+      "#......#.........#.........#",
+      "#########K##################",
+      "#..........................#",
+      "#............X.........h...#",
+      "#..........................#",
+      "#..a.......................#",
+      "############################",
+    ],
+  },
+  {
+    name: "E2M7: SPAWNING VATS",
+    music: "17. E2M7; E3M7 - Waltz Of The Demons.mp3",
+    rows: [
+      "############################",
+      "#P.........................#",
+      "#..........................#",
+      "#..~~~..%%%..~~~..%%%......#",
+      "#..~~~..%%%..~~~..%%%..t...#",
+      "#..........................#",
+      "#.....g........o...........#",
+      "#..%%%..~~~..%%%..~~~......#",
+      "#..%%%..~~~..%%%..~~~..x...#",
+      "#..........................#",
+      "############D###############",
+      "#..........................#",
+      "#...m.........p......o.....#",
+      "#..........................#",
+      "#..CCCC....CCCC....CCCC....#",
+      "#..C%%C....C~~C....C%%C....#",
+      "#..CCCC....CCCC....CCCC....#",
+      "#..........................#",
+      "#....u..............z......#",
+      "#..........................#",
+      "#.........X................#",
+      "#...h...............a......#",
+      "#..........................#",
+      "############################",
+    ],
+  },
+  {
+    name: "E2M8: TOWER OF BABEL",
+    music: "18. E2M8 - Nobody Told Me About id.mp3",
+    next: 18,   // on to Inferno
+    rows: [
+      "############################",
+      "#P.........................#",
+      "#..........................#",
+      "#...BB..............BB.....#",
+      "#...BB..............BB.....#",
+      "#..........................#",
+      "#.........a....h...........#",
+      "#..........................#",
+      "#......b..............b....#",
+      "#..........................#",
+      "#............y.............#",
+      "#..........................#",
+      "#......b..............b....#",
+      "#..........................#",
+      "#...BB..............BB.....#",
+      "#...BB..............BB.....#",
+      "#..........................#",
+      "#....h....a....h....a......#",
+      "#..........................#",
+      "#BBBBBBBBBBBBDBBBBBBBBBBBBB#",
+      "#..........................#",
+      "#.............X............#",
+      "#..........................#",
+      "############################",
+    ],
+  },
+  {
+    name: "E2M9: FORTRESS OF MYSTERY",
+    music: "11. E1M9; E3M9 - Hiding The Secrets.mp3",
+    next: 14,   // secret level exits back to E2M6
+    rows: [
+      "############################",
+      "#P.........................#",
+      "#..........................#",
+      "#..o.....o.....o...........#",
+      "#..........................#",
+      "#........j.k.l.............#",
+      "#..........................#",
+      "#....n.........n...........#",
+      "#..........................#",
+      "#BBBBBBBBBJBBBBKBBBBBLBBBBB#",
+      "#..........................#",
+      "#...h.....a.......h....a...#",
+      "#..........................#",
+      "#.....o.........o..........#",
+      "#..........................#",
+      "#BBBBBBBBBBBBDBBBBBBBBBBBBB#",
+      "#..........................#",
+      "#..........X...............#",
+      "#..........................#",
+      "############################",
+    ],
+  },
+  {
+    name: "E3M1: HELL KEEP",
+    music: "19. E3M1 - Untitled.mp3",
+    rows: [
+      "############################",
+      "#P.........................#",
+      "#..........................#",
+      "#....BBBBBBBBBBBBBBBB......#",
+      "#....B..............B......#",
+      "#....B..m........m..B......#",
+      "#....B..............B......#",
+      "#....B....%%%%......B..a...#",
+      "#....B....%%%%......B......#",
+      "#....B..............B......#",
+      "#....B...o......g...B......#",
+      "#....B.......X......B......#",
+      "#....B..............B......#",
+      "#....BBBBBBBDBBBBBBBB......#",
+      "#..........................#",
+      "#......m........m..........#",
+      "#..........................#",
+      "#...h...........a..........#",
+      "#..........................#",
+      "############################",
+    ],
+  },
+  {
+    name: "E3M2: SLOUGH OF DESPAIR",
+    music: "20. E3M2 - Donna To The Rescue.mp3",
+    rows: [
+      "############################",
+      "#P.........%%%%............#",
+      "#....%%%...%%%%...%%%......#",
+      "#....%%%........g.%%%......#",
+      "#..........m...............#",
+      "#.%%%%..........%%%%%......#",
+      "#.%%%%....o.....%%%%%..b...#",
+      "#.%%%%..........%%%%%......#",
+      "#..........................#",
+      "#....g........%%%....m.....#",
+      "#.............%%%..........#",
+      "#..h.......................#",
+      "#......%%%%%%.....o........#",
+      "#......%%%%%%..............#",
+      "#..................p.......#",
+      "#...%%%........%%%%%.......#",
+      "#...%%%...a....%%%%%.......#",
+      "#..........................#",
+      "#.............X............#",
+      "#..........................#",
+      "#.....m..........o.........#",
+      "#..a.....h.................#",
+      "#..........................#",
+      "############################",
+    ],
+  },
+  {
+    name: "E3M3: PANDEMONIUM",
+    music: "21. E3M3 - Deep Into The Code.mp3",
+    rows: [
+      "############################",
+      "#P.....B.........C.........#",
+      "#......B....g....C....o....#",
+      "#......B.........C.........#",
+      "#..BBBBB..CCCCC..CCCC......#",
+      "#..........................#",
+      "#...m..........p......m....#",
+      "#..CCCC..BBBBB..BBBB.......#",
+      "#......................g...#",
+      "#..o.......b...............#",
+      "#..BBBB..CCCC..CCCCC.......#",
+      "#..........................#",
+      "#.....g..........o.........#",
+      "#..CCCCCCCCCCCCCCCCCCCC....#",
+      "#..C..................C....#",
+      "#..C....X......h......C....#",
+      "#..C..................C....#",
+      "#..CCCCCCCCCDCCCCCCCCCC....#",
+      "#..........................#",
+      "#....m..........g..........#",
+      "#...a.......h..............#",
+      "#..........................#",
+      "#..........................#",
+      "############################",
+    ],
+  },
+  {
+    name: "E3M4: HOUSE OF PAIN",
+    music: "10. E1M8; E3M4 - Sign Of Evil.mp3",
+    rows: [
+      "############################",
+      "#P.........................#",
+      "#..b...b...b...b...b.......#",
+      "#..........................#",
+      "#BBBBBBBBDBBBBBBBBBBBBBBBBB#",
+      "#%%%%%%%%%%%%%%%%%%%%......#",
+      "#%%%%%%%%%%%%%%%%%%%%..l...#",
+      "#%%%%%%%%%%%%%%%%%%%%......#",
+      "#..........................#",
+      "#....o..........o..........#",
+      "#..........................#",
+      "#BBBBBBBBBBBBBBBBBBLBBBBBBB#",
+      "#..........................#",
+      "#...m.....g.......m........#",
+      "#..........................#",
+      "#....h..........a..........#",
+      "#..b.....b......b..........#",
+      "#..........................#",
+      "#..........X...............#",
+      "#..........................#",
+      "#......g..........o........#",
+      "#..........................#",
+      "#..........................#",
+      "############################",
+    ],
+  },
+  {
+    name: "E3M5: UNHOLY CATHEDRAL",
+    music: "09. E1M7; E2M5; E3M5 - Demons On The Prey.mp3",
+    rows: [
+      "############################",
+      "#P.........................#",
+      "#....BB......BB......BB....#",
+      "#....BB......BB......BB....#",
+      "#..........................#",
+      "#..t....................t..#",
+      "#..........................#",
+      "#....BB......BB......BB....#",
+      "#....BB..n...BB...n..BB....#",
+      "#..........................#",
+      "#............u.............#",
+      "#..........................#",
+      "#....BB......BB......BB....#",
+      "#....BB......BB......BB....#",
+      "#..........................#",
+      "#.....m..........m.........#",
+      "#..........................#",
+      "#BBBBBBBBBBBDBBBBBBBBBBBBBB#",
+      "#..........................#",
+      "#........X.........h.......#",
+      "#..........................#",
+      "#...a...............a......#",
+      "#..........................#",
+      "############################",
+    ],
+  },
+  {
+    name: "E3M6: MT. EREBUS",
+    music: "08. E1M6; E3M6 - On The Hunt.mp3",
+    secretNext: 26,   // secret exit leads to E3M9: WARRENS
+    rows: [
+      "############################",
+      "#P.........................#",
+      "#..........................#",
+      "#..%%%%%%%%%%%%%%%%%%%.....#",
+      "#..%%%%%%%%%%%%%%%%%%%..o..#",
+      "#..%%CCCC%%%%%BBBB%%%%.....#",
+      "#..%%C.hC%%%%%B..B%%%%..g..#",
+      "#..%%C..C%%%%%B.aB%%%%.....#",
+      "#..%%CCDC%%%%%BBDB%%%%.....#",
+      "#..%%%%%%%%%%%%%%%%%%%.....#",
+      "#..%%%%%%%%%%%%%%%%%%%.m...#",
+      "#..........................#",
+      "#.....g..........o.........#",
+      "#..........................#",
+      "#....BBBBB.................#",
+      "#....B...B.......h.........#",
+      "#....B.S.B.................#",
+      "#....BBsBB.................#",
+      "#..........................#",
+      "#..........X......a........#",
+      "#..........................#",
+      "#...m...........g..........#",
+      "#..........................#",
+      "############################",
+    ],
+  },
+  {
+    name: "E3M7: LIMBO",
+    music: "17. E2M7; E3M7 - Waltz Of The Demons.mp3",
+    rows: [
+      "############################",
+      "#P.........................#",
+      "#..~~~~~~~~~~~~~~~~~~~~....#",
+      "#..~~~~~~~~~~~~~~~~~~~~.g..#",
+      "#..~~BB~~~~~CC~~~~~BB~~....#",
+      "#..~~BB~~~~~CC~~~~~BB~~....#",
+      "#..~~~~~~~~~~~~~~~~~~~~....#",
+      "#..~~~~~l~~~~~~~~~~~~~~....#",
+      "#..~~~~~~~~~~~~~~~~~~~~....#",
+      "#..........................#",
+      "#....o.........m......o....#",
+      "#..........................#",
+      "#BBBBBBBBBBBLBBBBBBBBBBBBBB#",
+      "#..........................#",
+      "#......m.........g.........#",
+      "#..........................#",
+      "#.......~~~~~~~~~~.........#",
+      "#.......~~~X~~~~~~....h....#",
+      "#.......~~~~~~~~~~.........#",
+      "#..........................#",
+      "#...a...............a......#",
+      "#..........................#",
+      "#..........................#",
+      "############################",
+    ],
+  },
+  {
+    name: "E3M8: DIS",
+    music: "22. E3M8 - Facing The Spider.mp3",
+    next: null,   // the end
+    rows: [
+      "############################",
+      "#P.........................#",
+      "#..........................#",
+      "#...BB...............BB....#",
+      "#..........................#",
+      "#........h.....a...........#",
+      "#..........................#",
+      "#......b...........b.......#",
+      "#..........................#",
+      "#..........................#",
+      "#.............q............#",
+      "#..........................#",
+      "#..........................#",
+      "#......b...........b.......#",
+      "#..........................#",
+      "#....a.....h......a........#",
+      "#..........................#",
+      "#...BB...............BB....#",
+      "#..........................#",
+      "#............X.............#",
+      "#..........................#",
+      "############################",
+    ],
+  },
+  {
+    name: "E3M9: WARRENS",
+    music: "11. E1M9; E3M9 - Hiding The Secrets.mp3",
+    next: 24,   // secret level exits back to E3M7
+    rows: [
+      "############################",
+      "#P.........................#",
+      "#....n..........n..........#",
+      "#..........................#",
+      "#..BBBBBBBBBBBBBBBBBB......#",
+      "#..B................B......#",
+      "#..B...m........m...B..a...#",
+      "#..B................B......#",
+      "#..B..o.........g...B..h...#",
+      "#..B................B......#",
+      "#..B......X.........B......#",
+      "#..B................B......#",
+      "#..BBBBBBBBDBBBBBBBBB......#",
+      "#..........................#",
+      "#.....m..........m.........#",
+      "#..........................#",
+      "#...h...........a..........#",
+      "#..........................#",
       "############################",
     ],
   },
@@ -742,6 +1273,129 @@ function drawBaron(g, attacking, hurt) {
   g.fillStyle = "#fff";
   g.fillRect(27, 17, 2, 3); g.fillRect(36, 17, 2, 3);
 }
+function drawZombie(g, attacking, hurt) {
+  const skin = hurt ? "#e8b090" : "#c8906a";
+  const uniform = hurt ? "#b09a70" : "#8a7a50";
+  g.fillStyle = uniform;
+  g.fillRect(24, 44, 6, 16); g.fillRect(34, 44, 6, 16);   // legs
+  g.fillRect(22, 26, 20, 20);                              // torso
+  g.fillStyle = "#5a5040"; g.fillRect(22, 26, 20, 4);
+  g.fillStyle = skin;
+  g.beginPath(); g.ellipse(32, 17, 8, 8, 0, 0, 7); g.fill();
+  g.fillStyle = "#3a5a2a"; g.fillRect(24, 9, 16, 5);       // helmet band
+  g.fillStyle = hurt ? "#fff" : "#c03030";                 // mad eyes
+  g.fillRect(27, 15, 3, 3); g.fillRect(34, 15, 3, 3);
+  g.fillStyle = "#301808"; g.fillRect(28, 21, 8, 2);
+  // rifle
+  g.fillStyle = "#222";
+  if (attacking) {
+    g.fillRect(18, 28, 24, 4);
+    g.fillStyle = "#ffd24d"; g.fillRect(12, 27, 6, 6);     // muzzle flash
+  } else {
+    g.fillRect(20, 32, 5, 18);
+  }
+  g.fillStyle = skin;
+  g.fillRect(18, 30, 5, 10); g.fillRect(41, 30, 5, 10);
+}
+function drawCaco(g, attacking, hurt) {
+  const body = hurt ? "#ff8080" : "#c03030";
+  g.fillStyle = body;
+  g.beginPath(); g.ellipse(32, 32, 22, 20, 0, 0, 7); g.fill();
+  g.fillStyle = hurt ? "#d06060" : "#8a1a1a";
+  g.beginPath(); g.ellipse(32, 40, 18, 10, 0, 0, 7); g.fill();
+  // mouth
+  g.fillStyle = "#200404";
+  g.beginPath(); g.ellipse(32, 42, 14, attacking ? 8 : 4, 0, 0, 7); g.fill();
+  g.fillStyle = "#fff";
+  for (let i = 0; i < 7; i++) {
+    g.beginPath(); g.moveTo(20 + i * 4, 38); g.lineTo(22 + i * 4, 44); g.lineTo(24 + i * 4, 38); g.closePath(); g.fill();
+  }
+  // single green eye
+  g.fillStyle = "#fff"; g.beginPath(); g.ellipse(32, 22, 8, 6, 0, 0, 7); g.fill();
+  g.fillStyle = "#30a030"; g.fillRect(29, 19, 6, 6);
+  g.fillStyle = "#000"; g.fillRect(31, 21, 3, 3);
+  // horns
+  g.fillStyle = "#d8d0c0";
+  g.beginPath(); g.moveTo(14, 20); g.lineTo(8, 12); g.lineTo(17, 15); g.closePath(); g.fill();
+  g.beginPath(); g.moveTo(50, 20); g.lineTo(56, 12); g.lineTo(47, 15); g.closePath(); g.fill();
+}
+function drawSoul(g, attacking, hurt) {
+  // flames
+  g.fillStyle = attacking ? "#ff8c1a" : "#d06010";
+  for (let i = 0; i < 6; i++) {
+    g.beginPath();
+    g.ellipse(14 + i * 7, 40 + (i % 2) * 5, 4, 9 + (i % 3) * 3, 0, 0, 7);
+    g.fill();
+  }
+  // skull
+  const bone = hurt ? "#fff" : "#e0d8c8";
+  g.fillStyle = bone;
+  g.beginPath(); g.ellipse(32, 28, 13, 12, 0, 0, 7); g.fill();
+  g.fillRect(24, 36, 16, 8);
+  g.fillStyle = "#2a1408";
+  g.fillRect(25, 24, 6, 5); g.fillRect(33, 24, 6, 5);   // eye sockets
+  g.fillStyle = hurt ? "#fff" : "#ff8c1a";
+  g.fillRect(27, 26, 2, 2); g.fillRect(35, 26, 2, 2);
+  g.fillStyle = "#a89880";
+  for (let i = 0; i < 4; i++) g.fillRect(26 + i * 4, 40, 2, 4);   // teeth
+}
+function drawCyber(g, attacking, hurt) {
+  const skin = hurt ? "#e0a080" : "#a06848";
+  const metal = "#5a5e66";
+  // legs: one flesh, one metal
+  g.fillStyle = skin;  g.fillRect(20, 42, 9, 18);
+  g.fillStyle = metal; g.fillRect(36, 42, 8, 18);
+  g.fillStyle = "#33363c"; g.fillRect(35, 56, 10, 6);
+  // torso
+  g.fillStyle = skin;
+  g.beginPath(); g.ellipse(32, 30, 15, 15, 0, 0, 7); g.fill();
+  g.fillStyle = "#7a4a30"; g.fillRect(24, 26, 16, 3); g.fillRect(24, 33, 16, 3);
+  // rocket launcher arm
+  g.fillStyle = metal;
+  if (attacking) {
+    g.fillRect(6, 20, 16, 8);
+    g.fillStyle = "#ffd24d"; g.fillRect(2, 19, 5, 10);
+  } else {
+    g.fillRect(10, 26, 12, 8);
+  }
+  g.fillStyle = skin; g.fillRect(46, 24, 8, 14);
+  // head with big curled horns
+  g.fillStyle = skin;
+  g.beginPath(); g.ellipse(32, 11, 8, 8, 0, 0, 7); g.fill();
+  g.fillStyle = "#d8d0c0";
+  g.beginPath(); g.moveTo(23, 8); g.lineTo(13, 2); g.lineTo(20, 11); g.closePath(); g.fill();
+  g.beginPath(); g.moveTo(41, 8); g.lineTo(51, 2); g.lineTo(44, 11); g.closePath(); g.fill();
+  g.fillStyle = hurt ? "#fff" : "#30ff30";   // cyber eyes
+  g.fillRect(28, 9, 3, 3); g.fillRect(34, 9, 3, 3);
+}
+function drawSpider(g, attacking, hurt) {
+  const brain = hurt ? "#e8c0b0" : "#b89080";
+  // splayed metal legs
+  g.strokeStyle = "#4a4e56"; g.lineWidth = 4;
+  for (const [x1, y1, x2, y2] of [[20, 38, 4, 58], [26, 40, 16, 60], [44, 38, 60, 58], [38, 40, 48, 60]]) {
+    g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke();
+  }
+  // chassis
+  g.fillStyle = "#5a5e66"; g.fillRect(18, 34, 28, 10);
+  g.fillStyle = "#33363c"; g.fillRect(18, 34, 28, 3);
+  // chaingun
+  g.fillStyle = "#222";
+  g.fillRect(26, 44, 12, 6);
+  if (attacking) { g.fillStyle = "#ffd24d"; g.fillRect(28, 50, 8, 5); }
+  // giant brain
+  g.fillStyle = brain;
+  g.beginPath(); g.ellipse(32, 20, 17, 15, 0, 0, 7); g.fill();
+  g.strokeStyle = hurt ? "#c08070" : "#8a6050"; g.lineWidth = 2;
+  for (let i = 0; i < 4; i++) {
+    g.beginPath(); g.moveTo(20 + i * 3, 8 + i * 2);
+    g.quadraticCurveTo(32, 14 + i * 4, 44 - i * 3, 8 + i * 2); g.stroke();
+  }
+  // face
+  g.fillStyle = hurt ? "#fff" : "#c03030";
+  g.fillRect(25, 24, 5, 4); g.fillRect(34, 24, 5, 4);
+  g.fillStyle = "#301008"; g.fillRect(27, 30, 10, 3);
+  g.fillStyle = "#fff"; g.fillRect(28, 30, 2, 2); g.fillRect(33, 30, 2, 2);
+}
 const sprites = {
   impIdle:    makeSprite(g => drawImp(g, false, false)),
   impAttack:  makeSprite(g => drawImp(g, true,  false)),
@@ -775,6 +1429,34 @@ const sprites = {
   baronIdle:   makeSprite(g => drawBaron(g, false, false)),
   baronAttack: makeSprite(g => drawBaron(g, true,  false)),
   baronPain:   makeSprite(g => drawBaron(g, false, true)),
+  zombieIdle:   makeSprite(g => drawZombie(g, false, false)),
+  zombieAttack: makeSprite(g => drawZombie(g, true,  false)),
+  zombiePain:   makeSprite(g => drawZombie(g, false, true)),
+  cacoIdle:     makeSprite(g => drawCaco(g, false, false)),
+  cacoAttack:   makeSprite(g => drawCaco(g, true,  false)),
+  cacoPain:     makeSprite(g => drawCaco(g, false, true)),
+  soulIdle:     makeSprite(g => drawSoul(g, false, false)),
+  soulAttack:   makeSprite(g => drawSoul(g, true,  false)),
+  soulPain:     makeSprite(g => drawSoul(g, false, true)),
+  cyberIdle:    makeSprite(g => drawCyber(g, false, false)),
+  cyberAttack:  makeSprite(g => drawCyber(g, true,  false)),
+  cyberPain:    makeSprite(g => drawCyber(g, false, true)),
+  spiderIdle:   makeSprite(g => drawSpider(g, false, false)),
+  spiderAttack: makeSprite(g => drawSpider(g, true,  false)),
+  spiderPain:   makeSprite(g => drawSpider(g, false, true)),
+  tracer: makeSprite(g => {
+    g.fillStyle = "#ffd24d"; g.fillRect(28, 30, 8, 4);
+    g.fillStyle = "#fff0a0"; g.fillRect(30, 31, 4, 2);
+  }),
+  rocket: makeSprite(g => {
+    g.fillStyle = "#8a8e96"; g.fillRect(26, 24, 12, 16);
+    g.fillStyle = "#5a5e66";
+    g.beginPath(); g.moveTo(26, 24); g.lineTo(32, 16); g.lineTo(38, 24); g.closePath(); g.fill();
+    g.fillStyle = "#ff8c1a";
+    g.beginPath(); g.ellipse(32, 44, 5, 7, 0, 0, 7); g.fill();
+    g.fillStyle = "#ffd24d";
+    g.beginPath(); g.ellipse(32, 42, 2.5, 4, 0, 0, 7); g.fill();
+  }),
   barrel: makeSprite(g => {
     g.fillStyle = "#50565a"; g.fillRect(21, 22, 22, 38);
     g.fillStyle = "#3a3f43";
@@ -853,6 +1535,11 @@ const SHEET_MAP = [
   { file: "Imp.png",           set: "imp" },
   { file: "Demon.png",         set: "pinky" },
   { file: "Baron Of Hell.png", set: "baron" },
+  { file: "Zombie.png",        set: "zombie" },
+  { file: "Cacodemon.png",     set: "caco" },
+  { file: "Lost Soul.png",     set: "soul" },
+  { file: "Cyber Demon.png",   set: "cyber" },
+  { file: "Spiderdemon.png",   set: "spider" },
 ];
 function sliceSheet(img) {
   const c = document.createElement("canvas");
@@ -948,6 +1635,12 @@ const SFX_FILES = {
   baronSight: "dsbrssit.wav", baronDie: "dsbrsdth.wav",
   baronPain: "dsdmpain.wav",  baronAct: "dsdmact.wav",
   teleport: "dstelept.wav",
+  zombieSight: "dsposit1.wav", zombieDie: "dspodth1.wav",
+  cacoSight: "dscacsit.wav",   cacoDie: "dscacdth.wav",
+  soulSight: "dssklatk.wav",   soulDie: "dsskldth.wav",
+  cyberSight: "dscybsit.wav",  cyberDie: "dscybdth.wav",
+  spiderSight: "dsspisit.wav", spiderDie: "dsspidth.wav",
+  rocket: "dsrlaunc.wav",      rocketHit: "dsrxplod.wav",
 };
 const sfxLib = {};
 for (const [k, f] of Object.entries(SFX_FILES)) {
@@ -977,6 +1670,10 @@ const SYNTH_ALIAS = {
   fireballHit: "fireball",
   switch: "pickup", noway: "growl",
   barrel: "boom", teleport: "boom",
+  zombieSight: "sight", cacoSight: "sight", cyberSight: "sight", spiderSight: "sight",
+  soulSight: "hit",
+  zombieDie: "die", cacoDie: "die", soulDie: "die", cyberDie: "die", spiderDie: "die",
+  rocket: "fireball", rocketHit: "boom",
 };
 function synthSfx(kind, vol = 1) {
   if (!audio || audio.state !== "running") return;
@@ -1082,6 +1779,7 @@ function synthSfx(kind, vol = 1) {
 // copyrighted, so the hosted build ships no music files).
 // ---------------------------------------------------------
 const OST_DIR = "Doom OST/";
+const MUSIC_TITLE = "01. INTRO - Title Music.mp3";
 const MUSIC_INTER = "14. E2M3; INTER - Intermission From Doom.mp3";
 const MUSIC_VICTORY = "23. VICTOR - The End Of Doom.mp3";
 let musicOn = true, musicRealOk = true;
@@ -1091,7 +1789,12 @@ musicEl.volume = 0.45;
 musicEl.addEventListener("error", () => { musicRealOk = false; });
 function playMusic(file) {
   if (!musicRealOk) return;   // synth loop covers it
-  musicEl.src = encodeURI(OST_DIR + file);
+  const url = encodeURI(OST_DIR + file);
+  if (musicEl.src && musicEl.src.endsWith(url)) {
+    if (musicOn && musicEl.paused) musicEl.play().catch(() => {});
+    return;
+  }
+  musicEl.src = url;
   musicEl.loop = true;
   if (musicOn) musicEl.play().catch(() => { musicRealOk = false; });
 }
@@ -1169,12 +1872,30 @@ let msg = "", msgT = 0;
 function showMsg(text, dur = 2.2) { msg = text; msgT = dur; }
 
 const ENEMY_TYPES = {
-  imp:   { hp: 60,  speed: 1.6, dmg: 12, ranged: true,  idle: "impIdle",   attack: "impAttack",   pain: "impPain",   scale: 1.0,
-           ball: "fireball", sfxSight: "impSight", sfxPain: "impPain", sfxDie: "impDie", sfxAct: "impAct" },
-  pinky: { hp: 150, speed: 2.6, dmg: 25, ranged: false, idle: "pinkyIdle", attack: "pinkyAttack", pain: "pinkyPain", scale: 1.15,
-           ball: "fireball", sfxSight: "pinkySight", sfxPain: "pinkyPain", sfxDie: "pinkyDie", sfxAct: "pinkyAct" },
-  baron: { hp: 320, speed: 1.5, dmg: 22, ranged: true,  idle: "baronIdle", attack: "baronAttack", pain: "baronPain", scale: 1.35,
-           ball: "greenball", sfxSight: "baronSight", sfxPain: "baronPain", sfxDie: "baronDie", sfxAct: "baronAct" },
+  imp:      { hp: 60,  speed: 1.6, dmg: 12, ranged: true,  cool: 1.6, pspeed: 6,  scale: 1.0,
+              idle: "impIdle", attack: "impAttack", pain: "impPain", ball: "fireball", atkSfx: "fireball",
+              sfxSight: "impSight", sfxPain: "impPain", sfxDie: "impDie", sfxAct: "impAct" },
+  pinky:    { hp: 150, speed: 2.6, dmg: 25, ranged: false, cool: 1.0, scale: 1.15,
+              idle: "pinkyIdle", attack: "pinkyAttack", pain: "pinkyPain", ball: "fireball", atkSfx: "bite",
+              sfxSight: "pinkySight", sfxPain: "pinkyPain", sfxDie: "pinkyDie", sfxAct: "pinkyAct" },
+  baron:    { hp: 320, speed: 1.5, dmg: 22, ranged: true,  cool: 1.7, pspeed: 6, scale: 1.35,
+              idle: "baronIdle", attack: "baronAttack", pain: "baronPain", ball: "greenball", atkSfx: "fireball",
+              sfxSight: "baronSight", sfxPain: "baronPain", sfxDie: "baronDie", sfxAct: "baronAct" },
+  zombie:   { hp: 30,  speed: 1.8, dmg: 7,  ranged: true,  cool: 1.3, pspeed: 11, scale: 0.95,
+              idle: "zombieIdle", attack: "zombieAttack", pain: "zombiePain", ball: "tracer", atkSfx: "shoot",
+              sfxSight: "zombieSight", sfxPain: "impPain", sfxDie: "zombieDie", sfxAct: "impAct" },
+  caco:     { hp: 200, speed: 1.1, dmg: 18, ranged: true,  cool: 1.9, pspeed: 6, scale: 1.25,
+              idle: "cacoIdle", attack: "cacoAttack", pain: "cacoPain", ball: "fireball", atkSfx: "fireball",
+              sfxSight: "cacoSight", sfxPain: "pinkyPain", sfxDie: "cacoDie", sfxAct: "baronAct" },
+  lostsoul: { hp: 50,  speed: 3.4, dmg: 10, ranged: false, cool: 0.9, scale: 0.7,
+              idle: "soulIdle", attack: "soulAttack", pain: "soulPain", ball: "fireball", atkSfx: "soulSight",
+              sfxSight: "soulSight", sfxPain: "pinkyPain", sfxDie: "soulDie", sfxAct: "baronAct" },
+  cyber:    { hp: 650, speed: 1.3, dmg: 38, ranged: true,  cool: 1.4, pspeed: 8, scale: 1.6,
+              idle: "cyberIdle", attack: "cyberAttack", pain: "cyberPain", ball: "rocket", atkSfx: "rocket",
+              sfxSight: "cyberSight", sfxPain: "pinkyPain", sfxDie: "cyberDie", sfxAct: "baronAct" },
+  spider:   { hp: 650, speed: 1.1, dmg: 9,  ranged: true,  cool: 0.55, pspeed: 12, scale: 1.7,
+              idle: "spiderIdle", attack: "spiderAttack", pain: "spiderPain", ball: "tracer", atkSfx: "shoot",
+              sfxSight: "spiderSight", sfxPain: "pinkyPain", sfxDie: "spiderDie", sfxAct: "baronAct" },
 };
 function makeEnemy(type, x, y) {
   return {
@@ -1203,6 +1924,11 @@ function loadLevel() {
     else if (ch === "i") enemies.push(makeEnemy("imp", cx, cy));
     else if (ch === "p") enemies.push(makeEnemy("pinky", cx, cy));
     else if (ch === "n") enemies.push(makeEnemy("baron", cx, cy));
+    else if (ch === "g") enemies.push(makeEnemy("zombie", cx, cy));
+    else if (ch === "o") enemies.push(makeEnemy("caco", cx, cy));
+    else if (ch === "m") enemies.push(makeEnemy("lostsoul", cx, cy));
+    else if (ch === "y") enemies.push(makeEnemy("cyber", cx, cy));
+    else if (ch === "q") enemies.push(makeEnemy("spider", cx, cy));
     else if (ch === "h") pickups.push({ kind: "medkit", x: cx, y: cy });
     else if (ch === "a") pickups.push({ kind: "ammo", x: cx, y: cy });
     else if (ch === "b") barrels.push({ x: cx, y: cy, hp: 20, fuse: -1 });
@@ -1227,12 +1953,27 @@ function loadLevel() {
   fireCooldown = 0; muzzle = 0; teleCooldown = 0; nukeTimer = 0;
   showMsg(L.name, 2.6);
 }
-function startGame() {
-  levelIdx = 0;
+function startGame(startIdx = 0) {
+  levelIdx = startIdx;
   player.hp = 100; player.ammo = 48;
   loadLevel();
   gameState = "play";
   playMusic(LEVELS[levelIdx].music);
+  canvas.requestPointerLock();
+}
+function pauseGame() {
+  gameState = "paused";
+  menuMode = "paused"; menuSel = 0;
+  if (document.pointerLockElement === canvas) document.exitPointerLock();
+}
+function resumeGame() {
+  gameState = "play";
+  canvas.requestPointerLock();
+}
+function goToTitle() {
+  gameState = "title";
+  menuMode = "main"; menuSel = 0;
+  playMusic(MUSIC_TITLE);
 }
 function exitLevel(secret) {
   const L = LEVELS[levelIdx];
@@ -1257,11 +1998,60 @@ function nextLevel() {
 // ---------------------------------------------------------
 // Input
 // ---------------------------------------------------------
+// ---------------------------------------------------------
+// Menus (title / episode select / help / pause)
+// ---------------------------------------------------------
+overlay.classList.add("hidden");   // the canvas draws its own menus
+let menuMode = "main", menuSel = 0;
+const EPISODE_STARTS = [0, 9, 18];
+function menuItems() {
+  if (menuMode === "episodes") return ["KNEE-DEEP IN THE DEAD", "THE SHORES OF HELL", "INFERNO", "BACK"];
+  if (menuMode === "paused")   return ["RESUME", "RESTART LEVEL", "MUSIC: " + (musicOn ? "ON" : "OFF"), "END GAME"];
+  return ["NEW GAME", "MUSIC: " + (musicOn ? "ON" : "OFF"), "READ THIS!"];
+}
+function menuActivate() {
+  sfx("switch", 0.6);
+  if (menuMode === "main") {
+    if (menuSel === 0) { menuMode = "episodes"; menuSel = 0; }
+    else if (menuSel === 1) toggleMusic();
+    else menuMode = "help";
+  } else if (menuMode === "episodes") {
+    if (menuSel < 3) startGame(EPISODE_STARTS[menuSel]);
+    else { menuMode = "main"; menuSel = 0; }
+  } else if (menuMode === "paused") {
+    if (menuSel === 0) resumeGame();
+    else if (menuSel === 1) { player.hp = 100; player.ammo = 48; loadLevel(); resumeGame(); }
+    else if (menuSel === 2) toggleMusic();
+    else goToTitle();
+  }
+}
+function menuBack() {
+  if (menuMode === "episodes" || menuMode === "help") { menuMode = "main"; menuSel = 0; }
+  else if (menuMode === "paused") resumeGame();
+}
+function maybeTitleMusic() {
+  if (gameState === "title" && audio) playMusic(MUSIC_TITLE);
+}
+
 const keys = {};
 addEventListener("keydown", e => {
+  initAudio();
+  maybeTitleMusic();
+  if (gameState === "title" || gameState === "paused") {
+    if (menuMode === "help") { menuMode = "main"; menuSel = 0; e.preventDefault(); return; }
+    const n = menuItems().length;
+    if (e.code === "ArrowUp" || e.code === "KeyW")   { menuSel = (menuSel + n - 1) % n; sfx("pickup", 0.35); }
+    if (e.code === "ArrowDown" || e.code === "KeyS") { menuSel = (menuSel + 1) % n; sfx("pickup", 0.35); }
+    if (e.code === "Enter" || e.code === "Space") menuActivate();
+    if (e.code === "Escape") menuBack();
+    e.preventDefault();
+    return;
+  }
   keys[e.code] = true;
   if (e.code === "KeyM") showMap = !showMap;
   if (e.code === "KeyN") toggleMusic();
+  if (e.code === "Escape" && gameState === "play") pauseGame();
+  if (e.code === "Escape" && (gameState === "dead" || gameState === "victory")) goToTitle();
   if (e.code === "KeyE") {
     if (gameState === "play") tryUse();
     else if (gameState === "intermission") nextLevel();
@@ -1274,7 +2064,7 @@ addEventListener("keydown", e => {
       gameState = "play";
       playMusic(LEVELS[levelIdx].music);
     } else if (gameState === "victory") {
-      startGame();
+      goToTitle();
     }
   }
   if (["Space", "ArrowUp", "ArrowDown"].includes(e.code)) e.preventDefault();
@@ -1283,15 +2073,17 @@ addEventListener("keyup", e => keys[e.code] = false);
 
 canvas.addEventListener("click", () => {
   initAudio();
-  if (gameState === "title") { startGame(); overlay.classList.add("hidden"); }
-  else if (gameState === "intermission") nextLevel();
-  if (document.pointerLockElement !== canvas) canvas.requestPointerLock();
+  maybeTitleMusic();
+  if (gameState === "play") {
+    if (document.pointerLockElement !== canvas) canvas.requestPointerLock();
+  } else if (gameState === "intermission") {
+    nextLevel();
+  } else if (gameState === "title" || gameState === "paused") {
+    menuActivate();
+  }
 });
-overlay.addEventListener("click", () => {
-  initAudio();
-  startGame();
-  overlay.classList.add("hidden");
-  canvas.requestPointerLock();
+document.addEventListener("pointerlockchange", () => {
+  if (document.pointerLockElement !== canvas && gameState === "play") pauseGame();
 });
 addEventListener("mousemove", e => {
   if (document.pointerLockElement === canvas && gameState === "play")
@@ -1526,15 +2318,16 @@ function update(dt) {
     // chase
     e.attackT -= dt;
     if (e.ranged && los && dist > 2.5 && e.attackT <= 0) {
-      e.state = "attack"; e.stateT = 0; e.attackT = 1.6 + Math.random();
+      e.state = "attack"; e.stateT = 0; e.attackT = e.cool + Math.random() * 0.6;
       const pa = Math.atan2(dy, dx) + (Math.random() - 0.5) * 0.12;
-      projectiles.push({ x: e.x, y: e.y, vx: Math.cos(pa) * 6, vy: Math.sin(pa) * 6, dmg: e.dmg, img: e.ball });
-      sfx("fireball", volAt(dist));
+      const ps = e.pspeed || 6;
+      projectiles.push({ x: e.x, y: e.y, vx: Math.cos(pa) * ps, vy: Math.sin(pa) * ps, dmg: e.dmg, img: e.ball });
+      sfx(e.atkSfx, volAt(dist));
     } else if (!e.ranged && dist < 1.1 && e.attackT <= 0) {
-      e.state = "attack"; e.stateT = 0; e.attackT = 1.0;
+      e.state = "attack"; e.stateT = 0; e.attackT = e.cool;
       player.hp -= e.dmg;
       player.hurtFlash = 0.35; faceTimer = 0.8;
-      sfx("bite");
+      sfx(e.atkSfx);
       sfx("playerPain", 0.9);
     } else if (dist > (e.ranged ? 3.5 : 0.8)) {
       if (dist < 9 && Math.random() < dt * 0.18) sfx(e.sfxAct, volAt(dist) * 0.7);
@@ -1555,14 +2348,16 @@ function update(dt) {
     const p = projectiles[i];
     p.x += p.vx * dt; p.y += p.vy * dt;
     if (solidCell(p.x | 0, p.y | 0)) {
-      sfx("fireballHit", volAt(distToPlayer(p.x, p.y)) * 0.8);
+      sfx(p.img === "rocket" ? "rocketHit" : "fireballHit", volAt(distToPlayer(p.x, p.y)) * 0.8);
+      if (p.img === "rocket") effects.push({ x: p.x, y: p.y, t: 0, kind: "boom" });
       projectiles.splice(i, 1);
       continue;
     }
     if (Math.hypot(p.x - player.x, p.y - player.y) < 0.4) {
       player.hp -= p.dmg;
       player.hurtFlash = 0.35; faceTimer = 0.8;
-      sfx("fireballHit");
+      sfx(p.img === "rocket" ? "rocketHit" : "fireballHit");
+      if (p.img === "rocket") effects.push({ x: p.x, y: p.y, t: 0, kind: "boom" });
       sfx("playerPain", 0.9);
       projectiles.splice(i, 1);
     }
@@ -1952,7 +2747,7 @@ function renderOverlays() {
     ctx.font = "bold 20px 'Courier New', monospace";
     ctx.fillStyle = "#ccc";
     ctx.fillText(LEVELS[levelIdx].name, W / 2, H / 2 + 10);
-    ctx.fillText("PRESS R TO RESTART LEVEL", W / 2, H / 2 + 42);
+    ctx.fillText("PRESS R TO RESTART - ESC FOR MENU", W / 2, H / 2 + 42);
   } else if (gameState === "intermission") {
     ctx.font = "bold 36px 'Courier New', monospace";
     ctx.fillStyle = "#e0a020";
@@ -1971,10 +2766,107 @@ function renderOverlays() {
     ctx.fillText("YOU WIN", W / 2, H / 2 - 40);
     ctx.font = "bold 20px 'Courier New', monospace";
     ctx.fillStyle = "#ccc";
-    ctx.fillText("KNEE-DEEP HOMAGE COMPLETE", W / 2, H / 2 + 5);
-    ctx.fillText("PRESS R TO PLAY AGAIN", W / 2, H / 2 + 40);
+    ctx.fillText("THE DEMONS ARE DEFEATED... FOR NOW", W / 2, H / 2 + 5);
+    ctx.fillText("PRESS R FOR THE MENU", W / 2, H / 2 + 40);
   }
   ctx.textAlign = "left";
+}
+
+// ---------------------------------------------------------
+// Menu rendering (drawn in the classic style, original art)
+// ---------------------------------------------------------
+function drawSkull(x, y) {
+  const bob = Math.sin(performance.now() / 250) * 2;
+  ctx.fillStyle = "#e0d8c8";
+  ctx.fillRect(x, y + bob, 16, 12);
+  ctx.fillRect(x + 3, y + 12 + bob, 10, 5);
+  ctx.fillStyle = "#7a1010";
+  ctx.fillRect(x + 3, y + 4 + bob, 4, 4);
+  ctx.fillRect(x + 9, y + 4 + bob, 4, 4);
+  ctx.fillStyle = "#8a8070";
+  for (let i = 0; i < 3; i++) ctx.fillRect(x + 4 + i * 3, y + 13 + bob, 2, 3);
+}
+function drawMenuList(startY, lineH = 34) {
+  const items = menuItems();
+  ctx.textAlign = "center";
+  for (let i = 0; i < items.length; i++) {
+    const y = startY + i * lineH;
+    ctx.font = "bold 26px Impact, 'Arial Black', sans-serif";
+    ctx.fillStyle = "#500";
+    ctx.fillText(items[i], W / 2 + 2, y + 2);
+    ctx.fillStyle = i === menuSel ? "#ff3020" : "#b01010";
+    ctx.fillText(items[i], W / 2, y);
+    if (i === menuSel) {
+      const tw = ctx.measureText(items[i]).width;
+      drawSkull(W / 2 - tw / 2 - 34, y - 18);
+    }
+  }
+  ctx.textAlign = "left";
+}
+function drawHelp() {
+  ctx.textAlign = "center";
+  ctx.font = "bold 24px Impact, 'Arial Black', sans-serif";
+  ctx.fillStyle = "#b01010";
+  ctx.fillText("HOW TO PLAY", W / 2, 175);
+  ctx.font = "bold 15px 'Courier New', monospace";
+  ctx.fillStyle = "#ccc";
+  const lines = [
+    "WASD ........... MOVE / STRAFE",
+    "MOUSE / ARROWS . TURN",
+    "CLICK / SPACE .. FIRE",
+    "E .............. USE DOORS + SWITCHES",
+    "SHIFT .......... RUN",
+    "M .............. AUTOMAP    N ... MUSIC",
+    "ESC ............ PAUSE",
+    "",
+    "FIND THE EXIT SWITCH IN EACH LEVEL.",
+    "COLORED DOORS NEED KEYCARDS.",
+    "SOME WALLS HIDE SECRETS...",
+    "",
+    "PRESS ANY KEY TO RETURN",
+  ];
+  lines.forEach((ln, i) => ctx.fillText(ln, W / 2, 205 + i * 20));
+  ctx.textAlign = "left";
+}
+function renderTitle() {
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, "#1a0202");
+  grad.addColorStop(0.45, "#4a0a02");
+  grad.addColorStop(1, "#0e0000");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+  // jagged hell-scape silhouette
+  ctx.fillStyle = "#180404";
+  ctx.beginPath();
+  ctx.moveTo(0, H);
+  for (let x = 0; x <= W; x += 40) ctx.lineTo(x, H - 40 - ((x * 7919) % 53));
+  ctx.lineTo(W, H);
+  ctx.closePath(); ctx.fill();
+  // logo
+  ctx.textAlign = "center";
+  ctx.font = "bold 108px Impact, 'Arial Black', sans-serif";
+  ctx.fillStyle = "#2a0000";
+  ctx.fillText("DOOM", W / 2 + 7, 122);
+  const lg = ctx.createLinearGradient(0, 20, 0, 130);
+  lg.addColorStop(0, "#ff6a20");
+  lg.addColorStop(0.45, "#d01010");
+  lg.addColorStop(1, "#500000");
+  ctx.fillStyle = lg;
+  ctx.fillText("DOOM", W / 2, 115);
+  ctx.font = "bold 14px 'Courier New', monospace";
+  ctx.fillStyle = "#a08060";
+  ctx.fillText("A FAN-MADE HTML TRIBUTE", W / 2, 143);
+  ctx.textAlign = "left";
+  if (menuMode === "help") drawHelp();
+  else drawMenuList(205, 40);
+}
+function renderPauseMenu() {
+  ctx.textAlign = "center";
+  ctx.font = "bold 40px Impact, 'Arial Black', sans-serif";
+  ctx.fillStyle = "#500"; ctx.fillText("PAUSED", W / 2 + 3, 103);
+  ctx.fillStyle = "#d01010"; ctx.fillText("PAUSED", W / 2, 100);
+  ctx.textAlign = "left";
+  drawMenuList(160, 38);
 }
 
 // ---------------------------------------------------------
@@ -1984,13 +2876,16 @@ let lastT = performance.now();
 function loop(now) {
   const dt = Math.min(0.05, (now - lastT) / 1000);
   lastT = now;
-  if (gameState !== "title") {
+  if (gameState === "title") {
+    renderTitle();
+  } else {
     update(dt);
     renderWorld();
-    if (gameState === "play") renderWeapon();
+    if (gameState === "play" || gameState === "paused") renderWeapon();
     renderHUD();
     if (showMap) renderMinimap();
     renderOverlays();
+    if (gameState === "paused") renderPauseMenu();
   }
   requestAnimationFrame(loop);
 }

@@ -7,20 +7,32 @@ no bundled assets — every texture and sprite is generated in code at runtime.
 
 ## Levels
 
-The full *Knee-Deep in the Dead* episode as grid adaptations (the real maps
+All three original episodes — 27 levels — as grid adaptations (the real maps
 aren't tile-based, so these recreate each level's layout beats, themes, and
-progression — not the exact geometry):
+progression — not the exact geometry). Pick your episode from the main menu:
 
-1. **E1M1: Hangar** · 2. **E1M2: Nuclear Plant** · 3. **E1M3: Toxin Refinery**
-   (hides a **secret exit** to E1M9) · 4. **E1M4: Command Control** ·
-   5. **E1M5: Phobos Lab** · 6. **E1M6: Central Processing** ·
-   7. **E1M7: Computer Station** · 8. **E1M8: Phobos Anomaly** (episode boss:
-   twin **Barons of Hell**) · 9. **E1M9: Military Base** (secret level, exits to E1M4)
+- **Episode 1: Knee-Deep in the Dead** — E1M1 Hangar through E1M8 Phobos
+  Anomaly (twin **Barons of Hell**). E1M3 hides a secret exit to E1M9
+  Military Base, which exits back to E1M4.
+- **Episode 2: The Shores of Hell** — E2M1 Deimos Anomaly through E2M8 Tower
+  of Babel (**Cyberdemon**). E2M5 hides a secret exit to E2M9 Fortress of
+  Mystery, which exits back to E2M6.
+- **Episode 3: Inferno** — E3M1 Hell Keep through E3M8 Dis (**Spider
+  Mastermind**). E3M6 hides a secret exit to E3M9 Warrens, which exits back
+  to E3M7.
+
+The bestiary: zombies, imps, demons, lost souls, cacodemons, Barons of Hell,
+the Cyberdemon, and the Spider Mastermind.
 
 Find and press the **exit switch** in each level to advance. Colored **keycards**
 open matching locked doors, **teleporter pads** whisk you across the map,
 and some walls hide **secret doors** (press `E` on suspicious walls). Health
 and ammo carry over between levels; dying restarts the current level.
+
+## Menus
+
+A classic-styled main menu (episode select, music toggle, help) with skull
+cursor, and a pause menu on `Esc` (resume, restart level, music, end game).
 
 ## Optional local assets
 
