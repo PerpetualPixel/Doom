@@ -1873,6 +1873,49 @@ GUN_ART_FILES.forEach(([idle, fire], i) => {
   if (fire) loadGunImage(fire, i, "fire");
 });
 
+// Full GIF firing animations via ImageDecoder (Chromium; needs http).
+// Frame 0 is treated as the rest pose; the remaining frames play with
+// their own GIF timings each time the weapon fires. Falls back to the
+// two-frame idle/fire swap when unavailable.
+async function loadGunAnim(file, slot) {
+  if (!window.ImageDecoder) return;
+  try {
+    const resp = await fetch("Guns/gifs/" + file);
+    if (!resp.ok) return;
+    const dec = new ImageDecoder({ data: await resp.arrayBuffer(), type: "image/gif" });
+    await dec.tracks.ready;
+    const count = dec.tracks.selectedTrack.frameCount;
+    if (count < 2) return;
+    const frames = [], durs = [];
+    for (let i = 0; i < count; i++) {
+      const { image } = await dec.decode({ frameIndex: i });
+      const c = document.createElement("canvas");
+      c.width = image.displayWidth; c.height = image.displayHeight;
+      const g = c.getContext("2d");
+      g.drawImage(image, 0, 0);
+      try {   // key out a solid background color if the gif has one
+        const d2 = g.getImageData(0, 0, c.width, c.height);
+        const p = d2.data;
+        if (p[3] > 200) {
+          const kr = p[0], kg = p[1], kb = p[2];
+          for (let j = 0; j < p.length; j += 4)
+            if (Math.abs(p[j] - kr) < 12 && Math.abs(p[j + 1] - kg) < 12 && Math.abs(p[j + 2] - kb) < 12) p[j + 3] = 0;
+          g.putImageData(d2, 0, 0);
+        }
+      } catch {}
+      frames.push(c);
+      durs.push(image.duration ? Math.max(0.03, image.duration / 1e6) : 0.1);
+      image.close();
+    }
+    gunArt[slot].frames = frames;
+    gunArt[slot].durs = durs;
+    gunArt[slot].fireTotal = durs.slice(1).reduce((a, b) => a + b, 0);
+    gunArt[slot].idle = frames[0];
+  } catch {}
+}
+GUN_ART_FILES.forEach(([idle], i) => loadGunAnim(idle, i));
+let gunFireT = 99;   // seconds since the current weapon last fired
+
 // ---------------------------------------------------------
 // Audio. Real files from SFX/ and Doom OST/ when available,
 // synthesized WebAudio otherwise.
@@ -2441,6 +2484,7 @@ addEventListener("keydown", e => {
     if (n >= 0 && n < WEAPONS.length && player.weapons[n] && n !== player.weapon) {
       player.weapon = n;
       fireCooldown = Math.max(fireCooldown, 0.3);
+      gunFireT = 99;
       sfx("sgcock", 0.7);
     }
   }
@@ -2656,12 +2700,14 @@ function update(dt) {
   // --- firing ---
   fireCooldown -= dt;
   muzzle -= dt;
+  gunFireT += dt;
   if ((keys["Space"] || mouseDown) && fireCooldown <= 0) {
     const wp = WEAPONS[player.weapon];
     const cost = wp.use || 0;
     if (!wp.ammoType || player.ammo[wp.ammoType] >= cost) {
       if (wp.ammoType) player.ammo[wp.ammoType] -= cost;
       fireCooldown = wp.rate; muzzle = 0.08; faceTimer = 0.6;
+      gunFireT = 0;
       sfx(wp.sfx);
       if (wp.name === "SHOTGUN") setTimeout(() => sfx("sgcock", 0.8), 550);
       if (wp.melee) {
@@ -3070,13 +3116,22 @@ function renderWeapon() {
   const w = player.weapon;
   // real weapon art when the local Guns/gifs/ frames are loaded
   const art = gunArt[w];
-  const img = (muzzle > 0 && art.fire) ? art.fire : art.idle;
+  let img = null, animating = false;
+  if (art.frames && gunFireT < art.fireTotal) {
+    // play the gif's own firing frames (1..n) with their own timings
+    let t = gunFireT, idx = 1;
+    while (idx < art.frames.length - 1 && t > art.durs[idx]) { t -= art.durs[idx]; idx++; }
+    img = art.frames[idx];
+    animating = true;
+  } else {
+    img = (muzzle > 0 && art.fire) ? art.fire : art.idle;
+  }
   if (img) {
     ctx.imageSmoothingEnabled = false;
     const scale = Math.min(340 / img.width, 260 / img.height);
     const dw = img.width * scale, dh = img.height * scale;
     const dx = W / 2 - dw / 2 + bobX, dy = VIEW_H - dh + bobY + (muzzle > 0 ? -4 : 2);
-    if (muzzle > 0 && !art.fire && w !== 0) {   // generic flash when there is no firing frame
+    if (muzzle > 0 && !art.fire && !animating && w !== 0) {   // generic flash when no firing art exists
       const col = w === 6 ? ["rgba(80,255,80,0.9)", "rgba(200,255,180,0.9)"]
                : ["rgba(255,220,80,0.9)", "rgba(255,255,200,0.9)"];
       ctx.fillStyle = col[0];
