@@ -24,6 +24,16 @@ progression — not the exact geometry). Pick your episode from the main menu:
 The bestiary: zombies, imps, demons, lost souls, cacodemons, Barons of Hell,
 the Cyberdemon, and the Spider Mastermind.
 
+## Arsenal
+
+Seven weapons on keys `1`–`7`: fist, pistol, shotgun (7-pellet spread with
+pump-action sound), chaingun, rocket launcher (splash damage — careful up
+close), plasma rifle, and the BFG9000. Four ammo types (bullets, shells,
+rockets, cells) with pickups placed through the levels; the HUD ARMS panel
+shows what you own. You start with the pistol; find the rest — the BFG is
+hidden in the Fortress of Mystery and guarded in Dis. Dying resets you to
+a pistol start.
+
 Find and press the **exit switch** in each level to advance. Colored **keycards**
 open matching locked doors, **teleporter pads** whisk you across the map,
 and some walls hide **secret doors** (press `E` on suspicious walls). Health
