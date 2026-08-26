@@ -7,28 +7,36 @@ no bundled assets — every texture and sprite is generated in code at runtime.
 
 ## Levels
 
-Three levels, grid homages of the *Knee-Deep in the Dead* openers (the real maps
-aren't tile-based, so these recreate the layout beats, not the exact geometry):
+The full *Knee-Deep in the Dead* episode as grid adaptations (the real maps
+aren't tile-based, so these recreate each level's layout beats, themes, and
+progression — not the exact geometry):
 
-1. **E1M1: Hangar** — three-room front block, side chambers, pillared exit hall
-2. **E1M2: Nuclear Plant** — nested ring corridors around a computer core
-3. **E1M3: Toxin Refinery** — four quadrants, a toxin pit, and a locked-away exit room
+1. **E1M1: Hangar** · 2. **E1M2: Nuclear Plant** · 3. **E1M3: Toxin Refinery**
+   (hides a **secret exit** to E1M9) · 4. **E1M4: Command Control** ·
+   5. **E1M5: Phobos Lab** · 6. **E1M6: Central Processing** ·
+   7. **E1M7: Computer Station** · 8. **E1M8: Phobos Anomaly** (episode boss:
+   twin **Barons of Hell**) · 9. **E1M9: Military Base** (secret level, exits to E1M4)
 
-Find and press the **exit switch** in each level to advance. Health and ammo
-carry over between levels; dying restarts the current level with a fresh pistol.
+Find and press the **exit switch** in each level to advance. Colored **keycards**
+open matching locked doors, **teleporter pads** whisk you across the map,
+and some walls hide **secret doors** (press `E` on suspicious walls). Health
+and ammo carry over between levels; dying restarts the current level.
 
-## Audio
+## Optional local assets
 
-The game looks for two optional local folders:
+The game looks for optional local folders and auto-detects what's present:
 
 - `SFX/` — classic Doom sound effect WAVs (`dspistol.wav`, `dsdoropn.wav`, ...)
 - `Doom OST/` — the soundtrack MP3s (each level plays its matching track,
   plus intermission and victory music)
+- `sprites/` — monster sprite sheets (`Imp.png`, `Demon.png`, `Baron Of Hell.png`),
+  auto-sliced at runtime (requires serving over http, e.g. `python -m http.server`;
+  browsers block pixel access to local images on `file://`)
 
-If they exist, you get the real sounds and music. If not (as in this repo and
-the hosted build — those files are id Software's copyrighted assets, so they are
-git-ignored and not distributed here), the game falls back to fully synthesized
-WebAudio sound effects and an original metal-style music loop.
+Whatever is missing falls back to fully synthesized WebAudio sound, an original
+metal-style music loop, and procedural sprite art. These folders are
+git-ignored and not distributed with the repo — they are id Software's
+copyrighted assets.
 
 ## Features
 

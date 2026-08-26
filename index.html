@@ -84,27 +84,27 @@ const LEVELS = [
       "############################",
       "#P........T.......T........#",
       "#.........T..a....T....h...#",
-      "#...##....T.......T........#",
-      "#...##....D.......D........#",
-      "#.........T.......T........#",
+      "#...WW....T.......T........#",
+      "#...WW....D.......D........#",
+      "#......b..T.......T........#",
       "#.....i...T....p..T...i....#",
       "#.........T.......T........#",
       "#####D################D#####",
-      "#.........T.......B........#",
-      "#..a......T...a...B....a...#",
-      "#..####...T.......B..BB....#",
+      "#.........R.......B........#",
+      "#..a......R.~~~.a.B....a...#",
+      "#..####...R.~~~...B..BB....#",
       "#.i.......D...p...D...i....#",
-      "#..####...T.......B..BB....#",
-      "#.........T.......B........#",
-      "#....h....T...a...B......h.#",
-      "#.........T.......B........#",
-      "#####D################D#####",
+      "#..####...R.......B..BB....#",
+      "#.........R..c....B........#",
+      "#....h....R...a...B......h.#",
+      "#.........R.......B........#",
+      "##s##D################D#####",
       "#..........................#",
-      "#..i............p..........#",
-      "#.....##..........##.......#",
-      "#.....##....a.....##....X..#",
-      "#.....##..........##.......#",
-      "#...p......................#",
+      "#..i....b.......p..........#",
+      "#.....WW..........WW.......#",
+      "#.....WW....a.....WW....X..#",
+      "#.....WW..........WW.......#",
+      "#...p.........b............#",
       "#...........h..............#",
       "############################",
     ],
@@ -119,7 +119,7 @@ const LEVELS = [
       "#............................#",
       "#...TTTTTTTTTTDTTTTTTTTTTT...#",
       "#...T....................T...#",
-      "#...T..i.............i...T...#",
+      "#...T..i....b........i...T...#",
       "#...T....................T...#",
       "#...T...CCCCCCCCCCCCCC...T...#",
       "#...T...C............C...T...#",
@@ -129,16 +129,16 @@ const LEVELS = [
       "#...T...C.....X......C...T...#",
       "#...D...C............C...D...#",
       "#...T...C....h.......C...T...#",
-      "#...T...C............C...T...#",
-      "#...T...C............C...T...#",
+      "#...T...C.~~~~~~~~~..C...T...#",
+      "#...T...C.~~~~~~~~~..C...T...#",
       "#...T...C.a........a.C...T...#",
       "#...T...CCCCCCDCCCCCCC...T...#",
       "#...T....................T...#",
-      "#...T..i..........i......T...#",
+      "#...T..i......b...i......T...#",
       "#...T....................T...#",
-      "#...TTTTTTTTTTDTTTTTTTTTTT...#",
+      "#...RRRRRRRRRRDRRRRRRRRRRR...#",
       "#............................#",
-      "#..h....................p....#",
+      "#..h......c.............p....#",
       "#...........a................#",
       "##############################",
     ],
@@ -146,17 +146,18 @@ const LEVELS = [
   {
     name: "E1M3: TOXIN REFINERY",
     music: "05. E1M3 - Dark Halls.mp3",
+    secretNext: 8,   // secret exit leads to E1M9: MILITARY BASE
     rows: [
       "##############################",
       "#P............#..............#",
-      "#.............#...a..........#",
-      "#..BB.........#..............#",
-      "#..BB....i....#......p.......#",
+      "#.........b...#...a..........#",
+      "#..WW.........#..............#",
+      "#..WW....i....#......p.......#",
       "#.............#..............#",
       "#......a......#..............#",
       "#.............D..............#",
       "#.............#..............#",
-      "#....i........#.........i....#",
+      "#....i........#.....c...i....#",
       "#.............#..............#",
       "#..........h..#....p.........#",
       "#.............#..............#",
@@ -164,21 +165,223 @@ const LEVELS = [
       "#.............#..............#",
       "#..a..........#..............#",
       "#....BBBB.....#..............#",
-      "#....B..B.....#..............#",
-      "#....B..B..i..#....CCCCCCCC..#",
+      "#....B%j......#..............#",
+      "#....B%%B..i..#....CCCCCCCC..#",
       "#....BBBB.....#....C......C..#",
       "#.............D....C......C..#",
       "#..p..........#....D...X..C..#",
-      "#.............#....C......C..#",
+      "#.............#....C.b....C..#",
       "#......i......#....C...h..C..#",
-      "#.............#....CCCCCCCC..#",
-      "#....a........#..............#",
-      "#..........p..#......a.......#",
+      "#J####........#....CCCCCCCC..#",
+      "#....#........#..............#",
+      "#...S#.....p..#......a.......#",
       "##############################",
     ],
   },
+  {
+    name: "E1M4: COMMAND CONTROL",
+    music: "06. E1M4 - Kitchen Ace (And Taking Names).mp3",
+    rows: [
+      "##############################",
+      "#..........C.........#.......#",
+      "#.P........C...i.....#..a....#",
+      "#..........C.........K....X..#",
+      "#..........C.........#.......#",
+      "#...CCCC...C...CCCC..#########",
+      "#......................b.....#",
+      "#..C..C..C..C..C..C..C..C....#",
+      "#..C..Ci.C..C..Cp.C..C..C....#",
+      "#..C..C..C..C..C..C..C..C....#",
+      "#............................#",
+      "#~~~~~~~~~~~~~~~~~~~~........#",
+      "#~~~~~~~~~~~~~~~~~~~~...p....#",
+      "#............................#",
+      "#..CCCCCCCCCC....CCCCCCCCC...#",
+      "#..C........C....C.......C...#",
+      "#..C..b.....C....C...k...C...#",
+      "#..C........C....C..pp...C...#",
+      "#..C...i....D....D.......C...#",
+      "#..CCCCCCCCCC....CCCCCCCCC...#",
+      "#............................#",
+      "#....a...........i...........#",
+      "#............................#",
+      "####s#########################",
+      "#.h.a........................#",
+      "##############################",
+    ],
+  },
+  {
+    name: "E1M5: PHOBOS LAB",
+    music: "07. E1M5 - Suspense.mp3",
+    rows: [
+      "##############################",
+      "#P...........................#",
+      "#............................#",
+      "#...WW...............i.......#",
+      "#...WW.......................#",
+      "#..........%%%%%%%%..........#",
+      "#..........%%%%%%%%......a...#",
+      "#..i.......%%####%%..........#",
+      "#..........%%#..#%%..........#",
+      "#..........%%#X.#%%..........#",
+      "#..........%%#..#%%..........#",
+      "#..........%%#..#%%..........#",
+      "#..........%%#J##%%..........#",
+      "#..........%%%%%%%%..........#",
+      "#..........%%%%%%%%..........#",
+      "#........p...........p.......#",
+      "#....................b.......#",
+      "####D#########################",
+      "#............................#",
+      "#..j......i..................#",
+      "#.....................WW.....#",
+      "#...i.................WW.....#",
+      "#.........h..........a.......#",
+      "#............................#",
+      "#..............p.............#",
+      "##############################",
+    ],
+  },
+  {
+    name: "E1M6: CENTRAL PROCESSING",
+    music: "08. E1M6; E3M6 - On The Hunt.mp3",
+    rows: [
+      "##############################",
+      "#P...........T...............#",
+      "#..u.........T....i..........#",
+      "#....TTTT....T...............#",
+      "#.......T....T....TTTTTTTT...#",
+      "#..b....T....D....T......T...#",
+      "#.......T....T....T..pp..T...#",
+      "#..TTTTTT....T....T......T...#",
+      "#............T....TTTDTTTT...#",
+      "#............T...............#",
+      "#%%%%........T..........l....#",
+      "#%%%%........T...............#",
+      "#............T...............#",
+      "#TTTTT...TTTTT......TTTTTT...#",
+      "#............................#",
+      "#...i...........p............#",
+      "#......TTTTTTDTTTTTTT........#",
+      "#......T............T....t...#",
+      "#......T..%%%%......T........#",
+      "#......T..%%%%..i...T........#",
+      "#......T............T........#",
+      "#......TTTTTTLTTTTTTT........#",
+      "#......T............T........#",
+      "#......T.....X......T...p....#",
+      "#......T............T........#",
+      "#......TTTTTTTTTTTTTT........#",
+      "#.....h...............a......#",
+      "##############################",
+    ],
+  },
+  {
+    name: "E1M7: COMPUTER STATION",
+    music: "09. E1M7; E2M5; E3M5 - Demons On The Prey.mp3",
+    rows: [
+      "############################",
+      "#P.........................#",
+      "#..........................#",
+      "#...i...........i..........#",
+      "#..........CCCCCC..........#",
+      "#..........C....C.....a....#",
+      "#..........C.X..C..........#",
+      "#..........C....C..b.......#",
+      "#..........CCKCCC..........#",
+      "#..........................#",
+      "#.....p..........p.........#",
+      "#..........................#",
+      "#....CCCC........CCCC......#",
+      "#....C..C........C..C......#",
+      "#....C..C...ii...C..C......#",
+      "#....CDCC........CCDC......#",
+      "#..........................#",
+      "#..a.....k.................#",
+      "#..........................#",
+      "#.......p..........h.......#",
+      "#..........................#",
+      "####s#######################",
+      "#.h.a......................#",
+      "############################",
+    ],
+  },
+  {
+    name: "E1M8: PHOBOS ANOMALY",
+    music: "10. E1M8; E3M4 - Sign Of Evil.mp3",
+    next: null,   // episode ends here
+    rows: [
+      "############################",
+      "#............T.............#",
+      "#.....P......T......i......#",
+      "#............T.............#",
+      "#..a....h....T........a....#",
+      "#TTTTTTTTDTTTT.............#",
+      "#..........................#",
+      "#....B...............B.....#",
+      "#......B..........B........#",
+      "#........B......B..........#",
+      "#..........BB..............#",
+      "#.....n....BB.......n......#",
+      "#..........BB..............#",
+      "#........B......B..........#",
+      "#......B..........B........#",
+      "#....B...............B.....#",
+      "#.....b.............b......#",
+      "#..h....................h..#",
+      "#....a..............a......#",
+      "#BBBBBBBBBBBBDBBBBBBBBBBBBB#",
+      "#..........................#",
+      "#............X.............#",
+      "#..........................#",
+      "############################",
+    ],
+  },
+  {
+    name: "E1M9: MILITARY BASE",
+    music: "11. E1M9; E3M9 - Hiding The Secrets.mp3",
+    next: 3,   // secret level exits back to E1M4
+    rows: [
+      "############################",
+      "#P.........................#",
+      "#.....................a.u..#",
+      "#...WWWWW......WWWWW.......#",
+      "#...W...W......W...W.......#",
+      "#...W.j.W......W.k.W.......#",
+      "#...W.i.W......W.p.W.......#",
+      "#...WWDWW......WWDWW.......#",
+      "#..........................#",
+      "#%%%%%%%%%%%%%%%%%%%%%%....#",
+      "#%%%%%%%%%%%%%%%%%%%%%%.b..#",
+      "#%%%%%%%%%%%%%%%%%%%%%%....#",
+      "#..........................#",
+      "#...WWWWW..........i.......#",
+      "#...W...W..................#",
+      "#...W.l.W.......p..........#",
+      "#...W.n.W..................#",
+      "#...WWDWW..................#",
+      "#..........................#",
+      "#...................#.#.#..#",
+      "#...................#.#.#..#",
+      "#..h................J.K.L.X#",
+      "#...................#.#.#..#",
+      "#...................#.#.#..#",
+      "#.......t..................#",
+      "############################",
+    ],
+  },
 ];
-const TILE_CHARS = { "#": 1, "B": 2, "T": 3, "D": 4, "C": 5, "X": 9 };
+const TILE_CHARS = {
+  "#": 1, "B": 2, "T": 3, "D": 4, "C": 5, "W": 6, "R": 7,
+  "X": 9,  "S": 10,             // exit switch / secret-exit switch
+  "J": 11, "K": 12, "L": 13,    // blue / yellow / red locked doors
+  "s": 14,                      // secret door (looks like a stone wall)
+};
+const FLOOR_CHARS = { "~": 1, "%": 2 };   // water, nukage (walkable liquid floors)
+const DOOR_TILES = new Set([4, 11, 12, 13, 14]);
+const DOOR_LOCKS = { 11: "blue", 12: "yellow", 13: "red" };
+const KEY_CHARS = { j: "blue", k: "yellow", l: "red" };
+const TELE_PAIRS = [["t", "u"], ["v", "w"], ["x", "z"]];   // pad -> destination
 
 let MAP = [], MAP_W = 0, MAP_H = 0, levelIdx = 0;
 const mapAt = (x, y) => (x < 0 || y < 0 || x >= MAP_W || y >= MAP_H) ? 1 : MAP[y * MAP_W + x];
@@ -189,7 +392,7 @@ function doorAt(cx, cy) { return doors.get(cy * MAP_W + cx); }
 function solidCell(cx, cy) {
   const t = mapAt(cx, cy);
   if (t === 0) return false;
-  if (t === 4) {
+  if (DOOR_TILES.has(t)) {
     const d = doorAt(cx, cy);
     return !(d && d.open > 0.8);
   }
@@ -219,46 +422,48 @@ function noiseOver(g, alpha, n = 300) {
   }
 }
 const textures = [null,
-  // 1: gray stone brick
+  // 1: gray stone brick (dark)
   makeTexture(g => {
-    g.fillStyle = "#5a5a5a"; g.fillRect(0, 0, TEX, TEX);
-    g.fillStyle = "#3c3c3c";
+    g.fillStyle = "#484848"; g.fillRect(0, 0, TEX, TEX);
     for (let r = 0; r < 4; r++) {
       const off = (r % 2) * 16;
-      for (let c = -1; c < 3; c++) g.strokeRect(c * 32 + off + 0.5, r * 16 + 0.5, 32, 16);
+      for (let c = -1; c < 3; c++) {
+        g.fillStyle = `rgb(${60 + (Math.random() * 16 | 0)},${58 + (Math.random() * 14 | 0)},${56 + (Math.random() * 12 | 0)})`;
+        g.fillRect(c * 32 + off + 1, r * 16 + 1, 30, 14);
+      }
     }
-    g.strokeStyle = "#2c2c2c"; g.lineWidth = 2;
+    g.strokeStyle = "#242424"; g.lineWidth = 2;
     for (let r = 0; r < 4; r++) {
       g.beginPath(); g.moveTo(0, r * 16); g.lineTo(TEX, r * 16); g.stroke();
       const off = (r % 2) * 16;
       for (let c = 0; c < 3; c++) { g.beginPath(); g.moveTo(c * 32 + off, r * 16); g.lineTo(c * 32 + off, r * 16 + 16); g.stroke(); }
     }
-    noiseOver(g, 0.25);
+    noiseOver(g, 0.35);
   }),
-  // 2: hell brick (red)
+  // 2: hell brick (dark red)
   makeTexture(g => {
-    g.fillStyle = "#6e1f14"; g.fillRect(0, 0, TEX, TEX);
-    g.strokeStyle = "#38100a"; g.lineWidth = 2;
+    g.fillStyle = "#571a10"; g.fillRect(0, 0, TEX, TEX);
+    g.strokeStyle = "#2a0c07"; g.lineWidth = 2;
     for (let r = 0; r < 8; r++) {
       g.beginPath(); g.moveTo(0, r * 8); g.lineTo(TEX, r * 8); g.stroke();
       const off = (r % 2) * 8;
       for (let c = 0; c < 5; c++) { g.beginPath(); g.moveTo(c * 16 + off, r * 8); g.lineTo(c * 16 + off, r * 8 + 8); g.stroke(); }
     }
-    g.fillStyle = "rgba(255,120,40,0.15)";
+    g.fillStyle = "rgba(255,120,40,0.12)";
     g.fillRect(8, 20, 10, 6); g.fillRect(40, 44, 12, 5);
-    noiseOver(g, 0.3);
+    noiseOver(g, 0.35);
   }),
   // 3: tech wall (green-lit panels)
   makeTexture(g => {
-    g.fillStyle = "#33383d"; g.fillRect(0, 0, TEX, TEX);
-    g.strokeStyle = "#1c1f22"; g.lineWidth = 2;
+    g.fillStyle = "#2c3034"; g.fillRect(0, 0, TEX, TEX);
+    g.strokeStyle = "#17191c"; g.lineWidth = 2;
     g.strokeRect(4, 4, 56, 56); g.strokeRect(12, 12, 40, 40);
-    g.fillStyle = "#22262a"; g.fillRect(12, 12, 40, 40);
-    g.fillStyle = "#3fda6a";
+    g.fillStyle = "#1c1f23"; g.fillRect(12, 12, 40, 40);
+    g.fillStyle = "#36b85a";
     for (let i = 0; i < 4; i++) g.fillRect(18, 18 + i * 8, 28, 3);
-    g.fillStyle = "#9aa1a8";
+    g.fillStyle = "#7d838a";
     g.fillRect(0, 0, TEX, 3); g.fillRect(0, 61, TEX, 3);
-    noiseOver(g, 0.2);
+    noiseOver(g, 0.3);
   }),
   // 4: door (metal, warning stripes)
   makeTexture(g => {
@@ -277,16 +482,56 @@ const textures = [null,
   }),
   // 5: blue tech / computer wall
   makeTexture(g => {
-    g.fillStyle = "#1d2740"; g.fillRect(0, 0, TEX, TEX);
-    g.strokeStyle = "#0d1220"; g.lineWidth = 2;
+    g.fillStyle = "#161e33"; g.fillRect(0, 0, TEX, TEX);
+    g.strokeStyle = "#0a0e19"; g.lineWidth = 2;
     for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) g.strokeRect(x * 16 + 1, y * 16 + 1, 14, 14);
     for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) {
       if ((x + y * 3) % 3 === 0) {
-        g.fillStyle = "#4fc3f7"; g.fillRect(x * 16 + 4, y * 16 + 4, 8, 3);
-        g.fillStyle = "#e05050"; g.fillRect(x * 16 + 4, y * 16 + 9, 3, 3);
+        g.fillStyle = "#3fa3d7"; g.fillRect(x * 16 + 4, y * 16 + 4, 8, 3);
+        g.fillStyle = "#c04040"; g.fillRect(x * 16 + 4, y * 16 + 9, 3, 3);
       }
     }
-    noiseOver(g, 0.2);
+    noiseOver(g, 0.3);
+  }),
+  // 6: wood planks (pillars, panelling)
+  makeTexture(g => {
+    g.fillStyle = "#54401f"; g.fillRect(0, 0, TEX, TEX);
+    for (let p = 0; p < 4; p++) {
+      g.fillStyle = `rgb(${78 + (Math.random() * 14 | 0)},${58 + (Math.random() * 10 | 0)},${30 + (Math.random() * 8 | 0)})`;
+      g.fillRect(p * 16 + 1, 0, 14, TEX);
+      g.strokeStyle = "#2b2010"; g.lineWidth = 2;
+      g.beginPath(); g.moveTo(p * 16, 0); g.lineTo(p * 16, TEX); g.stroke();
+      // grain
+      g.strokeStyle = "rgba(40,28,12,0.5)"; g.lineWidth = 1;
+      for (let i = 0; i < 3; i++) {
+        const gx = p * 16 + 3 + Math.random() * 10;
+        g.beginPath(); g.moveTo(gx, 0); g.lineTo(gx + (Math.random() * 4 - 2), TEX); g.stroke();
+      }
+    }
+    // horizontal support bands
+    g.fillStyle = "#2e2210";
+    g.fillRect(0, 0, TEX, 4); g.fillRect(0, 30, TEX, 4); g.fillRect(0, 60, TEX, 4);
+    noiseOver(g, 0.3);
+  }),
+  // 7: rusty metal with vents
+  makeTexture(g => {
+    g.fillStyle = "#45423b"; g.fillRect(0, 0, TEX, TEX);
+    g.strokeStyle = "#26241f"; g.lineWidth = 2;
+    g.strokeRect(2, 2, 60, 60);
+    g.beginPath(); g.moveTo(0, 32); g.lineTo(TEX, 32); g.stroke();
+    // vent slits
+    g.fillStyle = "#1b1a16";
+    for (let i = 0; i < 5; i++) g.fillRect(18, 8 + i * 4, 28, 2);
+    // rivets
+    g.fillStyle = "#5c584e";
+    for (const [rx, ry] of [[6, 6], [58, 6], [6, 58], [58, 58], [6, 32], [58, 32]]) g.fillRect(rx - 1, ry - 1, 3, 3);
+    // rust streaks
+    for (let i = 0; i < 6; i++) {
+      const rx = 4 + Math.random() * 56, ry = 30 + Math.random() * 20;
+      g.fillStyle = "rgba(122,74,34,0.35)";
+      g.fillRect(rx, ry, 2 + Math.random() * 3, 8 + Math.random() * 18);
+    }
+    noiseOver(g, 0.35);
   }),
 ];
 // 9: exit switch
@@ -303,19 +548,91 @@ textures[9] = makeTexture(g => {
   g.fillStyle = "#0a5a1a"; g.fillRect(26, 46, 12, 6);
   noiseOver(g, 0.2, 150);
 });
-const floorTex = makeTexture(g => {
-  g.fillStyle = "#3a3733"; g.fillRect(0, 0, TEX, TEX);
-  g.strokeStyle = "#26241f"; g.lineWidth = 2;
-  for (let i = 0; i <= 4; i++) {
-    g.beginPath(); g.moveTo(i * 16, 0); g.lineTo(i * 16, TEX); g.stroke();
-    g.beginPath(); g.moveTo(0, i * 16); g.lineTo(TEX, i * 16); g.stroke();
-  }
-  noiseOver(g, 0.3);
+textures[10] = textures[9];   // secret exit looks identical
+// locked door variants: door texture with colored key trim
+for (const [tile, color] of [[11, "#2050e0"], [12, "#d8b820"], [13, "#d02020"]]) {
+  textures[tile] = makeTexture(g => {
+    g.drawImage(textures[4].canvas, 0, 0);
+    g.fillStyle = color;
+    g.fillRect(0, 0, 6, TEX); g.fillRect(58, 0, 6, TEX);
+    g.fillStyle = "rgba(0,0,0,0.35)";
+    g.fillRect(0, 0, 2, TEX); g.fillRect(62, 0, 2, TEX);
+  });
+}
+// teleporter pad (floor)
+const padTex = makeTexture(g => {
+  g.fillStyle = "#2e2c2a"; g.fillRect(0, 0, TEX, TEX);
+  g.strokeStyle = "#151413"; g.lineWidth = 2; g.strokeRect(1, 1, 62, 62);
+  g.strokeStyle = "#b02020"; g.lineWidth = 3;
+  g.strokeRect(8, 8, 48, 48); g.strokeRect(18, 18, 28, 28);
+  g.fillStyle = "#e04040"; g.fillRect(30, 30, 4, 4);
+  g.fillStyle = "#802020";
+  for (const [mx, my] of [[4, 4], [56, 4], [4, 56], [56, 56]]) g.fillRect(mx, my, 4, 4);
+  noiseOver(g, 0.25, 150);
 });
+// floor: big dark deck plates with cut corners (octagon + diamond)
+const floorTex = makeTexture(g => {
+  g.fillStyle = "#232120"; g.fillRect(0, 0, TEX, TEX);
+  for (let ty = 0; ty < 2; ty++) for (let tx = 0; tx < 2; tx++) {
+    const x = tx * 32, y = ty * 32, c = 7;
+    g.fillStyle = `rgb(${44 + (Math.random() * 8 | 0)},${42 + (Math.random() * 7 | 0)},${40 + (Math.random() * 6 | 0)})`;
+    g.beginPath();
+    g.moveTo(x + c, y + 1); g.lineTo(x + 31 - c, y + 1);
+    g.lineTo(x + 31, y + c); g.lineTo(x + 31, y + 31 - c);
+    g.lineTo(x + 31 - c, y + 31); g.lineTo(x + c, y + 31);
+    g.lineTo(x + 1, y + 31 - c); g.lineTo(x + 1, y + c);
+    g.closePath(); g.fill();
+    g.strokeStyle = "#151413"; g.lineWidth = 2; g.stroke();
+    // corner diamond
+    g.fillStyle = "#1a1918";
+    g.beginPath();
+    g.moveTo(x, y - 5); g.lineTo(x + 5, y); g.lineTo(x, y + 5); g.lineTo(x - 5, y);
+    g.closePath(); g.fill();
+  }
+  noiseOver(g, 0.35);
+});
+// ceiling: big dark panels with grid seams and rivets
 const ceilTex = makeTexture(g => {
-  g.fillStyle = "#22201e"; g.fillRect(0, 0, TEX, TEX);
-  g.fillStyle = "#191715";
-  for (let i = 0; i < 40; i++) g.fillRect(Math.random() * TEX | 0, Math.random() * TEX | 0, 4, 4);
+  g.fillStyle = "#1d1d1f"; g.fillRect(0, 0, TEX, TEX);
+  for (let ty = 0; ty < 2; ty++) for (let tx = 0; tx < 2; tx++) {
+    g.fillStyle = `rgb(${33 + (Math.random() * 6 | 0)},${33 + (Math.random() * 6 | 0)},${36 + (Math.random() * 6 | 0)})`;
+    g.fillRect(tx * 32 + 2, ty * 32 + 2, 28, 28);
+  }
+  g.strokeStyle = "#0f0f11"; g.lineWidth = 3;
+  g.beginPath(); g.moveTo(32, 0); g.lineTo(32, TEX); g.stroke();
+  g.beginPath(); g.moveTo(0, 32); g.lineTo(TEX, 32); g.stroke();
+  g.strokeRect(0, 0, TEX, TEX);
+  g.fillStyle = "#37373b";
+  for (const [rx, ry] of [[8, 8], [24, 8], [40, 8], [56, 8], [8, 24], [56, 24], [8, 40], [56, 40], [8, 56], [24, 56], [40, 56], [56, 56]])
+    g.fillRect(rx, ry, 2, 2);
+  noiseOver(g, 0.25, 150);
+});
+// liquid floors
+const waterTex = makeTexture(g => {
+  g.fillStyle = "#1c2c86"; g.fillRect(0, 0, TEX, TEX);
+  for (let i = 0; i < 14; i++) {
+    g.strokeStyle = i % 3 ? "rgba(58,85,200,0.7)" : "rgba(90,120,224,0.8)";
+    g.lineWidth = 1 + Math.random() * 2;
+    const y = Math.random() * TEX;
+    g.beginPath(); g.moveTo(0, y);
+    g.quadraticCurveTo(TEX / 2, y + (Math.random() * 10 - 5), TEX, y);
+    g.stroke();
+  }
+});
+const nukeTex = makeTexture(g => {
+  g.fillStyle = "#1e5f16"; g.fillRect(0, 0, TEX, TEX);
+  for (let i = 0; i < 14; i++) {
+    g.strokeStyle = i % 3 ? "rgba(56,160,40,0.7)" : "rgba(110,220,70,0.8)";
+    g.lineWidth = 1 + Math.random() * 2;
+    const y = Math.random() * TEX;
+    g.beginPath(); g.moveTo(0, y);
+    g.quadraticCurveTo(TEX / 2, y + (Math.random() * 10 - 5), TEX, y);
+    g.stroke();
+  }
+  g.fillStyle = "rgba(160,255,90,0.5)";
+  for (let i = 0; i < 8; i++) {
+    g.beginPath(); g.ellipse(Math.random() * TEX, Math.random() * TEX, 2, 2, 0, 0, 7); g.fill();
+  }
 });
 
 // ---------------------------------------------------------
@@ -383,6 +700,48 @@ function drawPinky(g, attacking, hurt) {
   g.fillStyle = skin;
   g.fillRect(10, 30, 6, 10); g.fillRect(48, 30, 6, 10);
 }
+function drawBaron(g, attacking, hurt) {
+  const skin = hurt ? "#f0a090" : "#c88a70";
+  const dark = hurt ? "#c07860" : "#8a5844";
+  // hooved goat legs
+  g.fillStyle = dark;
+  g.fillRect(21, 44, 8, 12); g.fillRect(35, 44, 8, 12);
+  g.fillRect(23, 56, 6, 6);  g.fillRect(37, 56, 6, 6);
+  g.fillStyle = "#3a2a20";
+  g.fillRect(22, 60, 8, 3); g.fillRect(36, 60, 8, 3);
+  // massive torso
+  g.fillStyle = skin;
+  g.beginPath(); g.ellipse(32, 32, 15, 16, 0, 0, 7); g.fill();
+  g.fillStyle = dark;
+  g.fillRect(26, 30, 12, 3); g.fillRect(26, 36, 12, 3);   // abs
+  // arms
+  g.fillStyle = skin;
+  if (attacking) {
+    g.fillRect(9, 18, 7, 16);
+    g.fillStyle = "#35d035";
+    g.beginPath(); g.ellipse(12, 14, 7, 7, 0, 0, 7); g.fill();
+    g.fillStyle = "#a8ff70";
+    g.beginPath(); g.ellipse(12, 14, 3, 3, 0, 0, 7); g.fill();
+    g.fillStyle = skin;
+    g.fillRect(48, 28, 8, 16);
+  } else {
+    g.fillRect(10, 28, 8, 16); g.fillRect(46, 28, 8, 16);
+  }
+  // head
+  g.fillStyle = skin;
+  g.beginPath(); g.ellipse(32, 13, 9, 9, 0, 0, 7); g.fill();
+  // big curled horns
+  g.fillStyle = "#e8e0d0";
+  g.beginPath(); g.moveTo(23, 10); g.lineTo(15, 2); g.lineTo(20, 12); g.closePath(); g.fill();
+  g.beginPath(); g.moveTo(41, 10); g.lineTo(49, 2); g.lineTo(44, 12); g.closePath(); g.fill();
+  // eyes
+  g.fillStyle = hurt ? "#fff" : "#ff3030";
+  g.fillRect(27, 10, 4, 3); g.fillRect(34, 10, 4, 3);
+  // fanged mouth
+  g.fillStyle = "#2a0a08"; g.fillRect(27, 17, 11, 3);
+  g.fillStyle = "#fff";
+  g.fillRect(27, 17, 2, 3); g.fillRect(36, 17, 2, 3);
+}
 const sprites = {
   impIdle:    makeSprite(g => drawImp(g, false, false)),
   impAttack:  makeSprite(g => drawImp(g, true,  false)),
@@ -407,7 +766,154 @@ const sprites = {
     g.fillStyle = "#ffd24d";
     g.beginPath(); g.ellipse(32, 32, 5, 5, 0, 0, 7); g.fill();
   }),
+  greenball: makeSprite(g => {
+    g.fillStyle = "#35d035";
+    g.beginPath(); g.ellipse(32, 32, 10, 10, 0, 0, 7); g.fill();
+    g.fillStyle = "#a8ff70";
+    g.beginPath(); g.ellipse(32, 32, 5, 5, 0, 0, 7); g.fill();
+  }),
+  baronIdle:   makeSprite(g => drawBaron(g, false, false)),
+  baronAttack: makeSprite(g => drawBaron(g, true,  false)),
+  baronPain:   makeSprite(g => drawBaron(g, false, true)),
+  barrel: makeSprite(g => {
+    g.fillStyle = "#50565a"; g.fillRect(21, 22, 22, 38);
+    g.fillStyle = "#3a3f43";
+    for (let i = 0; i < 6; i++) g.fillRect(21, 26 + i * 6, 22, 2);
+    g.fillStyle = "#666d72"; g.fillRect(23, 22, 4, 38);   // highlight
+    g.fillStyle = "#42484c";
+    g.beginPath(); g.ellipse(32, 22, 11, 4, 0, 0, 7); g.fill();
+    g.fillStyle = "#28b428";
+    g.beginPath(); g.ellipse(32, 22, 8, 3, 0, 0, 7); g.fill();
+    g.fillStyle = "#7dff5a";
+    g.beginPath(); g.ellipse(30, 21, 3, 1.5, 0, 0, 7); g.fill();
+  }),
+  corpse: makeSprite(g => {
+    g.fillStyle = "#5a0e0a";
+    g.beginPath(); g.ellipse(32, 55, 20, 6, 0, 0, 7); g.fill();
+    g.fillStyle = "#8a1812";
+    g.beginPath(); g.ellipse(28, 52, 10, 5, 0, 0, 7); g.fill();
+    g.beginPath(); g.ellipse(40, 53, 7, 4, 0, 0, 7); g.fill();
+    g.fillStyle = "#b02820";
+    g.beginPath(); g.ellipse(33, 51, 5, 3, 0, 0, 7); g.fill();
+    g.fillStyle = "#d8cfc0";     // bone specks
+    g.fillRect(24, 50, 3, 2); g.fillRect(42, 52, 2, 2); g.fillRect(35, 55, 2, 2);
+  }),
+  boom1: makeSprite(g => {
+    g.fillStyle = "#ff7a10";
+    g.beginPath(); g.ellipse(32, 34, 15, 15, 0, 0, 7); g.fill();
+    g.fillStyle = "#ffc040";
+    g.beginPath(); g.ellipse(32, 34, 9, 9, 0, 0, 7); g.fill();
+    g.fillStyle = "#fff0a0";
+    g.beginPath(); g.ellipse(32, 34, 4, 4, 0, 0, 7); g.fill();
+  }),
+  boom2: makeSprite(g => {
+    g.fillStyle = "#c04010";
+    g.beginPath(); g.ellipse(32, 32, 24, 24, 0, 0, 7); g.fill();
+    g.fillStyle = "#ff7a10";
+    g.beginPath(); g.ellipse(30, 30, 16, 16, 0, 0, 7); g.fill();
+    g.fillStyle = "#ffc040";
+    for (let i = 0; i < 7; i++) {
+      const a = i * 0.9, r = 14 + (i % 3) * 5;
+      g.beginPath(); g.ellipse(32 + Math.cos(a) * r, 32 + Math.sin(a) * r, 4, 4, 0, 0, 7); g.fill();
+    }
+    g.fillStyle = "#fff0a0";
+    g.beginPath(); g.ellipse(30, 30, 6, 6, 0, 0, 7); g.fill();
+  }),
+  telefog: makeSprite(g => {
+    for (let i = 0; i < 12; i++) {
+      g.fillStyle = i % 2 ? "rgba(120,255,120,0.7)" : "rgba(220,255,220,0.8)";
+      const a = i * 0.55, r = 6 + (i % 4) * 6;
+      g.beginPath();
+      g.ellipse(32 + Math.cos(a) * 8, 14 + (i % 5) * 10, 3 + (i % 3) * 2, 6 + (i % 3) * 3, 0, 0, 7);
+      g.fill();
+    }
+  }),
 };
+// keycard pickups
+function keycardSprite(color) {
+  return makeSprite(g => {
+    g.fillStyle = "#c8c8c8"; g.fillRect(25, 40, 14, 20);
+    g.fillStyle = "#8a8a8a"; g.fillRect(25, 40, 14, 3);
+    g.fillStyle = color; g.fillRect(25, 45, 14, 8);
+    g.fillStyle = "#333"; g.fillRect(28, 55, 8, 3);
+  });
+}
+sprites.bluekey = keycardSprite("#2050e0");
+sprites.yellowkey = keycardSprite("#d8b820");
+sprites.redkey = keycardSprite("#d02020");
+
+// -----------------------------------------------------
+// Optional real sprite sheets from local sprites/ folder
+// (auto-sliced at runtime; procedural art is the fallback,
+// and the folder is not part of the repo). Pixel access to
+// local images requires http(s) - on file:// this quietly
+// keeps the fallback art.
+// -----------------------------------------------------
+const SHEET_MAP = [
+  { file: "Imp.png",           set: "imp" },
+  { file: "Demon.png",         set: "pinky" },
+  { file: "Baron Of Hell.png", set: "baron" },
+];
+function sliceSheet(img) {
+  const c = document.createElement("canvas");
+  c.width = img.width; c.height = img.height;
+  const g = c.getContext("2d");
+  g.drawImage(img, 0, 0);
+  let data;
+  try { data = g.getImageData(0, 0, c.width, c.height); } catch { return null; }
+  const d = data.data, w = c.width, h = c.height;
+  let key = -1;   // solid background color to key out, if the sheet has one
+  if (d[3] > 200) key = (d[0] << 16) | (d[1] << 8) | d[2];
+  const solid = (x, y) => {
+    const i = (y * w + x) * 4;
+    if (d[i + 3] < 128) return false;
+    return key < 0 || ((d[i] << 16) | (d[i + 1] << 8) | d[i + 2]) !== key;
+  };
+  const rowSolid = new Array(h).fill(false);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (solid(x, y)) { rowSolid[y] = true; break; }
+  const bands = [];
+  for (let y = 0; y < h; y++) if (rowSolid[y]) {
+    if (!bands.length || !rowSolid[y - 1]) bands.push({ y0: y, y1: y });
+    bands[bands.length - 1].y1 = y;
+  }
+  if (!bands.length) return null;
+  const band = bands[0];   // first band: front-facing frames
+  const colSolid = new Array(w).fill(false);
+  for (let x = 0; x < w; x++) for (let y = band.y0; y <= band.y1; y++) if (solid(x, y)) { colSolid[x] = true; break; }
+  const cells = [];
+  for (let x = 0; x < w; x++) if (colSolid[x]) {
+    if (!cells.length || !colSolid[x - 1]) cells.push({ x0: x, x1: x });
+    cells[cells.length - 1].x1 = x;
+  }
+  return cells.filter(cl => cl.x1 - cl.x0 > 4).map(cl => {
+    const cw = cl.x1 - cl.x0 + 1, ch = band.y1 - band.y0 + 1;
+    const oc = document.createElement("canvas");
+    oc.width = oc.height = SPR;
+    const og = oc.getContext("2d");
+    og.imageSmoothingEnabled = false;
+    const sc = Math.min(SPR / cw, SPR / ch);
+    og.drawImage(c, cl.x0, band.y0, cw, ch, (SPR - cw * sc) / 2, SPR - ch * sc, cw * sc, ch * sc);
+    const od = og.getImageData(0, 0, SPR, SPR);
+    if (key >= 0) {
+      const p = od.data;
+      for (let i = 0; i < p.length; i += 4)
+        if (((p[i] << 16) | (p[i + 1] << 8) | p[i + 2]) === key) p[i + 3] = 0;
+    }
+    return new Uint32Array(od.data.buffer);
+  });
+}
+for (const { file, set } of SHEET_MAP) {
+  const img = new Image();
+  img.onload = () => {
+    const frames = sliceSheet(img);
+    if (!frames || !frames.length) return;
+    sprites[set + "Idle"] = frames[0];
+    sprites[set + "Attack"] = frames[Math.min(1, frames.length - 1)];
+    sprites[set + "Pain"] = frames[Math.min(2, frames.length - 1)];
+  };
+  img.onerror = () => {};
+  img.src = "sprites/" + file;
+}
 
 // ---------------------------------------------------------
 // Audio. Real files from SFX/ and Doom OST/ when available,
@@ -438,6 +944,10 @@ const SFX_FILES = {
   pickup: "dsitemup.wav",
   door: "dsdoropn.wav",      doorClose: "dsdorcls.wav",
   switch: "dsswtchn.wav",    noway: "dsnoway.wav",
+  barrel: "dsbarexp.wav",
+  baronSight: "dsbrssit.wav", baronDie: "dsbrsdth.wav",
+  baronPain: "dsdmpain.wav",  baronAct: "dsdmact.wav",
+  teleport: "dstelept.wav",
 };
 const sfxLib = {};
 for (const [k, f] of Object.entries(SFX_FILES)) {
@@ -459,13 +969,14 @@ function sfx(kind, vol = 1) {
 
 // synthesized fallbacks (used when the wav files aren't present)
 const SYNTH_ALIAS = {
-  impPain: "hit", pinkyPain: "hit", bite: "hit",
-  impDie: "die", pinkyDie: "die", playerDie: "die",
+  impPain: "hit", pinkyPain: "hit", baronPain: "hit", bite: "hit",
+  impDie: "die", pinkyDie: "die", baronDie: "die", playerDie: "die",
   playerPain: "pain",
-  impSight: "sight", pinkySight: "sight",
-  impAct: "growl", pinkyAct: "growl",
+  impSight: "sight", pinkySight: "sight", baronSight: "sight",
+  impAct: "growl", pinkyAct: "growl", baronAct: "growl",
   fireballHit: "fireball",
   switch: "pickup", noway: "growl",
+  barrel: "boom", teleport: "boom",
 };
 function synthSfx(kind, vol = 1) {
   if (!audio || audio.state !== "running") return;
@@ -549,6 +1060,19 @@ function synthSfx(kind, vol = 1) {
     o.connect(f); f.connect(out);
     out.gain.setValueAtTime(0.12, t); out.gain.exponentialRampToValueAtTime(0.001, t + 0.32);
     o.start(t); o.stop(t + 0.33);
+  } else if (kind === "boom") {
+    const src = audio.createBufferSource(); src.buffer = noiseBuffer(0.6);
+    const f = audio.createBiquadFilter(); f.type = "lowpass";
+    f.frequency.setValueAtTime(1200, t); f.frequency.exponentialRampToValueAtTime(80, t + 0.55);
+    src.connect(f); f.connect(out);
+    out.gain.setValueAtTime(0.7, t); out.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
+    src.start(t); src.stop(t + 0.6);
+    const o = audio.createOscillator(); o.type = "sine";
+    o.frequency.setValueAtTime(90, t); o.frequency.exponentialRampToValueAtTime(35, t + 0.4);
+    const og = audio.createGain();
+    og.gain.setValueAtTime(0.8, t); og.gain.exponentialRampToValueAtTime(0.001, t + 0.45);
+    o.connect(og); og.connect(master);
+    o.start(t); o.stop(t + 0.46);
   }
 }
 
@@ -635,16 +1159,22 @@ setInterval(() => {
 // Game state
 // ---------------------------------------------------------
 const player = { x: 0, y: 0, ang: 0, hp: 100, ammo: 0, kills: 0, hurtFlash: 0, pickFlash: 0, bob: 0 };
-let enemies = [], pickups = [], projectiles = [];
+let enemies = [], pickups = [], projectiles = [], barrels = [], decors = [], effects = [];
+let floorMap = null;   // per-cell floor type: 0 plate, 1 water, 2 nukage, 3 teleporter pad
+let nukeTimer = 0, teleports = [], teleCooldown = 0;
 let gameState = "title";   // title | play | intermission | dead | victory
 let fireCooldown = 0, muzzle = 0, showMap = false, faceTimer = 0, faceLook = 0;
-let totalEnemies = 0;
+let totalEnemies = 0, pendingNext = null;
+let msg = "", msgT = 0;
+function showMsg(text, dur = 2.2) { msg = text; msgT = dur; }
 
 const ENEMY_TYPES = {
   imp:   { hp: 60,  speed: 1.6, dmg: 12, ranged: true,  idle: "impIdle",   attack: "impAttack",   pain: "impPain",   scale: 1.0,
-           sfxSight: "impSight", sfxPain: "impPain", sfxDie: "impDie", sfxAct: "impAct" },
+           ball: "fireball", sfxSight: "impSight", sfxPain: "impPain", sfxDie: "impDie", sfxAct: "impAct" },
   pinky: { hp: 150, speed: 2.6, dmg: 25, ranged: false, idle: "pinkyIdle", attack: "pinkyAttack", pain: "pinkyPain", scale: 1.15,
-           sfxSight: "pinkySight", sfxPain: "pinkyPain", sfxDie: "pinkyDie", sfxAct: "pinkyAct" },
+           ball: "fireball", sfxSight: "pinkySight", sfxPain: "pinkyPain", sfxDie: "pinkyDie", sfxAct: "pinkyAct" },
+  baron: { hp: 320, speed: 1.5, dmg: 22, ranged: true,  idle: "baronIdle", attack: "baronAttack", pain: "baronPain", scale: 1.35,
+           ball: "greenball", sfxSight: "baronSight", sfxPain: "baronPain", sfxDie: "baronDie", sfxAct: "baronAct" },
 };
 function makeEnemy(type, x, y) {
   return {
@@ -660,22 +1190,42 @@ function loadLevel() {
   MAP_W = L.rows[0].length;
   MAP_H = L.rows.length;
   MAP = new Array(MAP_W * MAP_H).fill(0);
-  enemies = []; pickups = []; projectiles = [];
+  floorMap = new Uint8Array(MAP_W * MAP_H);
+  enemies = []; pickups = []; projectiles = []; barrels = []; decors = []; effects = [];
   doors.clear();
+  const telePads = { t: [], u: [], v: [], w: [], x: [], z: [] };
   for (let y = 0; y < MAP_H; y++) for (let x = 0; x < MAP_W; x++) {
     const ch = L.rows[y][x];
     if (TILE_CHARS[ch]) { MAP[y * MAP_W + x] = TILE_CHARS[ch]; continue; }
+    if (FLOOR_CHARS[ch]) { floorMap[y * MAP_W + x] = FLOOR_CHARS[ch]; continue; }
     const cx = x + 0.5, cy = y + 0.5;
     if      (ch === "P") { player.x = cx; player.y = cy; player.ang = 0; }
     else if (ch === "i") enemies.push(makeEnemy("imp", cx, cy));
     else if (ch === "p") enemies.push(makeEnemy("pinky", cx, cy));
+    else if (ch === "n") enemies.push(makeEnemy("baron", cx, cy));
     else if (ch === "h") pickups.push({ kind: "medkit", x: cx, y: cy });
     else if (ch === "a") pickups.push({ kind: "ammo", x: cx, y: cy });
+    else if (ch === "b") barrels.push({ x: cx, y: cy, hp: 20, fuse: -1 });
+    else if (ch === "c") decors.push({ x: cx, y: cy, kind: "corpse" });
+    else if (KEY_CHARS[ch]) pickups.push({ kind: KEY_CHARS[ch] + "key", x: cx, y: cy });
+    else if (telePads[ch]) telePads[ch].push([x, y]);
   }
+  teleports = [];
+  for (const [src, dst] of TELE_PAIRS) {
+    if (!telePads[src].length || !telePads[dst].length) continue;
+    const [dx, dy] = telePads[dst][0];
+    for (const [sx, sy] of telePads[src]) {
+      teleports.push({ x: sx, y: sy, dx, dy });
+      floorMap[sy * MAP_W + sx] = 3;
+    }
+    floorMap[dy * MAP_W + dx] = 3;   // destination pad is visual only
+  }
+  player.keys = { blue: false, yellow: false, red: false };
   player.kills = 0;
   player.hurtFlash = 0; player.pickFlash = 0;
   totalEnemies = enemies.length;
-  fireCooldown = 0; muzzle = 0;
+  fireCooldown = 0; muzzle = 0; teleCooldown = 0; nukeTimer = 0;
+  showMsg(L.name, 2.6);
 }
 function startGame() {
   levelIdx = 0;
@@ -684,18 +1234,21 @@ function startGame() {
   gameState = "play";
   playMusic(LEVELS[levelIdx].music);
 }
-function exitLevel() {
+function exitLevel(secret) {
+  const L = LEVELS[levelIdx];
+  pendingNext = secret ? L.secretNext : (L.next !== undefined ? L.next : levelIdx + 1);
+  if (pendingNext !== null && (pendingNext === undefined || pendingNext >= LEVELS.length)) pendingNext = null;
   sfx("switch");
   gameState = "intermission";
   playMusic(MUSIC_INTER);
 }
 function nextLevel() {
-  levelIdx++;
-  if (levelIdx >= LEVELS.length) {
+  if (pendingNext === null) {
     gameState = "victory";
     playMusic(MUSIC_VICTORY);
     return;
   }
+  levelIdx = pendingNext;
   loadLevel();
   gameState = "play";
   playMusic(LEVELS[levelIdx].music);
@@ -771,13 +1324,22 @@ function tryUse() {
   for (const reach of [0.6, 1.1]) {
     const cx = (player.x + cs * reach) | 0, cy = (player.y + sn * reach) | 0;
     const t = mapAt(cx, cy);
-    if (t === 9) { exitLevel(); return; }
-    if (t === 4) {
+    if (t === 9)  { exitLevel(false); return; }
+    if (t === 10) { showMsg("YOU FOUND A SECRET EXIT!"); exitLevel(true); return; }
+    if (DOOR_TILES.has(t)) {
+      const lock = DOOR_LOCKS[t];
+      if (lock && !player.keys[lock]) {
+        showMsg("YOU NEED THE " + lock.toUpperCase() + " KEYCARD");
+        sfx("noway", 0.7);
+        return;
+      }
       const key = cy * MAP_W + cx;
       let d = doors.get(key);
       if (!d) { d = { open: 0, state: "closed", timer: 0 }; doors.set(key, d); }
-      if (d.state === "closed" || d.state === "closing") { d.state = "opening"; sfx("door"); }
-      else if (d.state === "open") { d.state = "closing"; sfx("doorClose"); }
+      if (d.state === "closed" || d.state === "closing") {
+        if (t === 14) showMsg("A SECRET DOOR GRINDS OPEN...");
+        d.state = "opening"; sfx("door");
+      } else if (d.state === "open") { d.state = "closing"; sfx("doorClose"); }
       return;
     }
     if (t !== 0) { sfx("noway", 0.6); return; }   // a plain wall blocks the reach
@@ -804,6 +1366,32 @@ function updateDoors(dt) {
       d.open -= dt * 1.6;
       if (d.open <= 0) { d.open = 0; d.state = "closed"; }
     }
+  }
+}
+
+function damageEnemy(e, amt, dist) {
+  if (e.dead || e.state === "dying" || amt <= 0) return;
+  e.hp -= amt;
+  if (e.hp <= 0) { e.state = "dying"; e.stateT = 0; sfx(e.sfxDie, volAt(dist)); }
+  else { e.state = "pain"; e.stateT = 0; sfx(e.sfxPain, volAt(dist)); }
+}
+function explodeBarrel(b) {
+  effects.push({ x: b.x, y: b.y, t: 0, kind: "boom" });
+  const pd = distToPlayer(b.x, b.y);
+  sfx("barrel", volAt(pd));
+  if (pd < 2.2) {
+    player.hp -= (50 * (1 - pd / 2.2)) | 0;
+    player.hurtFlash = 0.4; faceTimer = 0.8;
+    sfx("playerPain", 0.9);
+  }
+  for (const e of enemies) {
+    if (e.dead) continue;
+    const d = Math.hypot(e.x - b.x, e.y - b.y);
+    if (d < 2.2) damageEnemy(e, (90 * (1 - d / 2.2)) | 0, distToPlayer(e.x, e.y));
+  }
+  for (const ob of barrels) {   // chain reaction
+    if (ob !== b && ob.fuse < 0 && Math.hypot(ob.x - b.x, ob.y - b.y) < 1.8)
+      ob.fuse = 0.12 + Math.random() * 0.15;
   }
 }
 
@@ -841,33 +1429,75 @@ function update(dt) {
       player.ammo--; fireCooldown = 0.34; muzzle = 0.08;
       sfx("shoot");
       faceTimer = 0.6;
+      const targets = [];
+      for (const e of enemies) if (!e.dead && e.state !== "dying") targets.push({ o: e, r: 0.35, isBarrel: false });
+      for (const b of barrels) if (b.fuse < 0) targets.push({ o: b, r: 0.3, isBarrel: true });
       let best = null, bestDist = Infinity;
-      for (const e of enemies) {
-        if (e.dead) continue;
-        const dx = e.x - player.x, dy = e.y - player.y;
+      for (const tgt of targets) {
+        const dx = tgt.o.x - player.x, dy = tgt.o.y - player.y;
         const dist = Math.hypot(dx, dy);
         let da = Math.atan2(dy, dx) - player.ang;
         while (da >  Math.PI) da -= 2 * Math.PI;
         while (da < -Math.PI) da += 2 * Math.PI;
-        const halfWidth = Math.atan2(0.35, dist);
-        if (Math.abs(da) < halfWidth && dist < bestDist && hasLOS(player.x, player.y, e.x, e.y)) {
-          best = e; bestDist = dist;
+        const halfWidth = Math.atan2(tgt.r, dist);
+        if (Math.abs(da) < halfWidth && dist < bestDist && hasLOS(player.x, player.y, tgt.o.x, tgt.o.y)) {
+          best = tgt; bestDist = dist;
         }
       }
       if (best) {
-        best.hp -= 20 + (Math.random() * 14 | 0);
-        if (best.hp <= 0) {
-          best.state = "dying"; best.stateT = 0;
-          sfx(best.sfxDie, volAt(bestDist));
+        const dmg = 20 + (Math.random() * 14 | 0);
+        if (best.isBarrel) {
+          best.o.hp -= dmg;
+          if (best.o.hp <= 0) best.o.fuse = 0.02;
         } else {
-          best.state = "pain"; best.stateT = 0;
-          sfx(best.sfxPain, volAt(bestDist));
+          damageEnemy(best.o, dmg, bestDist);
         }
       }
     } else {
       fireCooldown = 0.34;
     }
   }
+
+  // --- barrels & effects ---
+  for (const b of barrels) {
+    if (b.fuse >= 0) {
+      b.fuse -= dt;
+      if (b.fuse <= 0 && !b.boomed) { b.boomed = true; explodeBarrel(b); }
+    }
+  }
+  barrels = barrels.filter(b => !b.boomed);
+  for (let i = effects.length - 1; i >= 0; i--) {
+    effects[i].t += dt;
+    if (effects[i].t > 0.45) effects.splice(i, 1);
+  }
+
+  // --- liquid floors & teleporters ---
+  const floorType = floorMap[(player.y | 0) * MAP_W + (player.x | 0)];
+  if (floorType === 2) {
+    nukeTimer -= dt;
+    if (nukeTimer <= 0) {
+      nukeTimer = 0.7;
+      player.hp -= 5;
+      player.hurtFlash = Math.max(player.hurtFlash, 0.2);
+      faceTimer = 0.5;
+      sfx("playerPain", 0.5);
+    }
+  } else nukeTimer = 0.2;
+  teleCooldown -= dt;
+  if (teleCooldown <= 0) {
+    for (const tp of teleports) {
+      if ((player.x | 0) === tp.x && (player.y | 0) === tp.y) {
+        effects.push({ x: player.x, y: player.y, t: 0, kind: "telefog" });
+        player.x = tp.dx + 0.5; player.y = tp.dy + 0.5;
+        effects.push({ x: player.x, y: player.y, t: 0, kind: "telefog" });
+        teleCooldown = 1.2;
+        player.pickFlash = 0.3;
+        sfx("teleport");
+        break;
+      }
+    }
+  }
+  msgT = Math.max(0, msgT - dt);
 
   // --- enemies ---
   for (const e of enemies) {
@@ -898,7 +1528,7 @@ function update(dt) {
     if (e.ranged && los && dist > 2.5 && e.attackT <= 0) {
       e.state = "attack"; e.stateT = 0; e.attackT = 1.6 + Math.random();
       const pa = Math.atan2(dy, dx) + (Math.random() - 0.5) * 0.12;
-      projectiles.push({ x: e.x, y: e.y, vx: Math.cos(pa) * 6, vy: Math.sin(pa) * 6, dmg: e.dmg });
+      projectiles.push({ x: e.x, y: e.y, vx: Math.cos(pa) * 6, vy: Math.sin(pa) * 6, dmg: e.dmg, img: e.ball });
       sfx("fireball", volAt(dist));
     } else if (!e.ranged && dist < 1.1 && e.attackT <= 0) {
       e.state = "attack"; e.stateT = 0; e.attackT = 1.0;
@@ -945,8 +1575,12 @@ function update(dt) {
       if (p.kind === "medkit") {
         if (player.hp >= 100) continue;
         player.hp = Math.min(100, player.hp + 25);
-      } else {
+      } else if (p.kind === "ammo") {
         player.ammo = Math.min(200, player.ammo + 20);
+      } else {   // keycard
+        const color = p.kind.slice(0, -3);
+        player.keys[color] = true;
+        showMsg("PICKED UP THE " + color.toUpperCase() + " KEYCARD");
       }
       player.pickFlash = 0.25;
       sfx("pickup");
@@ -984,23 +1618,39 @@ function renderWorld() {
 
   // --- floor & ceiling casting (per row) ---
   const fData = floorTex.data, cData = ceilTex.data;
+  const wLiq = waterTex.data, nLiq = nukeTex.data, pPad = padTex.data;
+  const liqT = performance.now() / 1000 * 0.35;
   for (let y = 0; y < VIEW_H; y++) {
     const isFloor = y > horizon;
     const p = isFloor ? (y - horizon) : (horizon - y);
     if (p <= 0) continue;
     const rowDist = half / p;
-    const fog = Math.min(1, 2.4 / rowDist) * 0.8;
+    const fog = Math.min(1, 2.1 / rowDist) * (isFloor ? 0.8 : 0.55);
     const stepX = rowDist * (2 * planeX) / W;
     const stepY = rowDist * (2 * planeY) / W;
     let fx = posX + rowDist * (dirX - planeX);
     let fy = posY + rowDist * (dirY - planeY);
     const rowBase = y * W;
-    const tex = isFloor ? fData : cData;
-    for (let x = 0; x < W; x++) {
-      const tx = ((fx - Math.floor(fx)) * TEX) | 0;
-      const ty = ((fy - Math.floor(fy)) * TEX) | 0;
-      fb[rowBase + x] = shade(tex[ty * TEX + tx], fog);
-      fx += stepX; fy += stepY;
+    if (!isFloor) {
+      for (let x = 0; x < W; x++) {
+        const tx = ((fx - Math.floor(fx)) * TEX) | 0;
+        const ty = ((fy - Math.floor(fy)) * TEX) | 0;
+        fb[rowBase + x] = shade(cData[ty * TEX + tx], fog);
+        fx += stepX; fy += stepY;
+      }
+    } else {
+      for (let x = 0; x < W; x++) {
+        const cx = fx | 0, cy = fy | 0;
+        const ft = (cx >= 0 && cy >= 0 && cx < MAP_W && cy < MAP_H) ? floorMap[cy * MAP_W + cx] : 0;
+        let tex = fData, u = fx, v = fy, br = fog;
+        if (ft === 1)      { tex = wLiq; u += liqT; v += liqT * 0.6; br = Math.min(1, fog * 1.5); }
+        else if (ft === 2) { tex = nLiq; u += liqT; v += liqT * 0.6; br = Math.min(1, fog * 1.5); }
+        else if (ft === 3) { tex = pPad; br = Math.min(1, fog * 1.4); }
+        const tx = ((u - Math.floor(u)) * TEX) | 0;
+        const ty = ((v - Math.floor(v)) * TEX) | 0;
+        fb[rowBase + x] = shade(tex[ty * TEX + tx], br);
+        fx += stepX; fy += stepY;
+      }
     }
   }
 
@@ -1022,7 +1672,7 @@ function renderWorld() {
       else               { sideY += dY; mapY += stepY; side = 1; }
       const t = mapAt(mapX, mapY);
       if (!t) continue;
-      if (t === 4) {
+      if (DOOR_TILES.has(t)) {
         // sliding door: the slab covers [0, 1-open) of the cell face
         const d = doors.get(mapY * MAP_W + mapX);
         const openness = d ? d.open : 0;
@@ -1049,10 +1699,11 @@ function renderWorld() {
     let texX = (wallX * TEX) | 0;
     if ((side === 0 && rdX > 0) || (side === 1 && rdY < 0)) texX = TEX - texX - 1;
 
-    const tex = textures[hit] ? textures[hit].data : textures[1].data;
+    const texEntry = textures[hit === 14 ? 1 : hit] || textures[1];   // secret doors look like stone
+    const tex = texEntry.data;
     const step = TEX / lineH;
     let texPos = (drawStart - horizon + lineH / 2) * step;
-    let fog = Math.min(1, 3.2 / perpDist);
+    let fog = Math.min(1, 2.8 / perpDist);
     if (side === 1) fog *= 0.72;
     for (let y = drawStart; y <= drawEnd; y++) {
       const texY = Math.min(TEX - 1, texPos | 0);
@@ -1078,7 +1729,15 @@ function renderWorld() {
     items.push({ x: e.x, y: e.y, img, hScale, sink });
   }
   for (const p of pickups)     items.push({ x: p.x, y: p.y, img: sprites[p.kind], hScale: 0.7, sink: 0.18 });
-  for (const p of projectiles) items.push({ x: p.x, y: p.y, img: sprites.fireball, hScale: 0.5, sink: 0 });
+  for (const p of projectiles) items.push({ x: p.x, y: p.y, img: sprites[p.img] || sprites.fireball, hScale: 0.5, sink: 0 });
+  for (const b of barrels)     items.push({ x: b.x, y: b.y, img: sprites.barrel, hScale: 0.8, sink: 0.12 });
+  for (const d of decors)      items.push({ x: d.x, y: d.y, img: sprites.corpse, hScale: 0.6, sink: 0.3 });
+  for (const f of effects) items.push({
+    x: f.x, y: f.y,
+    img: f.kind === "telefog" ? sprites.telefog : (f.t < 0.18 ? sprites.boom1 : sprites.boom2),
+    hScale: f.kind === "telefog" ? 1.0 : 0.7 + f.t * 1.6,
+    sink: 0, bright: true,
+  });
 
   const invDet = 1 / (planeX * dirY - dirX * planeY);
   for (const s of items) {
@@ -1101,7 +1760,7 @@ function renderWorld() {
     const drawEndY = Math.min(VIEW_H - 1, (horizon + sprH / 2 + vShift) | 0);
     const drawStartX = Math.max(0, (screenX - sprW / 2) | 0);
     const drawEndX = Math.min(W - 1, (screenX + sprW / 2) | 0);
-    const fog = Math.min(1, 3.2 / transY);
+    const fog = s.bright ? 1 : Math.min(1, 2.8 / transY);
     for (let x = drawStartX; x <= drawEndX; x++) {
       if (transY >= zBuffer[x]) continue;
       const texX = (((x - (screenX - sprW / 2)) * SPR) / sprW) | 0;
@@ -1203,6 +1862,20 @@ function renderHUD() {
   drawDigits("HEALTH", 170, mid - 14, 13, "#888");
   drawDigits(player.hp + "%", 170, mid + 10, 30, player.hp > 30 ? "#e03030" : "#ff6060");
   renderFace(320, mid);
+  // collected keycards next to the face
+  if (player.keys) {
+    const keyColors = { blue: "#3060e0", yellow: "#d8b820", red: "#d02020" };
+    let ki = 0;
+    for (const color of ["blue", "yellow", "red"]) {
+      if (player.keys[color]) {
+        ctx.fillStyle = keyColors[color];
+        ctx.fillRect(345, VIEW_H + 8 + ki * 17, 9, 13);
+        ctx.fillStyle = "#eee";
+        ctx.fillRect(347, VIEW_H + 10 + ki * 17, 5, 3);
+      }
+      ki++;
+    }
+  }
   drawDigits("KILLS", 380, mid - 14, 13, "#888");
   drawDigits(`${player.kills}/${totalEnemies}`, 380, mid + 10, 30, "#e03030");
   drawDigits("LEVEL", 520, mid - 14, 13, "#888");
@@ -1223,10 +1896,12 @@ function renderMinimap() {
   for (let y = 0; y < MAP_H; y++) for (let x = 0; x < MAP_W; x++) {
     const t = MAP[y * MAP_W + x];
     if (t) {
-      const d = t === 4 ? doorAt(x, y) : null;
+      const d = DOOR_TILES.has(t) ? doorAt(x, y) : null;
       ctx.fillStyle =
-        t === 4 ? (d && d.open > 0.8 ? "#4a6a30" : "#c8a020") :
-        t === 9 ? "#d02020" : "#8a8a8a";
+        d && d.open > 0.8 ? "#4a6a30" :
+        t === 4  ? "#c8a020" :
+        t === 11 ? "#3060e0" : t === 12 ? "#d8b820" : t === 13 ? "#d02020" :
+        t === 9 || t === 10 ? "#d02020" : "#8a8a8a";   // secret doors (14) stay wall-gray
       ctx.fillRect(ox + x * s, oy + y * s, s - 1, s - 1);
     }
   }
@@ -1250,6 +1925,13 @@ function renderMinimap() {
 }
 
 function renderOverlays() {
+  if (msgT > 0 && gameState === "play") {
+    ctx.textAlign = "center";
+    ctx.font = "bold 17px 'Courier New', monospace";
+    ctx.fillStyle = "#e8c840";
+    ctx.fillText(msg, W / 2, 26);
+    ctx.textAlign = "left";
+  }
   if (player.hurtFlash > 0) {
     ctx.fillStyle = `rgba(200,0,0,${player.hurtFlash * 0.9})`;
     ctx.fillRect(0, 0, W, VIEW_H);
@@ -1280,8 +1962,8 @@ function renderOverlays() {
     ctx.fillText(`KILLS: ${player.kills} / ${totalEnemies}`, W / 2, H / 2 - 10);
     ctx.fillText(`ITEMS LEFT: ${pickups.length}`, W / 2, H / 2 + 22);
     ctx.fillStyle = "#e0a020";
-    ctx.fillText(levelIdx + 1 < LEVELS.length
-      ? "PRESS SPACE FOR " + LEVELS[levelIdx + 1].name
+    ctx.fillText(pendingNext !== null
+      ? "PRESS SPACE FOR " + LEVELS[pendingNext].name
       : "PRESS SPACE TO FINISH", W / 2, H / 2 + 70);
   } else if (gameState === "victory") {
     ctx.font = "bold 44px 'Courier New', monospace";

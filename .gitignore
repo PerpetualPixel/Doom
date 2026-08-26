@@ -1,5 +1,9 @@
-# Local audio assets (id Software's copyrighted sounds/music).
-# The game auto-detects them locally and falls back to synthesized
-# audio when absent, so the hosted build works without them.
+# Local asset folders (id Software's copyrighted game assets).
+# The game auto-detects these locally and falls back to its own
+# procedural art and synthesized audio when they are absent, so
+# the hosted build works without them. They are intentionally
+# not distributed with this repo.
 SFX/
 Doom OST/
+sprites/
+Maps/
