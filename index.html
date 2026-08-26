@@ -39,7 +39,8 @@
   <p>
     <span class="key">CLICK</span> to enter the map (locks mouse)<br>
     <span class="key">WASD</span> move &nbsp; <span class="key">MOUSE / ARROWS</span> turn &nbsp; <span class="key">SHIFT</span> run<br>
-    <span class="key">CLICK / SPACE</span> fire &nbsp; <span class="key">M</span> toggle map &nbsp; <span class="key">R</span> restart<br><br>
+    <span class="key">CLICK / SPACE</span> fire &nbsp; <span class="key">E</span> open doors &nbsp; <span class="key">M</span> map<br>
+    <span class="key">N</span> music on/off &nbsp; <span class="key">R</span> restart<br><br>
     Kill all the demons.
   </p>
 </div>
@@ -95,6 +96,24 @@ const MAP = [
   1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
 ];
 const mapAt = (x, y) => (x < 0 || y < 0 || x >= MAP_W || y >= MAP_H) ? 1 : MAP[y * MAP_W + x];
+
+// Doors: any tile 4 can be opened with E. Keyed by cell index.
+const doors = new Map();
+function doorAt(cx, cy) { return doors.get(cy * MAP_W + cx); }
+function solidCell(cx, cy) {
+  const t = mapAt(cx, cy);
+  if (t === 0) return false;
+  if (t === 4) {
+    const d = doorAt(cx, cy);
+    return !(d && d.open > 0.8);
+  }
+  return true;
+}
+function cellOccupied(key) {
+  const cx = key % MAP_W, cy = (key / MAP_W) | 0;
+  if ((player.x | 0) === cx && (player.y | 0) === cy) return true;
+  return enemies.some(e => !e.dead && (e.x | 0) === cx && (e.y | 0) === cy);
+}
 
 // ---------------------------------------------------------
 // Procedural textures (64x64) -> Uint32Array
@@ -361,8 +380,107 @@ function sfx(kind) {
     src.connect(f); f.connect(out);
     out.gain.setValueAtTime(0.2, t); out.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
     src.start(t); src.stop(t + 0.3);
+  } else if (kind === "door") {
+    // mechanical grind sliding up
+    const src = audio.createBufferSource(); src.buffer = noiseBuffer(0.5);
+    const f = audio.createBiquadFilter(); f.type = "bandpass"; f.Q.value = 4;
+    f.frequency.setValueAtTime(120, t); f.frequency.exponentialRampToValueAtTime(900, t + 0.45);
+    src.connect(f); f.connect(out);
+    out.gain.setValueAtTime(0.35, t); out.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+    src.start(t); src.stop(t + 0.5);
+    const o = audio.createOscillator(); o.type = "sawtooth";
+    o.frequency.setValueAtTime(70, t); o.frequency.linearRampToValueAtTime(110, t + 0.45);
+    const og = audio.createGain(); og.gain.setValueAtTime(0.08, t);
+    og.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+    o.connect(og); og.connect(audio.destination);
+    o.start(t); o.stop(t + 0.5);
+  } else if (kind === "doorClose") {
+    // descending grind + heavy thunk
+    const src = audio.createBufferSource(); src.buffer = noiseBuffer(0.4);
+    const f = audio.createBiquadFilter(); f.type = "bandpass"; f.Q.value = 4;
+    f.frequency.setValueAtTime(800, t); f.frequency.exponentialRampToValueAtTime(110, t + 0.35);
+    src.connect(f); f.connect(out);
+    out.gain.setValueAtTime(0.3, t); out.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+    src.start(t); src.stop(t + 0.4);
+    const o = audio.createOscillator(); o.type = "sine";
+    o.frequency.setValueAtTime(90, t + 0.35); o.frequency.exponentialRampToValueAtTime(45, t + 0.5);
+    const og = audio.createGain(); og.gain.setValueAtTime(0.0001, t);
+    og.gain.setValueAtTime(0.5, t + 0.35); og.gain.exponentialRampToValueAtTime(0.001, t + 0.55);
+    o.connect(og); og.connect(audio.destination);
+    o.start(t); o.stop(t + 0.55);
+  } else if (kind === "sight") {
+    // demon spots you: harsh rising-falling screech
+    const o = audio.createOscillator(); o.type = "sawtooth";
+    o.frequency.setValueAtTime(160, t);
+    o.frequency.exponentialRampToValueAtTime(420, t + 0.12);
+    o.frequency.exponentialRampToValueAtTime(110, t + 0.35);
+    o.connect(out);
+    out.gain.setValueAtTime(0.22, t); out.gain.exponentialRampToValueAtTime(0.001, t + 0.38);
+    o.start(t); o.stop(t + 0.4);
+  } else if (kind === "growl") {
+    const o = audio.createOscillator(); o.type = "sawtooth";
+    o.frequency.setValueAtTime(95, t); o.frequency.exponentialRampToValueAtTime(65, t + 0.3);
+    const f = audio.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = 400;
+    o.connect(f); f.connect(out);
+    out.gain.setValueAtTime(0.12, t); out.gain.exponentialRampToValueAtTime(0.001, t + 0.32);
+    o.start(t); o.stop(t + 0.33);
   }
 }
+
+// ---------------------------------------------------------
+// Music: original synthesized metal-style loop (not the id
+// Software tracks - those are copyrighted). Toggle with N.
+// ---------------------------------------------------------
+let musicOn = true, musicGain = null, musicNext = 0, musicStep = 0;
+const RIFF = [   // 16 eighth-notes, A minor chug (frequencies in Hz, 0 = rest)
+  110.00, 110.00, 164.81, 110.00, 98.00, 110.00, 130.81, 110.00,
+  110.00, 110.00, 146.83, 130.81, 110.00, 98.00, 82.41, 110.00,
+];
+function musicScheduleStep(step, t) {
+  const freq = RIFF[step];
+  if (freq) {          // palm-muted bass chug
+    const o = audio.createOscillator(); o.type = "sawtooth";
+    o.frequency.value = freq;
+    const o2 = audio.createOscillator(); o2.type = "square";
+    o2.frequency.value = freq / 2;
+    const f = audio.createBiquadFilter(); f.type = "lowpass";
+    f.frequency.setValueAtTime(900, t); f.frequency.exponentialRampToValueAtTime(300, t + 0.16);
+    const g = audio.createGain();
+    g.gain.setValueAtTime(0.5, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.19);
+    o.connect(f); o2.connect(f); f.connect(g); g.connect(musicGain);
+    o.start(t); o.stop(t + 0.2); o2.start(t); o2.stop(t + 0.2);
+  }
+  if (step % 4 === 0) { // kick on quarter notes
+    const o = audio.createOscillator(); o.type = "sine";
+    o.frequency.setValueAtTime(130, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.1);
+    const g = audio.createGain();
+    g.gain.setValueAtTime(0.9, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+    o.connect(g); g.connect(musicGain);
+    o.start(t); o.stop(t + 0.13);
+  }
+  if (step % 2 === 1) { // hats on the offbeats
+    const src = audio.createBufferSource(); src.buffer = noiseBuffer(0.03);
+    const f = audio.createBiquadFilter(); f.type = "highpass"; f.frequency.value = 6000;
+    const g = audio.createGain();
+    g.gain.setValueAtTime(0.12, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
+    src.connect(f); f.connect(g); g.connect(musicGain);
+    src.start(t); src.stop(t + 0.04);
+  }
+}
+setInterval(() => {
+  if (!audio || audio.state !== "running" || !musicOn || gameState !== "play") { musicNext = 0; return; }
+  if (!musicGain) {
+    musicGain = audio.createGain();
+    musicGain.gain.value = 0.35;
+    musicGain.connect(audio.destination);
+  }
+  if (musicNext < audio.currentTime) { musicNext = audio.currentTime + 0.06; }
+  while (musicNext < audio.currentTime + 0.25) {
+    musicScheduleStep(musicStep, musicNext);
+    musicStep = (musicStep + 1) % 16;
+    musicNext += 0.214;   // ~140 bpm eighth notes
+  }
+}, 90);
 
 // ---------------------------------------------------------
 // Game state
@@ -382,7 +500,9 @@ function spawnLevel() {
   player.hp = 100; player.ammo = 48; player.kills = 0;
   player.hurtFlash = 0; player.pickFlash = 0;
   projectiles = [];
+  doors.clear();
   enemies = [
+    { type: "imp",   x: 5.5,  y: 5.5 },
     { type: "imp",   x: 11.5, y: 4.5 },
     { type: "imp",   x: 20.0, y: 2.5 },
     { type: "imp",   x: 5.0,  y: 12.0 },
@@ -416,6 +536,8 @@ const keys = {};
 addEventListener("keydown", e => {
   keys[e.code] = true;
   if (e.code === "KeyM") showMap = !showMap;
+  if (e.code === "KeyN") musicOn = !musicOn;
+  if (e.code === "KeyE" && gameState === "play") tryUseDoor();
   if (e.code === "KeyR" && (gameState === "dead" || gameState === "won")) { spawnLevel(); gameState = "play"; }
   if (["Space", "ArrowUp", "ArrowDown"].includes(e.code)) e.preventDefault();
 });
@@ -448,14 +570,48 @@ function hasLOS(x0, y0, x1, y1) {
   const steps = Math.ceil(dist * 6);
   for (let i = 1; i < steps; i++) {
     const t = i / steps;
-    if (mapAt((x0 + dx * t) | 0, (y0 + dy * t) | 0) !== 0) return false;
+    if (solidCell((x0 + dx * t) | 0, (y0 + dy * t) | 0)) return false;
   }
   return true;
 }
 function moveWithCollision(obj, dx, dy, radius) {
   const nx = obj.x + dx, ny = obj.y + dy;
-  if (mapAt((nx + Math.sign(dx) * radius) | 0, obj.y | 0) === 0) obj.x = nx;
-  if (mapAt(obj.x | 0, (ny + Math.sign(dy) * radius) | 0) === 0) obj.y = ny;
+  if (!solidCell((nx + Math.sign(dx) * radius) | 0, obj.y | 0)) obj.x = nx;
+  if (!solidCell(obj.x | 0, (ny + Math.sign(dy) * radius) | 0)) obj.y = ny;
+}
+function tryUseDoor() {
+  const cs = Math.cos(player.ang), sn = Math.sin(player.ang);
+  for (const reach of [0.6, 1.1]) {
+    const cx = (player.x + cs * reach) | 0, cy = (player.y + sn * reach) | 0;
+    const t = mapAt(cx, cy);
+    if (t === 4) {
+      const key = cy * MAP_W + cx;
+      let d = doors.get(key);
+      if (!d) { d = { open: 0, state: "closed", timer: 0 }; doors.set(key, d); }
+      if (d.state === "closed" || d.state === "closing") { d.state = "opening"; sfx("door"); }
+      else if (d.state === "open") { d.state = "closing"; sfx("doorClose"); }
+      return;
+    }
+    if (t !== 0) return;   // a wall blocks the reach
+  }
+}
+function updateDoors(dt) {
+  for (const [key, d] of doors) {
+    if (d.state === "opening") {
+      d.open += dt * 1.6;
+      if (d.open >= 1) { d.open = 1; d.state = "open"; d.timer = 4; }
+    } else if (d.state === "open") {
+      d.timer -= dt;
+      if (d.timer <= 0) {
+        if (cellOccupied(key)) d.timer = 1;
+        else { d.state = "closing"; sfx("doorClose"); }
+      }
+    } else if (d.state === "closing") {
+      if (cellOccupied(key)) { d.state = "opening"; continue; }
+      d.open -= dt * 1.6;
+      if (d.open <= 0) { d.open = 0; d.state = "closed"; }
+    }
+  }
 }
 
 // ---------------------------------------------------------
@@ -463,6 +619,8 @@ function moveWithCollision(obj, dx, dy, radius) {
 // ---------------------------------------------------------
 function update(dt) {
   if (gameState !== "play") return;
+
+  updateDoors(dt);
 
   // --- player movement ---
   const run = keys["ShiftLeft"] || keys["ShiftRight"] ? 1.7 : 1;
@@ -538,7 +696,7 @@ function update(dt) {
     const los = dist < 14 && hasLOS(e.x, e.y, player.x, player.y);
 
     if (e.state === "idle") {
-      if (los && dist < 10) { e.state = "chase"; e.stateT = 0; }
+      if (los && dist < 10) { e.state = "chase"; e.stateT = 0; sfx("sight"); }
       continue;
     }
     if (e.state === "attack") {
@@ -558,6 +716,7 @@ function update(dt) {
       player.hurtFlash = 0.35; faceTimer = 0.8;
       sfx("pain");
     } else if (dist > (e.ranged ? 3.5 : 0.8)) {
+      if (dist < 9 && Math.random() < dt * 0.18) sfx("growl");
       const step = e.speed * dt;
       let vx = dx / dist, vy = dy / dist;
       if (!los) {   // simple wall-follow wiggle when no line of sight
@@ -574,7 +733,7 @@ function update(dt) {
   for (let i = projectiles.length - 1; i >= 0; i--) {
     const p = projectiles[i];
     p.x += p.vx * dt; p.y += p.vy * dt;
-    if (mapAt(p.x | 0, p.y | 0) !== 0) { projectiles.splice(i, 1); continue; }
+    if (solidCell(p.x | 0, p.y | 0)) { projectiles.splice(i, 1); continue; }
     if (Math.hypot(p.x - player.x, p.y - player.y) < 0.4) {
       player.hp -= p.dmg;
       player.hurtFlash = 0.35; faceTimer = 0.8;
@@ -658,11 +817,25 @@ function renderWorld() {
     else         { stepX = 1;  sideX = (mapX + 1 - posX) * dX; }
     if (rdY < 0) { stepY = -1; sideY = (posY - mapY) * dY; }
     else         { stepY = 1;  sideY = (mapY + 1 - posY) * dY; }
-    let hit = 0, side = 0;
+    let hit = 0, side = 0, doorShift = 0;
     while (!hit) {
       if (sideX < sideY) { sideX += dX; mapX += stepX; side = 0; }
       else               { sideY += dY; mapY += stepY; side = 1; }
-      hit = mapAt(mapX, mapY);
+      const t = mapAt(mapX, mapY);
+      if (!t) continue;
+      if (t === 4) {
+        // sliding door: the slab covers [0, 1-open) of the cell face
+        const d = doors.get(mapY * MAP_W + mapX);
+        const openness = d ? d.open : 0;
+        if (openness > 0) {
+          const pd = side === 0 ? sideX - dX : sideY - dY;
+          let wx = side === 0 ? posY + pd * rdY : posX + pd * rdX;
+          wx -= Math.floor(wx);
+          if (wx + openness >= 1) continue;   // ray passes through the opening
+          doorShift = openness;
+        }
+      }
+      hit = t;
     }
     const perpDist = side === 0 ? sideX - dX : sideY - dY;
     zBuffer[x] = perpDist;
@@ -673,6 +846,7 @@ function renderWorld() {
 
     let wallX = side === 0 ? posY + perpDist * rdY : posX + perpDist * rdX;
     wallX -= Math.floor(wallX);
+    if (doorShift > 0) wallX = Math.min(0.999, wallX + doorShift);   // texture slides with the door
     let texX = (wallX * TEX) | 0;
     if ((side === 0 && rdX > 0) || (side === 1 && rdY < 0)) texX = TEX - texX - 1;
 
@@ -860,8 +1034,10 @@ function renderMinimap() {
   ctx.fillStyle = "rgba(0,0,0,0.55)";
   ctx.fillRect(ox - 2, oy - 2, MAP_W * s + 4, MAP_H * s + 4);
   for (let y = 0; y < MAP_H; y++) for (let x = 0; x < MAP_W; x++) {
-    if (MAP[y * MAP_W + x]) {
-      ctx.fillStyle = "#8a8a8a";
+    const t = MAP[y * MAP_W + x];
+    if (t) {
+      const d = t === 4 ? doorAt(x, y) : null;
+      ctx.fillStyle = t === 4 ? (d && d.open > 0.8 ? "#4a6a30" : "#c8a020") : "#8a8a8a";
       ctx.fillRect(ox + x * s, oy + y * s, s - 1, s - 1);
     }
   }
