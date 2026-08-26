@@ -1597,7 +1597,6 @@ sprites.redkey = keycardSprite("#d02020");
 // keeps the fallback art.
 // -----------------------------------------------------
 const SHEET_MAP = [
-  { file: "Imp.png",           set: "imp" },
   { file: "Demon.png",         set: "pinky" },
   { file: "Baron Of Hell.png", set: "baron" },
   { file: "Zombie.png",        set: "zombie" },
@@ -1614,12 +1613,26 @@ function sliceSheet(img) {
   let data;
   try { data = g.getImageData(0, 0, c.width, c.height); } catch { return null; }
   const d = data.data, w = c.width, h = c.height;
-  let key = -1;   // solid background color to key out, if the sheet has one
-  if (d[3] > 200) key = (d[0] << 16) | (d[1] << 8) | d[2];
+  // solid background color to key out, if the sheet has one (with
+  // tolerance for JPEG noise; bright keys also strip gray shadows)
+  let kr = -1, kg = 0, kb = 0, brightKey = false;
+  if (d[3] > 200) {
+    kr = d[0]; kg = d[1]; kb = d[2];
+    brightKey = kr + kg + kb > 600;
+  }
+  const isBg = (r, g, b) => {
+    if (kr < 0) return false;
+    if (Math.abs(r - kr) < 30 && Math.abs(g - kg) < 30 && Math.abs(b - kb) < 30) return true;
+    if (brightKey) {   // light desaturated gray = drop shadow on white art
+      const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+      if (mx - mn < 14 && mn > 168) return true;
+    }
+    return false;
+  };
   const solid = (x, y) => {
     const i = (y * w + x) * 4;
     if (d[i + 3] < 128) return false;
-    return key < 0 || ((d[i] << 16) | (d[i + 1] << 8) | d[i + 2]) !== key;
+    return !isBg(d[i], d[i + 1], d[i + 2]);
   };
   const rowSolid = new Array(h).fill(false);
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (solid(x, y)) { rowSolid[y] = true; break; }
@@ -1646,10 +1659,10 @@ function sliceSheet(img) {
     const sc = Math.min(SPR / cw, SPR / ch);
     og.drawImage(c, cl.x0, band.y0, cw, ch, (SPR - cw * sc) / 2, SPR - ch * sc, cw * sc, ch * sc);
     const od = og.getImageData(0, 0, SPR, SPR);
-    if (key >= 0) {
+    if (kr >= 0) {
       const p = od.data;
       for (let i = 0; i < p.length; i += 4)
-        if (((p[i] << 16) | (p[i + 1] << 8) | p[i + 2]) === key) p[i + 3] = 0;
+        if (p[i + 3] > 0 && isBg(p[i], p[i + 1], p[i + 2])) p[i + 3] = 0;
     }
     return new Uint32Array(od.data.buffer);
   });
@@ -1662,6 +1675,20 @@ for (const { file, set } of SHEET_MAP) {
     sprites[set + "Idle"] = frames[0];
     sprites[set + "Attack"] = frames[Math.min(1, frames.length - 1)];
     sprites[set + "Pain"] = frames[Math.min(2, frames.length - 1)];
+  };
+  img.onerror = () => {};
+  img.src = "sprites/" + file;
+}
+// custom imp art: a standing frame for all live states, plus a corpse
+// frame that dead imps leave behind on the floor
+for (const [file, apply] of [
+  ["ImpCustom.jpg", f => { sprites.impIdle = f; sprites.impAttack = f; sprites.impPain = f; }],
+  ["ImpCorpse.jpg", f => { sprites.impCorpse = f; }],
+]) {
+  const img = new Image();
+  img.onload = () => {
+    const frames = sliceSheet(img);
+    if (frames && frames.length) apply(frames[0]);
   };
   img.onerror = () => {};
   img.src = "sprites/" + file;
@@ -2061,7 +2088,8 @@ function showMsg(text, dur = 2.2) { msg = text; msgT = dur; }
 
 const ENEMY_TYPES = {
   imp:      { hp: 60,  speed: 1.6, dmg: 12, ranged: true,  cool: 1.6, pspeed: 6,  scale: 1.0,
-              idle: "impIdle", attack: "impAttack", pain: "impPain", ball: "fireball", atkSfx: "fireball",
+              idle: "impIdle", attack: "impAttack", pain: "impPain", corpse: "impCorpse",
+              ball: "fireball", atkSfx: "fireball",
               sfxSight: "impSight", sfxPain: "impPain", sfxDie: "impDie", sfxAct: "impAct" },
   pinky:    { hp: 150, speed: 2.6, dmg: 25, ranged: false, cool: 1.0, scale: 1.15,
               idle: "pinkyIdle", attack: "pinkyAttack", pain: "pinkyPain", ball: "fireball", atkSfx: "bite",
@@ -2586,6 +2614,7 @@ function update(dt) {
     if (e.state === "dying") {
       if (e.stateT > 0.45) {
         e.dead = true; player.kills++;
+        if (e.corpse && sprites[e.corpse]) decors.push({ x: e.x, y: e.y, spr: e.corpse });
         const drop = ENEMY_DROPS[e.type];
         if (drop && Math.random() < drop.chance)
           pickups.push({ kind: "ammo", spr: drop.spr, give: drop.give, x: e.x, y: e.y });
@@ -2838,7 +2867,7 @@ function renderWorld() {
   for (const p of projectiles) items.push({ x: p.x, y: p.y, img: sprites[p.img] || sprites.fireball, hScale: 0.5, sink: 0 });
   for (const p of pProjectiles) items.push({ x: p.x, y: p.y, img: sprites[p.wp.proj], hScale: p.wp.proj === "bfgball" ? 0.8 : 0.45, sink: 0, bright: true });
   for (const b of barrels)     items.push({ x: b.x, y: b.y, img: sprites.barrel, hScale: 0.8, sink: 0.12 });
-  for (const d of decors)      items.push({ x: d.x, y: d.y, img: sprites.corpse, hScale: 0.6, sink: 0.3 });
+  for (const d of decors)      items.push({ x: d.x, y: d.y, img: sprites[d.spr] || sprites.corpse, hScale: d.spr ? 0.75 : 0.6, sink: d.spr ? 0.22 : 0.3 });
   for (const f of effects) items.push({
     x: f.x, y: f.y,
     img: f.kind === "telefog" ? sprites.telefog :
