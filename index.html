@@ -1600,7 +1600,6 @@ const SHEET_MAP = [
   { file: "Demon.png",         set: "pinky" },
   { file: "Baron Of Hell.png", set: "baron" },
   { file: "Zombie.png",        set: "zombie" },
-  { file: "Lost Soul.png",     set: "soul" },
   { file: "Cyber Demon.png",   set: "cyber" },
   { file: "Spiderdemon.png",   set: "spider" },
 ];
@@ -1614,28 +1613,31 @@ function sliceSheet(img) {
   const d = data.data, w = c.width, h = c.height;
   // Background keying, tolerant of JPEG noise. Handles: transparent
   // PNGs, solid-color backgrounds, white art with gray drop shadows,
-  // and two-tone checkerboard "transparency" patterns baked into JPGs.
-  let kr = -1, kg = 0, kb = 0, k2r = -1, k2g = 0, k2b = 0, brightKey = false;
+  // and checkerboard "transparency" patterns baked into JPGs — every
+  // background shade is sampled around the image border, so banded
+  // checkers key out too without touching interior grays.
+  const near = (r, g, b, k) => Math.abs(r - k[0]) < 26 && Math.abs(g - k[1]) < 26 && Math.abs(b - k[2]) < 26;
+  const bgKeys = [];
   if (d[3] > 200) {
-    kr = d[0]; kg = d[1]; kb = d[2];
-    brightKey = kr + kg + kb > 600;
-    const spread0 = Math.max(kr, kg, kb) - Math.min(kr, kg, kb);
-    if (spread0 < 16) {   // desaturated corner: look for a checker second shade
-      for (let x = 1; x < Math.min(w, 80); x++) {
-        const i = x * 4;
-        if (d[i + 3] < 200) break;
+    bgKeys.push([d[0], d[1], d[2]]);
+    const base = bgKeys[0];
+    if (Math.max(base[0], base[1], base[2]) - Math.min(base[0], base[1], base[2]) < 16) {
+      const sample = (x, y) => {
+        const i = (y * w + x) * 4;
+        if (d[i + 3] < 200 || bgKeys.length >= 12) return;
         const r = d[i], g2 = d[i + 1], b2 = d[i + 2];
-        const sp = Math.max(r, g2, b2) - Math.min(r, g2, b2);
-        if (sp < 16 && Math.abs(r - kr) > 20) { k2r = r; k2g = g2; k2b = b2; break; }
-      }
+        if (Math.max(r, g2, b2) - Math.min(r, g2, b2) >= 16) return;   // only desaturated shades
+        if (!bgKeys.some(k => near(r, g2, b2, k))) bgKeys.push([r, g2, b2]);
+      };
+      for (let x = 0; x < w; x += 3) { sample(x, 0); sample(x, h - 1); }
+      for (let y = 0; y < h; y += 3) { sample(0, y); sample(w - 1, y); }
     }
   }
-  const near = (r, g, b, xr, xg, xb) => Math.abs(r - xr) < 26 && Math.abs(g - xg) < 26 && Math.abs(b - xb) < 26;
+  const shadowRule = bgKeys.length === 1 && bgKeys[0][0] + bgKeys[0][1] + bgKeys[0][2] > 600;
   const isBg = (r, g, b) => {
-    if (kr < 0) return false;
-    if (near(r, g, b, kr, kg, kb)) return true;
-    if (k2r >= 0) return near(r, g, b, k2r, k2g, k2b);   // checkerboard: two keys, no shadow rule
-    if (brightKey) {   // light desaturated gray = drop shadow on white art
+    if (!bgKeys.length) return false;
+    if (bgKeys.some(k => near(r, g, b, k))) return true;
+    if (shadowRule) {   // light desaturated gray = drop shadow on white art
       const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
       if (mx - mn < 14 && mn > 168) return true;
     }
@@ -1682,7 +1684,7 @@ function sliceSheet(img) {
     const sc = Math.min(SPR / cw, SPR / ch);
     og.drawImage(c, cl.x0, cy0, cw, ch, (SPR - cw * sc) / 2, SPR - ch * sc, cw * sc, ch * sc);
     const od = og.getImageData(0, 0, SPR, SPR);
-    if (kr >= 0) {
+    if (bgKeys.length) {
       const p = od.data;
       for (let i = 0; i < p.length; i += 4)
         if (p[i + 3] > 0 && isBg(p[i], p[i + 1], p[i + 2])) p[i + 3] = 0;
@@ -1714,6 +1716,11 @@ const CUSTOM_ART = [
       sprites.cacoIdle = fr[0]; sprites.cacoPain = fr[0];
       sprites.cacoAttack = fr[Math.min(1, fr.length - 1)];
       if (fr.length > 2) sprites.cacoCorpse = fr[2];
+  } },
+  { file: "SoulCustom.jpg", apply: fr => {   // idle | scream | husk
+      sprites.soulIdle = fr[0]; sprites.soulPain = fr[0];
+      sprites.soulAttack = fr[Math.min(1, fr.length - 1)];
+      if (fr.length > 2) sprites.soulCorpse = fr[2];
   } },
 ];
 for (const { file, apply } of CUSTOM_ART) {
@@ -2137,7 +2144,8 @@ const ENEMY_TYPES = {
               ball: "fireball", atkSfx: "fireball",
               sfxSight: "cacoSight", sfxPain: "pinkyPain", sfxDie: "cacoDie", sfxAct: "baronAct" },
   lostsoul: { hp: 50,  speed: 3.4, dmg: 10, ranged: false, cool: 0.9, scale: 0.7, float: -0.25,
-              idle: "soulIdle", attack: "soulAttack", pain: "soulPain", ball: "fireball", atkSfx: "soulSight",
+              idle: "soulIdle", attack: "soulAttack", pain: "soulPain", corpse: "soulCorpse",
+              ball: "fireball", atkSfx: "soulSight",
               sfxSight: "soulSight", sfxPain: "pinkyPain", sfxDie: "soulDie", sfxAct: "baronAct" },
   cyber:    { hp: 650, speed: 1.3, dmg: 38, ranged: true,  cool: 1.4, pspeed: 8, scale: 1.6,
               idle: "cyberIdle", attack: "cyberAttack", pain: "cyberPain", ball: "rocket", atkSfx: "rocket",

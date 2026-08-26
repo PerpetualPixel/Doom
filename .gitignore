@@ -5,6 +5,12 @@
 # not distributed with this repo.
 SFX/
 Doom OST/
-sprites/
 Maps/
 Guns/
+sprites/*
+
+# The player's own custom monster art IS part of the repo:
+!sprites/ImpCustom.jpg
+!sprites/ImpCorpse.jpg
+!sprites/CacoCustom.jpg
+!sprites/SoulCustom.jpg
