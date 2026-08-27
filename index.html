@@ -4987,7 +4987,8 @@ function renderWorld() {
     else         { stepX = 1;  sideX = (mapX + 1 - posX) * dX; }
     if (rdY < 0) { stepY = -1; sideY = (posY - mapY) * dY; }
     else         { stepY = 1;  sideY = (mapY + 1 - posY) * dY; }
-    let hit = 0, side = 0, doorU = -1;
+    let hit = 0, side = 0;
+    let doorOver = null;   // a partially-risen door the ray passed under
     while (!hit) {
       if (sideX < sideY) { sideX += dX; mapX += stepX; side = 0; }
       else               { sideY += dY; mapY += stepY; side = 1; }
@@ -4995,44 +4996,22 @@ function renderWorld() {
         explored[mapY * MAP_W + mapX] = 1;   // fog of war: seen by this ray
       const t = mapAt(mapX, mapY);
       if (!t) continue;
-      if (DOOR_TILES.has(t) && t !== 14) {
-        // A doorway several cells wide is one slab: its texture spans the
-        // whole bank and the whole thing slides aside as a unit, instead
-        // of each cell drawing (and sliding) its own little door. Secret
-        // doors are exempt - stretching stone across the bank would make
-        // them stand out from the wall they hide in.
+      if (DOOR_TILES.has(t)) {
+        // Doors open the way the originals did: the slab rises into the
+        // ceiling. Once it has started moving it is no longer a wall to
+        // the 2D ray - the ray carries on to whatever is behind, and the
+        // slab is drawn afterwards, hanging from the ceiling over that.
         const d = doors.get(mapY * MAP_W + mapX);
-        const openness = d ? d.open : 0;
-        const pd = side === 0 ? sideX - dX : sideY - dY;
-        // The bank axis is the doorway's own orientation - which way its
-        // neighbouring cells are also door tiles - not whichever face this
-        // ray happened to enter through.
-        let axisY = mapAt(mapX, mapY - 1) === t || mapAt(mapX, mapY + 1) === t;
-        if (!axisY && !(mapAt(mapX - 1, mapY) === t || mapAt(mapX + 1, mapY) === t))
-          axisY = side === 0;   // single-cell door: fall back to the face axis
-        const wc = axisY ? posY + pd * rdY : posX + pd * rdX;
-        let b0 = axisY ? mapY : mapX, b1 = b0;   // bank extent on that axis
-        if (axisY) {
-          while (mapAt(mapX, b0 - 1) === t) b0--;
-          while (mapAt(mapX, b1 + 1) === t) b1++;
-        } else {
-          while (mapAt(b0 - 1, mapY) === t) b0--;
-          while (mapAt(b1 + 1, mapY) === t) b1++;
-        }
-        const g = (wc - b0) / (b1 - b0 + 1);   // 0..1 across the whole doorway
-        if (openness > 0 && g < openness) continue;   // the gap the slab slid out of
-        doorU = Math.min(0.999, Math.max(0, g - openness));   // texture rides the slab
-      } else if (t === 14) {
-        const d = doors.get(mapY * MAP_W + mapX);
-        const openness = d ? d.open : 0;
-        if (openness > 0) {
-          const pd = side === 0 ? sideX - dX : sideY - dY;
-          let wx = side === 0 ? posY + pd * rdY : posX + pd * rdX;
-          wx -= Math.floor(wx);
-          if (wx + openness >= 1) continue;
-          // per-cell slide, per-cell stone texture: it must keep looking
-          // like the wall around it
-          doorU = Math.min(0.999, wx + openness);
+        const o = d ? d.open : 0;
+        if (o > 0) {
+          if (!doorOver && o < 1) {
+            const pd = side === 0 ? sideX - dX : sideY - dY;
+            let wx = side === 0 ? posY + pd * rdY : posX + pd * rdX;
+            wx -= Math.floor(wx);
+            doorOver = { dist: pd, wx, side, tile: t, o,
+                         flip: (side === 0 && rdX > 0) || (side === 1 && rdY < 0) };
+          }
+          continue;
         }
       }
       hit = t;
@@ -5048,17 +5027,10 @@ function renderWorld() {
     const texEntry = textures[hit === 14 ? 1 : hit] || textures[1];   // secret doors look like stone
     const tex = texEntry.data;
     const TSZ = texEntry.size || TEX;   // hi-res art carries its own resolution
-    let texX;
-    if (doorU >= 0) {
-      // door texture coordinate is bank-global and world-anchored, so the
-      // slab reads the same from both sides and slides as one piece
-      texX = (doorU * TSZ) | 0;
-    } else {
-      let wallX = side === 0 ? posY + perpDist * rdY : posX + perpDist * rdX;
-      wallX -= Math.floor(wallX);
-      texX = (wallX * TSZ) | 0;
-      if ((side === 0 && rdX > 0) || (side === 1 && rdY < 0)) texX = TSZ - texX - 1;
-    }
+    let wallX = side === 0 ? posY + perpDist * rdY : posX + perpDist * rdX;
+    wallX -= Math.floor(wallX);
+    let texX = (wallX * TSZ) | 0;
+    if ((side === 0 && rdX > 0) || (side === 1 && rdY < 0)) texX = TSZ - texX - 1;
 
     const step = TSZ / lineH;
     let texPos = (drawStart - wallTop) * step;
@@ -5068,6 +5040,34 @@ function renderWorld() {
       const texY = Math.min(TSZ - 1, texPos | 0);
       texPos += step;
       fb[y * W + x] = shade(tex[texY * TSZ + texX], fog);
+    }
+
+    if (doorOver) {
+      // The slab has risen o of the way into the ceiling: its bottom
+      // (1 - o) is still in the doorway, showing the bottom (1 - o) of
+      // the texture, drawn over whatever the ray saw beneath it.
+      const dEntry = textures[doorOver.tile === 14 ? 1 : doorOver.tile] || textures[1];
+      const dTex = dEntry.data;
+      const DSZ = dEntry.size || TEX;
+      const dLineH = (VIEW_H / doorOver.dist) | 0;
+      const dTop = horizon - dLineH * (1 - eyeH);
+      const ds = Math.max(0, dTop | 0);
+      const de = Math.min(VIEW_H - 1, (dTop + dLineH * (1 - doorOver.o)) | 0);
+      let dTexX = (doorOver.wx * DSZ) | 0;
+      if (doorOver.flip) dTexX = DSZ - dTexX - 1;
+      const dStep = DSZ / dLineH;
+      let dPos = doorOver.o * DSZ + (ds - dTop) * dStep;
+      let dFog = Math.min(1, 2.8 / doorOver.dist);
+      if (doorOver.side === 1) dFog *= 0.72;
+      for (let y = ds; y <= de; y++) {
+        const ty = Math.min(DSZ - 1, dPos | 0);
+        dPos += dStep;
+        fb[y * W + x] = shade(dTex[ty * DSZ + dTexX], dFog);
+      }
+      // A mostly-closed door still occludes sprites behind it; a mostly
+      // open one lets them show through the gap. zBuffer is per column,
+      // so the nearer claim wins by whichever state dominates the doorway.
+      if (doorOver.o < 0.5) zBuffer[x] = doorOver.dist;
     }
   }
 
