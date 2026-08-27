@@ -2009,16 +2009,18 @@ function keyOutGunFrame(g, w, h) {
       if (Math.max(k[0], k[1], k[2]) - Math.min(k[0], k[1], k[2]) < 40) bgKeys.push(k);   // skip an arm crossing the border
     }
     if (!bgKeys.length) return;
-    const hiLum = Math.max(...bgKeys.map(k => Math.max(k[0], k[1], k[2]))) + 10;
+    const keyLum = Math.max(...bgKeys.map(k => Math.max(k[0], k[1], k[2])));
+    const darkBg = keyLum < 128;
     const isBg = i => {
       if (p[i + 3] === 0) return true;
       const r = p[i], g2 = p[i + 1], b = p[i + 2];
       if (bgKeys.some(k => Math.abs(r - k[0]) < 30 && Math.abs(g2 - k[1]) < 30 && Math.abs(b - k[2]) < 30)) return true;
-      // vignettes fade the background DOWN toward black, never up -
-      // so only shades no brighter than the background qualify, and
-      // bright gun metal stays out of the flood's reach
+      // fades follow the background's direction: a dark background
+      // vignettes down toward black (anything darker qualifies), a
+      // bright one only casts light gray shadows just below itself -
+      // either way, mid-tone gun metal stays out of the flood's reach
       const mx = Math.max(r, g2, b), mn = Math.min(r, g2, b);
-      return mx - mn < 16 && mx <= hiLum;
+      return mx - mn < 16 && (darkBg ? mx <= keyLum + 10 : mx >= keyLum - 34);
     };
     // Flood fill from the border: only background-connected pixels are
     // cleared, so dark details enclosed inside the weapon silhouette
