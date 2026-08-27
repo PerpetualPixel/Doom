@@ -1909,7 +1909,8 @@ const GUN_ART_FILES = [   // [idle, fire] per weapon slot 0-6
   ["200px-DevDoom1993-PlasmaRifle_anim_0.gif", "200px-DevDoom1993-PlasmaRifle_b_0.gif"],
   ["200px-DevDoom1993-BFG-2704_anim1.gif", null],
 ];
-const gunArt = Array.from({ length: WEAPONS.length }, () => ({ idle: null, fire: null }));
+const GUN_SLOTS = 8;   // fist..chainsaw (WEAPONS is defined further down)
+const gunArt = Array.from({ length: GUN_SLOTS }, () => ({ idle: null, fire: null }));
 // Key out a weapon frame's background: find the dominant opaque color
 // around the frame border and clear everything near it. Works whether
 // the corner pixel is transparent or not; frames with genuinely
