@@ -83,7 +83,7 @@ const LEVELS = [
     rows: [
       "############################",
       "#P........T.......T........#",
-      "#..e......T..a....T....h...#",
+      "#..a......T..a....T....h...#",
       "#...WW....T.......T........#",
       "#...WW....D.......D........#",
       "#......b..T....Z..T........#",
@@ -138,7 +138,7 @@ const LEVELS = [
       "#...T....................T...#",
       "#...RRRRRRRRRRDRRRRRRRRRRR...#",
       "#............................#",
-      "#..h......c.f...........p....#",
+      "#..h......c.e...........p....#",
       "#...........a................#",
       "##############################",
     ],
@@ -173,7 +173,7 @@ const LEVELS = [
       "#.......A.....#....C.b....C..#",
       "#......i......#....C...h..C..#",
       "#J####........#....CCCCCCCC..#",
-      "#.r..#........#..............#",
+      "#.f..#........#..............#",
       "#...S#.....p..#......a.......#",
       "##############################",
     ],
@@ -206,7 +206,7 @@ const LEVELS = [
       "#....a......F....i...........#",
       "#............................#",
       "####s#########################",
-      "#.h.a...d......H.............#",
+      "#.h.a...a......H.............#",
       "##############################",
     ],
   },
@@ -236,7 +236,7 @@ const LEVELS = [
       "#..j......i..................#",
       "#.....................WW.....#",
       "#...i.................WW.....#",
-      "#.........h..........a...A...#",
+      "#.........h..........a...r...#",
       "#............................#",
       "#..............p.............#",
       "##############################",
@@ -297,7 +297,7 @@ const LEVELS = [
       "#....C..C...ii...C..C......#",
       "#....CDCC........CCDC......#",
       "#..........................#",
-      "#..a.....k....A............#",
+      "#..a.....k....d............#",
       "#..........................#",
       "#.......p..........h.......#",
       "#..........................#",
@@ -393,7 +393,7 @@ const LEVELS = [
       "#..........%%%%............#",
       "#..........................#",
       "#............X.............#",
-      "#....a....f.....h..........#",
+      "#....a....A.....h..........#",
       "#.........m................#",
       "#..........................#",
       "#..............c...........#",
@@ -414,7 +414,7 @@ const LEVELS = [
       "#.WW........WWWW.......WW..#",
       "#.WW...p....W..W..g........#",
       "#..........W..W............#",
-      "#...WWW.........WWW....a...#",
+      "#...WWW.........WWW....f...#",
       "#.....................WWW..#",
       "#..o......h.......H........#",
       "#....WWWW........WWWW......#",
@@ -481,7 +481,7 @@ const LEVELS = [
       "#..~~~~~~~~~~~~~~~~~~~~....#",
       "#..~~~~~~~~~~~~~~~~~~~~.g..#",
       "#..........................#",
-      "#.....o.....d......o.......#",
+      "#.....o.....r......o.......#",
       "#..........................#",
       "#........CCCDCCCC..........#",
       "#........C..X...C..F.h.....#",
@@ -529,7 +529,7 @@ const LEVELS = [
       "#P.....#.........#.........#",
       "#......#....m....#....g....#",
       "#......#.........#.........#",
-      "#..a...#.........#..h......#",
+      "#..d...#.........#..h......#",
       "#......#.........#.........#",
       "#......................o...#",
       "#......#.........#.........#",
@@ -658,7 +658,7 @@ const LEVELS = [
       "#....B..............B......#",
       "#....BBBBBBBDBBBBBBBB......#",
       "#..........................#",
-      "#......m...e....m....f.....#",
+      "#......m...e....m....A.....#",
       "#..........................#",
       "#...h...........a...A......#",
       "#..........................#",
@@ -680,7 +680,7 @@ const LEVELS = [
       "#..........................#",
       "#....g........%%%....m.....#",
       "#.............%%%..........#",
-      "#..h..........A............#",
+      "#..h..........f............#",
       "#......%%%%%%.....o........#",
       "#......%%%%%%..............#",
       "#..................p.......#",
@@ -714,7 +714,7 @@ const LEVELS = [
       "#.....g....N.....o.........#",
       "#..CCCCCCCCCCCCCCCCCCCC....#",
       "#..C..................C....#",
-      "#..C....X......h.d....C....#",
+      "#..C....X......h.r....C....#",
       "#..C..................C....#",
       "#..CCCCCCCCCDCCCCCCCCCC....#",
       "#..........................#",
@@ -780,7 +780,7 @@ const LEVELS = [
       "#..........................#",
       "#........X.........h.......#",
       "#..........................#",
-      "#...a.......F.......a......#",
+      "#...d.......F.......a......#",
       "#..........................#",
       "############################",
     ],
@@ -840,7 +840,7 @@ const LEVELS = [
       "#.......~~~X~~~~~~....h....#",
       "#.......~~~~~~~~~~.........#",
       "#..........................#",
-      "#...a.......d.......a......#",
+      "#...a.......H.......a......#",
       "#..........................#",
       "#..........................#",
       "############################",
@@ -2381,7 +2381,7 @@ const SFX_FILES = {
   baronSight: "dsbrssit.wav", baronDie: "dsbrsdth.wav",
   baronPain: "dsdmpain.wav",  baronAct: "dsdmact.wav",
   teleport: "dstelept.wav",
-  shotgun: "dsshotgn.wav", sgcock: "dssgcock.wav",
+  shotgun: "dsshotgn.wav", sgcock: "dssgcock.wav", gatling: "dspistol.wav",
   punch: "dspunch.wav", plasma: "dsplasma.wav", bfg: "dsbfg.wav",
   saw: "dssawhit.wav", sawup: "dssawup.wav",
   menuBlip: "dspstop.wav",
@@ -2423,7 +2423,10 @@ const RF_SFX = {
   // weapons and world
   shoot: "pistol.mp3",
   shotgun: "shotgun.mp3",
-  gatling: "gatling gun.mp3",
+  // the chaingun is the pistol running hot, not a separate weapon:
+  // one short crack per round, clipped tight so 11 rounds a second
+  // read as a rattle instead of a wall of noise
+  gatling: { f: "pistol.mp3", rate: 1.45, vol: 0.32, max: 0.13 },
   plasma: "Plasma Rifle.mp3",
   rocket: "rocket launcher.mp3",
   rocketHit: "rocket launcher exploding.mp3",
@@ -2500,30 +2503,51 @@ const RF_SFX = {
   spiderPain:  { f: BIGROAR, rate: 1.4 },
   spiderDie:   { f: BIGROAR, rate: 0.78 },
 };
+// A sound effect must not outlive its moment - a monster that has
+// finished dying should be silent, however long the source file runs.
+// Caps are derived from the key so every monster sound is covered.
+const SFX_CAP_DEFAULT = 1.5;
+const SFX_CAPS = [[/Pain$/, 0.5], [/Act$/, 0.9], [/Die$/, 1.2], [/Sight$/, 1.2], [/Atk$/, 0.6]];
+const capFor = k => (SFX_CAPS.find(([re]) => re.test(k)) || [, SFX_CAP_DEFAULT])[1];
 const sfxLib = {};
 function addSfxSource(k, spec) {
   const cfg = typeof spec === "string" ? { f: spec } : spec;
   const a = new Audio("SFX/" + cfg.f);
   a.preload = "auto";
-  const entry = { el: a, ok: false, rate: cfg.rate || 1, gain: cfg.vol == null ? 1 : cfg.vol };
+  const entry = {
+    el: a, ok: false,
+    rate: cfg.rate || 1,
+    gain: cfg.vol == null ? 1 : cfg.vol,
+    max: cfg.max == null ? capFor(k) : cfg.max,
+  };
   a.addEventListener("canplaythrough", () => { entry.ok = true; }, { once: true });
   (sfxLib[k] = sfxLib[k] || []).push(entry);
 }
 for (const [k, spec] of Object.entries(RF_SFX)) addSfxSource(k, spec);
 for (const [k, f] of Object.entries(SFX_FILES)) addSfxSource(k, f);
 function sfx(kind, vol = 1) {
+  if (sfxVol <= 0) return;
   const list = sfxLib[kind];
   if (list) {
     for (const s of list) {
       if (!s.ok) continue;
       const c = s.el.cloneNode();
       c.playbackRate = s.rate;
-      c.volume = Math.max(0.05, Math.min(1, vol * s.gain * 0.9));
+      const target = Math.max(0.02, Math.min(1, vol * s.gain * sfxVol));
+      c.volume = target;
       c.play().catch(() => {});
+      setTimeout(() => {                       // fade out at the cap
+        const step = target / 6;
+        const fade = setInterval(() => {
+          const v = c.volume - step;
+          if (v <= 0.001) { clearInterval(fade); c.pause(); c.volume = 0; }
+          else c.volume = v;
+        }, 25);
+      }, s.max * 1000);
       return;
     }
   }
-  synthSfx(kind, vol);
+  synthSfx(kind, vol * sfxVol);
 }
 
 // synthesized fallbacks (used when the wav files aren't present)
@@ -2664,58 +2688,87 @@ const MUSIC_VICTORY = "23. VICTOR - The End Of Doom.mp3";
 // (Alec Koff, NickPanek, Emmraan, The_Mountain), committed with the
 // repo. The local id OST remains a fallback, then the synth loop.
 const MUSIC_DIR = "Music/";
-const TRACKS = {
-  title:   "alec_koff-doom-metal-trailer-493404.mp3",
-  inter:   "alec_koff-doom-metal-trailer-493404.mp3",
-  victory: "emmraan-escape-from-hell-dark-heavy-metal-solo-guitar-261215.mp3",
-  boss:    "nickpanek-intense-black-metal-instrumental-304729.mp3",
-  rotation: [
-    "alec_koff-first-person-shooter-484516.mp3",
-    "alec_koff-fps-metal-doom-493400.mp3",
-    "the_mountain-metal-doom-317789.mp3",
-    "nickpanek-heavy-doom-metal-instrumental-288971.mp3",
-    "nickpanek-70s-doom-metal-instrumental-dark-amp-heavy-riffs-309467.mp3",
-    "emmraan-escape-from-hell-dark-heavy-metal-solo-guitar-261215.mp3",
-  ],
-};
-const BOSS_LEVELS = new Set([7, 16, 25]);   // E1M8, E2M8, E3M8
-function levelMusicChain(idx) {
-  const mine = BOSS_LEVELS.has(idx) ? TRACKS.boss : TRACKS.rotation[idx % TRACKS.rotation.length];
-  return [MUSIC_DIR + mine, OST_DIR + LEVELS[idx].music];
-}
-const titleMusicChain   = () => [MUSIC_DIR + TRACKS.title,   OST_DIR + MUSIC_TITLE];
-const interMusicChain   = () => [MUSIC_DIR + TRACKS.inter,   OST_DIR + MUSIC_INTER];
-const victoryMusicChain = () => [MUSIC_DIR + TRACKS.victory, OST_DIR + MUSIC_VICTORY];
+// The shipped soundtrack as a playlist the player can navigate. Levels
+// still pick their own track, but prev/next moves freely from there.
+const PLAYLIST = [
+  { f: "alec_koff-doom-metal-trailer-493404.mp3",                            name: "DOOM METAL TRAILER" },
+  { f: "alec_koff-first-person-shooter-484516.mp3",                          name: "FIRST PERSON SHOOTER" },
+  { f: "alec_koff-fps-metal-doom-493400.mp3",                                name: "FPS METAL DOOM" },
+  { f: "the_mountain-metal-doom-317789.mp3",                                 name: "METAL DOOM" },
+  { f: "nickpanek-heavy-doom-metal-instrumental-288971.mp3",                 name: "HEAVY DOOM METAL" },
+  { f: "nickpanek-70s-doom-metal-instrumental-dark-amp-heavy-riffs-309467.mp3", name: "70S DOOM METAL" },
+  { f: "emmraan-escape-from-hell-dark-heavy-metal-solo-guitar-261215.mp3",   name: "ESCAPE FROM HELL" },
+  { f: "nickpanek-intense-black-metal-instrumental-304729.mp3",              name: "INTENSE BLACK METAL" },
+];
+const TRACK_TITLE = 0, TRACK_VICTORY = 6, TRACK_BOSS = 7;
+const LEVEL_ROTATION = [1, 2, 3, 4, 5, 6];   // playlist slots levels cycle through
+const BOSS_LEVELS = new Set([7, 16, 25]);    // E1M8, E2M8, E3M8
 
-let musicOn = true, musicSynth = false;
-let musicChain = [], musicChainIdx = 0;
+let musicVol = 0.5, sfxVol = 0.5;            // both start at half
+let musicOn = true, musicPaused = false, musicSynth = false;
+let trackIdx = 0, musicChain = [], musicChainIdx = 0;
+try {
+  const saved = JSON.parse(localStorage.getItem("doomAudio") || "null");
+  if (saved) {
+    if (typeof saved.musicVol === "number") musicVol = saved.musicVol;
+    if (typeof saved.sfxVol === "number") sfxVol = saved.sfxVol;
+    if (typeof saved.musicOn === "boolean") musicOn = saved.musicOn;
+  }
+} catch {}
+function saveAudioPrefs() {
+  try { localStorage.setItem("doomAudio", JSON.stringify({ musicVol, sfxVol, musicOn })); } catch {}
+}
 const musicEl = new Audio();
 musicEl.loop = true;
-musicEl.volume = 0.45;
-musicEl.addEventListener("error", () => { musicChainIdx++; tryMusicChain(); });
-function tryMusicChain() {
+musicEl.volume = musicVol;
+musicEl.addEventListener("error", () => { musicChainIdx++; startChain(); });
+function startChain() {
   if (musicChainIdx >= musicChain.length) { musicSynth = true; return; }
   musicSynth = false;
   musicEl.src = encodeURI(musicChain[musicChainIdx]);
   musicEl.loop = true;
-  if (musicOn) musicEl.play().catch(() => {});
+  musicEl.volume = musicVol;
+  if (musicOn && !musicPaused) musicEl.play().catch(() => {});
 }
-function playMusic(candidates) {
-  const url = encodeURI(candidates[0]);
-  if (!musicSynth && musicEl.src && musicEl.src.endsWith(url)) {
-    if (musicOn && musicEl.paused) musicEl.play().catch(() => {});
+function playTrack(i, fallback = [], force = false) {
+  const n = ((i % PLAYLIST.length) + PLAYLIST.length) % PLAYLIST.length;
+  const url = MUSIC_DIR + PLAYLIST[n].f;
+  if (!force && !musicSynth && trackIdx === n && musicEl.src.endsWith(encodeURI(url))) {
+    if (musicOn && !musicPaused && musicEl.paused) musicEl.play().catch(() => {});
     return;
   }
-  musicChain = candidates;
+  trackIdx = n;
+  musicChain = [url, ...fallback];
   musicChainIdx = 0;
-  tryMusicChain();
+  startChain();
 }
+const levelMusic   = idx => playTrack(BOSS_LEVELS.has(idx) ? TRACK_BOSS : LEVEL_ROTATION[idx % LEVEL_ROTATION.length],
+                                     [OST_DIR + LEVELS[idx].music]);
+const titleMusic   = () => playTrack(TRACK_TITLE,   [OST_DIR + MUSIC_TITLE]);
+const interMusic   = () => playTrack(TRACK_TITLE,   [OST_DIR + MUSIC_INTER]);
+const victoryMusic = () => playTrack(TRACK_VICTORY, [OST_DIR + MUSIC_VICTORY]);
+const trackName    = () => PLAYLIST[trackIdx].name;
+function musicSkip(d) {
+  musicPaused = false;
+  playTrack(trackIdx + d, [], true);
+  showMsg(trackName());
+}
+function musicTogglePlay() {
+  musicPaused = !musicPaused;
+  if (musicPaused) musicEl.pause();
+  else if (musicOn) { musicEl.play().catch(() => {}); showMsg(trackName()); }
+}
+function setMusicVol(v) {
+  musicVol = Math.max(0, Math.min(1, v));
+  musicEl.volume = musicVol;
+  saveAudioPrefs();
+}
+function setSfxVol(v) { sfxVol = Math.max(0, Math.min(1, v)); saveAudioPrefs(); }
 function toggleMusic() {
   musicOn = !musicOn;
-  if (!musicSynth) {
-    if (musicOn) musicEl.play().catch(() => {});
-    else musicEl.pause();
-  }
+  if (!musicOn) musicEl.pause();
+  else if (!musicSynth && !musicPaused) musicEl.play().catch(() => {});
+  saveAudioPrefs();
 }
 
 // Synth fallback music: original compositions, not the id tracks
@@ -2776,12 +2829,12 @@ function musicScheduleStep(step, t, slow) {
 }
 setInterval(() => {
   const wantsMusic = gameState === "play" || gameState === "title" || gameState === "paused";
-  if (!audio || audio.state !== "running" || !musicOn || !musicSynth || !wantsMusic) { musicNext = 0; return; }
+  if (!audio || audio.state !== "running" || !musicOn || musicPaused || !musicSynth || !wantsMusic) { musicNext = 0; return; }
   if (!musicGain) {
     musicGain = audio.createGain();
-    musicGain.gain.value = 0.35;
     musicGain.connect(audio.destination);
   }
+  musicGain.gain.value = 0.7 * musicVol;   // the synth fallback follows the same slider
   const slow = gameState !== "play";
   if (slow !== musicSlow || musicNext < audio.currentTime) {   // mode change or drift: resync
     musicSlow = slow;
@@ -2982,7 +3035,7 @@ function startGame(startIdx = 0) {
   resetLoadout();
   loadLevel();
   gameState = "play";
-  playMusic(levelMusicChain(levelIdx));
+  levelMusic(levelIdx);
   canvas.requestPointerLock();
 }
 function pauseGame() {
@@ -2997,7 +3050,7 @@ function resumeGame() {
 function goToTitle() {
   gameState = "title";
   menuMode = "main"; menuSel = 0;
-  playMusic(titleMusicChain());
+  titleMusic();
 }
 function exitLevel(secret) {
   const L = LEVELS[levelIdx];
@@ -3005,18 +3058,18 @@ function exitLevel(secret) {
   if (pendingNext !== null && (pendingNext === undefined || pendingNext >= LEVELS.length)) pendingNext = null;
   sfx("switch");
   gameState = "intermission";
-  playMusic(interMusicChain());
+  interMusic();
 }
 function nextLevel() {
   if (pendingNext === null) {
     gameState = "victory";
-    playMusic(victoryMusicChain());
+    victoryMusic();
     return;
   }
   levelIdx = pendingNext;
   loadLevel();
   gameState = "play";
-  playMusic(levelMusicChain(levelIdx));
+  levelMusic(levelIdx);
 }
 
 // ---------------------------------------------------------
@@ -3047,8 +3100,9 @@ function canvasCoords(e) {
 function menuLayout() {
   const items = menuItems();
   const lineH = 44;
-  const startY = gameState === "paused" ? 148 : 208;
-  return items.map((label, i) => ({ label, i, x: W / 2 - 170, y: startY + i * lineH, w: 340, h: 36 }));
+  const startY = menuMode === "audio" ? (gameState === "paused" ? 130 : 190)
+                                      : (gameState === "paused" ? 148 : 208);
+  return items.map((it, i) => ({ ...it, i, x: W / 2 - 170, y: startY + i * lineH, w: 340, h: 36 }));
 }
 function menuHitTest(mx, my) {
   if ((gameState !== "title" && gameState !== "paused") || menuMode === "help") return -1;
@@ -3056,33 +3110,69 @@ function menuHitTest(mx, my) {
     if (mx >= b.x && mx <= b.x + b.w && my >= b.y && my <= b.y + b.h) return b.i;
   return -1;
 }
-function menuItems() {
-  if (menuMode === "episodes") return ["KNEE-DEEP IN THE DEAD", "THE SHORES OF HELL", "INFERNO", "BACK"];
-  if (menuMode === "paused")   return ["RESUME", "RESTART LEVEL", "MUSIC: " + (musicOn ? "ON" : "OFF"), "END GAME"];
-  return ["NEW GAME", "MUSIC: " + (musicOn ? "ON" : "OFF"), "READ THIS!"];
+// the three transport buttons inside the media-player row
+function playerButtons(b) {
+  const bw = 42, gap = 10, total = bw * 3 + gap * 2;
+  const x0 = b.x + b.w - total - 12, y = b.y + 5, h = b.h - 10;
+  return [
+    { act: "prev", x: x0, y, w: bw, h },
+    { act: "play", x: x0 + bw + gap, y, w: bw, h },
+    { act: "next", x: x0 + (bw + gap) * 2, y, w: bw, h },
+  ];
 }
+function menuItems() {
+  if (menuMode === "episodes") return [
+    { label: "KNEE-DEEP IN THE DEAD" }, { label: "THE SHORES OF HELL" },
+    { label: "INFERNO" }, { label: "BACK" },
+  ];
+  if (menuMode === "audio") return [
+    { label: "MUSIC VOLUME", kind: "slider", get: () => musicVol, set: setMusicVol },
+    { label: "SFX VOLUME",   kind: "slider", get: () => sfxVol,   set: setSfxVol },
+    { label: "MUSIC: " + (musicOn ? "ON" : "OFF") },
+    { label: "", kind: "player" },
+    { label: "BACK" },
+  ];
+  if (menuMode === "paused") return [
+    { label: "RESUME" }, { label: "RESTART LEVEL" }, { label: "AUDIO OPTIONS" }, { label: "END GAME" },
+  ];
+  return [{ label: "NEW GAME" }, { label: "AUDIO OPTIONS" }, { label: "READ THIS!" }];
+}
+let audioMenuFrom = "main";   // where AUDIO OPTIONS was opened from
+function openAudioMenu() { audioMenuFrom = menuMode; menuMode = "audio"; menuSel = 0; }
 function menuActivate() {
   sfx("switch", 0.6);
   if (menuMode === "main") {
     if (menuSel === 0) { menuMode = "episodes"; menuSel = 0; }
-    else if (menuSel === 1) toggleMusic();
+    else if (menuSel === 1) openAudioMenu();
     else menuMode = "help";
   } else if (menuMode === "episodes") {
     if (menuSel < 3) startGame(EPISODE_STARTS[menuSel]);
     else { menuMode = "main"; menuSel = 0; }
+  } else if (menuMode === "audio") {
+    if (menuSel === 2) toggleMusic();
+    else if (menuSel === 3) musicTogglePlay();
+    else if (menuSel === 4) menuBack();
   } else if (menuMode === "paused") {
     if (menuSel === 0) resumeGame();
     else if (menuSel === 1) { player.hp = 100; resetLoadout(); loadLevel(); resumeGame(); }
-    else if (menuSel === 2) toggleMusic();
+    else if (menuSel === 2) openAudioMenu();
     else goToTitle();
   }
 }
+// left/right on a menu row: slider nudge, or track skip on the player
+function menuAdjust(dir) {
+  const it = menuItems()[menuSel];
+  if (!it) return;
+  if (it.kind === "slider") { it.set(it.get() + dir * 0.05); sfx("menuBlip", 0.5); }
+  else if (it.kind === "player") musicSkip(dir);
+}
 function menuBack() {
-  if (menuMode === "episodes" || menuMode === "help") { menuMode = "main"; menuSel = 0; }
+  if (menuMode === "audio") { menuMode = audioMenuFrom === "paused" ? "paused" : "main"; menuSel = 0; }
+  else if (menuMode === "episodes" || menuMode === "help") { menuMode = "main"; menuSel = 0; }
   else if (menuMode === "paused") resumeGame();
 }
 function maybeTitleMusic() {
-  if (gameState === "title" && audio) playMusic(titleMusicChain());
+  if (gameState === "title" && audio) titleMusic();
 }
 
 const keys = {};
@@ -3094,6 +3184,8 @@ addEventListener("keydown", e => {
     const n = menuItems().length;
     if (e.code === "ArrowUp" || e.code === "KeyW")   { menuSel = (menuSel + n - 1) % n; sfx("menuBlip", 0.7); }
     if (e.code === "ArrowDown" || e.code === "KeyS") { menuSel = (menuSel + 1) % n; sfx("menuBlip", 0.7); }
+    if (e.code === "ArrowLeft" || e.code === "KeyA")  menuAdjust(-1);
+    if (e.code === "ArrowRight" || e.code === "KeyD") menuAdjust(1);
     if (e.code === "Enter" || e.code === "Space") menuActivate();
     if (e.code === "Escape") menuBack();
     e.preventDefault();
@@ -3102,6 +3194,10 @@ addEventListener("keydown", e => {
   keys[e.code] = true;
   if (e.code === "KeyM") showMap = !showMap;
   if (e.code === "KeyN") toggleMusic();
+  // media keys during play, so the soundtrack is controllable mid-fight
+  if (e.code === "BracketLeft" || e.code === "Comma") musicSkip(-1);
+  if (e.code === "BracketRight" || e.code === "Period") musicSkip(1);
+  if (e.code === "Backslash") musicTogglePlay();
   if (e.code === "Escape" && gameState === "play") pauseGame();
   if (e.code === "Escape" && (gameState === "dead" || gameState === "victory")) goToTitle();
   if (e.code === "KeyE") {
@@ -3122,7 +3218,7 @@ addEventListener("keydown", e => {
       resetLoadout();
       loadLevel();
       gameState = "play";
-      playMusic(levelMusicChain(levelIdx));
+      levelMusic(levelIdx);
     } else if (gameState === "victory") {
       goToTitle();
     }
@@ -3151,9 +3247,23 @@ canvas.addEventListener("click", e => {
     if (menuMode === "help") { menuMode = "main"; menuSel = 0; return; }
     const [mx, my] = canvasCoords(e);
     const hit = menuHitTest(mx, my);
-    if (hit >= 0) { menuSel = hit; menuActivate(); }
+    if (hit < 0) return;
+    menuSel = hit;
+    const b = menuLayout()[hit];
+    if (b.kind === "slider") { dragSlider = hit; setSliderFromMouse(b, mx); sfx("menuBlip", 0.5); return; }
+    if (b.kind === "player") {
+      const p = playerButtons(b).find(p2 => mx >= p2.x && mx <= p2.x + p2.w && my >= p2.y && my <= p2.y + p2.h);
+      if (p) { sfx("switch", 0.6); p.act === "play" ? musicTogglePlay() : musicSkip(p.act === "next" ? 1 : -1); }
+      return;
+    }
+    menuActivate();
   }
 });
+let dragSlider = -1;
+function setSliderFromMouse(b, mx) {
+  const t = sliderTrack(b);
+  b.set((mx - t.x) / t.w);
+}
 document.addEventListener("pointerlockchange", () => {
   if (document.pointerLockElement !== canvas && gameState === "play") pauseGame();
 });
@@ -3164,6 +3274,10 @@ addEventListener("mousemove", e => {
   }
   if ((gameState === "title" || gameState === "paused") && menuMode !== "help") {
     const [mx, my] = canvasCoords(e);
+    if (dragSlider >= 0) {                       // drag a volume slider
+      const b = menuLayout()[dragSlider];
+      if (b && b.kind === "slider") { setSliderFromMouse(b, mx); return; }
+    }
     const hit = menuHitTest(mx, my);
     canvas.style.cursor = hit >= 0 ? "pointer" : "crosshair";
     if (hit >= 0 && hit !== menuSel) { menuSel = hit; sfx("menuBlip", 0.7); }
@@ -3177,7 +3291,7 @@ addEventListener("mousedown", e => {
   maybeTitleMusic();
   if (e.button === 0 && gameState === "play") mouseDown = true;
 });
-addEventListener("mouseup",   e => { if (e.button === 0) mouseDown = false; });
+addEventListener("mouseup",   e => { if (e.button === 0) { mouseDown = false; dragSlider = -1; } });
 
 // ---------------------------------------------------------
 // Helpers
@@ -4095,6 +4209,24 @@ function drawSkull(x, y) {
   ctx.fillStyle = "#8a8070";
   for (let i = 0; i < 3; i++) ctx.fillRect(x + 4 + i * 3, y + 13 + bob, 2, 3);
 }
+function sliderTrack(b) {
+  return { x: b.x + 150, y: b.y + b.h / 2 - 5, w: 120, h: 10 };
+}
+function drawTransportIcon(act, cx, cy) {
+  const s = 6;
+  const tri = (x, dir) => {
+    ctx.beginPath();
+    ctx.moveTo(x + (dir > 0 ? -s / 2 : s / 2), cy - s);
+    ctx.lineTo(x + (dir > 0 ? -s / 2 : s / 2), cy + s);
+    ctx.lineTo(x + (dir > 0 ? s : -s), cy);
+    ctx.closePath();
+    ctx.fill();
+  };
+  if (act === "prev") { ctx.fillRect(cx - 8, cy - s, 2, s * 2); tri(cx + 5, -1); }
+  else if (act === "next") { ctx.fillRect(cx + 6, cy - s, 2, s * 2); tri(cx - 5, 1); }
+  else if (musicPaused) tri(cx - 2, 1);
+  else { ctx.fillRect(cx - 5, cy - s, 3, s * 2); ctx.fillRect(cx + 2, cy - s, 3, s * 2); }
+}
 function drawMenuButtons() {
   ctx.textAlign = "center";
   for (const b of menuLayout()) {
@@ -4117,12 +4249,51 @@ function drawMenuButtons() {
     ctx.fillStyle = sel ? "#d8834a" : "#63636c";
     for (const [rx, ry] of [[b.x + 6, b.y + 6], [b.x + b.w - 9, b.y + 6], [b.x + 6, b.y + b.h - 9], [b.x + b.w - 9, b.y + b.h - 9]])
       ctx.fillRect(rx, ry, 3, 3);
-    // label
-    ctx.font = "bold 22px Impact, 'Arial Black', sans-serif";
-    ctx.fillStyle = "#300";
-    ctx.fillText(b.label, W / 2 + 2, b.y + b.h / 2 + 8 + 2);
-    ctx.fillStyle = sel ? "#ff4a2a" : "#c01812";
-    ctx.fillText(b.label, W / 2, b.y + b.h / 2 + 8);
+    if (b.kind === "slider") {
+      // label left, bar right
+      ctx.textAlign = "left";
+      ctx.font = "bold 17px Impact, 'Arial Black', sans-serif";
+      ctx.fillStyle = "#300";
+      ctx.fillText(b.label, b.x + 15, b.y + b.h / 2 + 7 + 2);
+      ctx.fillStyle = sel ? "#ff4a2a" : "#c01812";
+      ctx.fillText(b.label, b.x + 13, b.y + b.h / 2 + 7);
+      const t = sliderTrack(b), v = b.get();
+      ctx.fillStyle = "#0d0d10";
+      ctx.fillRect(t.x, t.y, t.w, t.h);
+      ctx.fillStyle = sel ? "#c9421f" : "#7a2a18";
+      ctx.fillRect(t.x, t.y, t.w * v, t.h);
+      ctx.fillStyle = sel ? "#ffb08a" : "#9a9aa4";       // knob
+      ctx.fillRect(t.x + t.w * v - 3, t.y - 3, 6, t.h + 6);
+      ctx.font = "bold 13px 'Courier New', monospace";
+      ctx.fillStyle = "#bbb";
+      ctx.textAlign = "right";
+      ctx.fillText(Math.round(v * 100) + "%", b.x + b.w - 10, b.y + b.h / 2 + 5);
+      ctx.textAlign = "center";
+    } else if (b.kind === "player") {
+      ctx.textAlign = "left";
+      ctx.font = "bold 12px 'Courier New', monospace";
+      ctx.fillStyle = "#8a8a92";
+      ctx.fillText(musicPaused ? "PAUSED" : "NOW PLAYING", b.x + 13, b.y + 14);
+      ctx.font = "bold 13px 'Courier New', monospace";
+      ctx.fillStyle = sel ? "#ff8a5a" : "#c8b090";
+      const nm = trackName();
+      ctx.fillText(nm.length > 20 ? nm.slice(0, 19) + "…" : nm, b.x + 13, b.y + 29);
+      for (const p of playerButtons(b)) {
+        ctx.fillStyle = "#0e0e12";
+        ctx.fillRect(p.x, p.y, p.w, p.h);
+        ctx.fillStyle = sel ? "#7a3a24" : "#4a4a52";
+        ctx.fillRect(p.x, p.y, p.w, 1); ctx.fillRect(p.x, p.y, 1, p.h);
+        ctx.fillStyle = sel ? "#ffa070" : "#b0b0ba";
+        drawTransportIcon(p.act, p.x + p.w / 2, p.y + p.h / 2);
+      }
+      ctx.textAlign = "center";
+    } else {
+      ctx.font = "bold 22px Impact, 'Arial Black', sans-serif";
+      ctx.fillStyle = "#300";
+      ctx.fillText(b.label, W / 2 + 2, b.y + b.h / 2 + 8 + 2);
+      ctx.fillStyle = sel ? "#ff4a2a" : "#c01812";
+      ctx.fillText(b.label, W / 2, b.y + b.h / 2 + 8);
+    }
     if (sel) drawSkull(b.x - 28, b.y + 9);
   }
   ctx.textAlign = "left";
@@ -4141,7 +4312,8 @@ function drawHelp() {
     "E .............. USE DOORS + SWITCHES",
     "SHIFT .......... RUN",
     "M .............. AUTOMAP    N ... MUSIC",
-    "ESC ............ PAUSE",
+    "[ ] ............ PREV / NEXT TRACK",
+    "ESC ............ PAUSE + AUDIO OPTIONS",
     "",
     "FIND THE EXIT SWITCH IN EACH LEVEL.",
     "COLORED DOORS NEED KEYCARDS.",
