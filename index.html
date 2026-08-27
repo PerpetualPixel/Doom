@@ -65,6 +65,14 @@ const FOV = Math.PI / 3;         // 60 degrees
 // pool reads as sunk into the floor rather than painted onto it. Wall
 // height is 1, so this is roughly a knee-high step.
 const LIQUID_DROP = 0.3;
+// Ceilings vary by the shape of the space: cramped corridors press down
+// like tunnels, big rooms open up, and some open to the sky outright.
+// Heights are in wall units (a standard wall is 1 tall).
+const CEIL_HIGH = 2.2;      // big rooms
+const CEIL_TUNNEL = 0.8;    // narrow corridors
+const CEIL_ARENA = 2.6;     // indoor boss arenas
+const SKY_WALL = 1.35;      // silhouette height of walls open to the sky
+const SKY = 0;              // ceilMap value meaning "no ceiling at all"
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
@@ -73,7 +81,10 @@ const overlay = document.getElementById("overlay");
 const frame = ctx.createImageData(W, VIEW_H);
 const fb = new Uint32Array(frame.data.buffer);   // ABGR little-endian
 const zBuffer = new Float64Array(W);
-const flBeam = new Float32Array(W);   // flashlight cone, per screen column
+const flBeam = new Float32Array(W);    // flashlight cone, per screen column
+const colLight = new Float32Array(W);  // dynamic light from flying shots, per column
+const colLightD = new Float32Array(W); // depth of the strongest such light
+const skyU = new Uint16Array(W);       // sky strip column per screen column
 
 // Art that gets its pixels read back loads through here: assets.js holds
 // the same images as data URIs, which keep working when the game is
@@ -1645,6 +1656,9 @@ const TELE_PAIRS = [["t", "u"], ["v", "w"], ["x", "z"]];   // pad -> destination
 
 let MAP = [], MAP_W = 0, MAP_H = 0, levelIdx = 0;
 const mapAt = (x, y) => (x < 0 || y < 0 || x >= MAP_W || y >= MAP_H) ? 1 : MAP[y * MAP_W + x];
+const ceilAt = (x, y) => (x < 0 || y < 0 || x >= MAP_W || y >= MAP_H) ? 1 : ceilMap[y * MAP_W + x];
+// sky counts as "taller than anything" when heights are compared
+const ceilEff = c => c === SKY ? 99 : c;
 
 // Doors: any tile 4 can be opened with E. Keyed by cell index.
 const doors = new Map();
@@ -1851,6 +1865,81 @@ const monitorFrames = [0, 1, 2].map(fi => makeTexture(g => {
   for (let i = 0; i < 6; i++) g.fillRect(10 + i * 8, 55, 5, 2);
 }));
 textures[8] = monitorFrames[0];
+// 18: the window - the same stone, with the slit's frame bevelled in.
+// The renderer leaves the slit rows unpainted so the world shows through.
+const WIN_LO = 0.45, WIN_HI = 0.72;   // slit band, in wall heights
+textures[18] = makeTexture(g => {
+  g.drawImage(textures[1].canvas, 0, 0);
+  const yTop = ((1 - WIN_HI) * TEX) | 0, yBot = ((1 - WIN_LO) * TEX) | 0;
+  g.fillStyle = "#0a0b0d";                       // frame shadow above and below
+  g.fillRect(0, yTop - 3, TEX, 3); g.fillRect(0, yBot, TEX, 3);
+  g.fillStyle = "#55595f";                       // worn sill catching light
+  g.fillRect(0, yBot + 3, TEX, 2);
+});
+
+// ---------------------------------------------------------
+// The sky, for rooms with no ceiling: a wrapped strip with
+// distance terrain silhhouetted along the horizon. One for
+// the Mars installations, a bloodier one for hell. Seamless
+// by construction - every jag is a sum of whole-strip waves.
+// ---------------------------------------------------------
+const SKY_W = 1024, SKY_H = 220;
+function makeSky(hell) {
+  const c = document.createElement("canvas");
+  c.width = SKY_W; c.height = SKY_H;
+  const g = c.getContext("2d");
+  const grad = g.createLinearGradient(0, 0, 0, SKY_H);
+  if (hell) {
+    grad.addColorStop(0, "#0e0103"); grad.addColorStop(0.55, "#3a0606");
+    grad.addColorStop(0.85, "#7a1408"); grad.addColorStop(1, "#a02a08");
+  } else {
+    grad.addColorStop(0, "#120b12"); grad.addColorStop(0.5, "#4a2018");
+    grad.addColorStop(0.85, "#8a4a26"); grad.addColorStop(1, "#b06a34");
+  }
+  g.fillStyle = grad;
+  g.fillRect(0, 0, SKY_W, SKY_H);
+  // stars high up, thinning toward the glow
+  for (let i = 0; i < 130; i++) {
+    const sx = (i * 379) % SKY_W, sy = ((i * 173) % (SKY_H * 0.5)) | 0;
+    g.fillStyle = `rgba(255,${hell ? 200 : 230},${hell ? 180 : 210},${0.25 + (i % 4) * 0.12})`;
+    g.fillRect(sx, sy, i % 7 === 0 ? 2 : 1, i % 7 === 0 ? 2 : 1);
+  }
+  // the sun, small and sick through the haze
+  const sunX = SKY_W * 0.62, sunY = SKY_H * 0.62;
+  const halo = g.createRadialGradient(sunX, sunY, 2, sunX, sunY, 60);
+  halo.addColorStop(0, hell ? "rgba(255,120,40,0.9)" : "rgba(255,210,150,0.9)");
+  halo.addColorStop(0.2, hell ? "rgba(200,60,20,0.4)" : "rgba(230,150,90,0.4)");
+  halo.addColorStop(1, "rgba(0,0,0,0)");
+  g.fillStyle = halo;
+  g.fillRect(sunX - 60, sunY - 60, 120, 120);
+  // distance terrain: two silhouette ranges, the nearer one darker
+  const TAU = Math.PI * 2;
+  const jag = (x, k, seed) =>
+    Math.sin(x / SKY_W * TAU * k + seed) + 0.6 * Math.sin(x / SKY_W * TAU * k * 2.7 + seed * 1.7)
+    + 0.35 * Math.sin(x / SKY_W * TAU * k * 6.1 + seed * 3.1);
+  for (const [k, seed, base, amp, col] of hell
+    ? [[3, 1.3, 42, 13, "#2a0504"], [5, 4.1, 24, 11, "#160202"]]
+    : [[2, 2.2, 40, 10, "#38201a"], [4, 5.7, 22, 9, "#1c100e"]]) {
+    g.fillStyle = col;
+    g.beginPath();
+    g.moveTo(0, SKY_H);
+    for (let x = 0; x <= SKY_W; x += 4)
+      g.lineTo(x, SKY_H - base - jag(x, k, seed) * amp);
+    g.lineTo(SKY_W, SKY_H);
+    g.closePath(); g.fill();
+  }
+  if (hell) {
+    // embers along the crags
+    for (let i = 0; i < 60; i++) {
+      const ex = (i * 211) % SKY_W;
+      g.fillStyle = `rgba(255,${90 + (i * 37) % 90},20,0.7)`;
+      g.fillRect(ex, SKY_H - 18 - (i * 53) % 30, 2, 2);
+    }
+  }
+  return new Uint32Array(g.getImageData(0, 0, SKY_W, SKY_H).data.buffer);
+}
+const skySet = { tech: makeSky(false), hell: makeSky(true) };
+let skyTex = skySet.tech;   // swapped per level alongside the door art
 // 15/17: the wall switch, armed (green) and thrown (red). Pressing it
 // swaps the tile, so the wall itself remembers.
 textures[15] = makeTexture(g => {
@@ -1922,6 +2011,7 @@ function applyDoorTextures() {
   const set = (hell && doorVariants.hell) || doorVariants.clean;
   textures[4] = set ? set.plain : proceduralDoor;
   for (const t of [11, 12, 13]) textures[t] = (set && set.locked[t]) || proceduralLocked[t];
+  skyTex = hell ? skySet.hell : skySet.tech;   // the open-air rooms match
 }
 for (const [key, file] of [["clean", "textures/door.jpg"], ["hell", "textures/door_hell.jpg"]]) {
   const img = new Image();
@@ -3973,6 +4063,11 @@ resetLoadout();
 let enemies = [], pickups = [], projectiles = [], pProjectiles = [], barrels = [], decors = [], effects = [];
 let floorMap = null;   // per-cell floor type: 0 plate, 1 water, 2 nukage, 3 teleporter pad
 let explored = null;   // automap fog of war: cells the player has actually seen
+let ceilMap = null;    // per-cell ceiling height in wall units; SKY (0) = open air
+let lightMap = null;   // per-cell light: low bits color 1 white / 2 red / 3 blue,
+                       // bit 7 = ceiling fixture drawn, bit 6 = it flickers
+let litCells = [];     // indices into lightMap that hold any light
+let lightNow = null;   // this frame's brightness per lit cell (flicker applied)
 let nukeTimer = 0, teleports = [], teleCooldown = 0;
 let gameState = "title";   // title | play | intermission | dead | victory
 let fireCooldown = 0, muzzle = 0, showMap = false, faceTimer = 0, faceLook = 0;
@@ -4048,6 +4143,110 @@ function makeEnemy(type, x, y) {
 function distToPlayer(x, y) { return Math.hypot(x - player.x, y - player.y); }
 function volAt(dist) { return Math.max(0.15, Math.min(1, 1.3 - dist / 12)); }
 
+// ---------------------------------------------------------
+// Ceilings, read off the shape of each level: squeezed
+// corridors press down into tunnels, big rooms open up, and
+// each level rolls its own habit for opening to the sky -
+// holes over the widest floors, long strips, or staying
+// roofed and tall. Boss arenas lose the roof outright.
+// ---------------------------------------------------------
+function computeCeilings() {
+  ceilMap = new Float32Array(MAP_W * MAP_H).fill(1);
+  const open = (x, y) => x >= 0 && y >= 0 && x < MAP_W && y < MAP_H && MAP[y * MAP_W + x] === 0;
+  // clearance: the biggest ring of open floor around a cell, 0..3
+  const clear = (x, y) => {
+    let r = 0;
+    outer: for (; r < 3; r++) {
+      const rr = r + 1;
+      for (let j = -rr; j <= rr; j++) for (let i = -rr; i <= rr; i++)
+        if (!open(x + i, y + j)) break outer;
+    }
+    return r;
+  };
+  const L = LEVELS[levelIdx];
+  const hell = levelIdx >= 18;
+  const style = L.bonus ? 0 : (levelIdx * 5 + 2) % 3;   // 0 holes, 1 strips, 2 closed
+  for (let y = 0; y < MAP_H; y++) for (let x = 0; x < MAP_W; x++) {
+    const idx = y * MAP_W + x;
+    if (MAP[idx] !== 0) continue;
+    const c = clear(x, y);
+    if (c <= 1) {
+      // a corridor - long one way, tight the other - presses down into a
+      // tunnel; a small room is tight both ways and keeps its ceiling
+      let sxp = 0; while (sxp < 9 && open(x + sxp + 1, y)) sxp++;
+      let sxn = 0; while (sxn < 9 && open(x - sxn - 1, y)) sxn++;
+      let syp = 0; while (syp < 9 && open(x, y + syp + 1)) syp++;
+      let syn = 0; while (syn < 9 && open(x, y - syn - 1)) syn++;
+      const spanX = sxp + sxn + 1, spanY = syp + syn + 1;
+      ceilMap[idx] = ((spanX <= 3 && spanY >= 7) || (spanY <= 3 && spanX >= 7)) ? CEIL_TUNNEL : 1;
+    } else if (c >= 2) {
+      let h = CEIL_HIGH;
+      if ((style === 0 || hell) && c >= 3) h = SKY;      // a hole over the middle
+      if (style === 1 && x % 7 < 2) h = SKY;             // open strips across
+      ceilMap[idx] = h;
+    }
+  }
+  // Boss arenas: the Cyberdemon and the Mastermind fight under open sky
+  // (the Gauntlet under hell's own), so the towers of meat finally fit.
+  // E1M8's barons are big-room sized already and need no special roof.
+  const arenaH = { 16: SKY, 25: SKY, 27: SKY }[levelIdx];
+  if (arenaH !== undefined) for (const e of enemies) {
+    if (!BOSSES.has(e.type)) continue;
+    const bx = e.x | 0, by = e.y | 0;
+    const q = [[bx, by]], seen = new Set([by * MAP_W + bx]);
+    while (q.length) {
+      const [cx, cy] = q.pop();
+      ceilMap[cy * MAP_W + cx] = arenaH;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = cx + dx, ny = cy + dy, k = ny * MAP_W + nx;
+        if (open(nx, ny) && !seen.has(k) && Math.abs(nx - bx) <= 12 && Math.abs(ny - by) <= 12) {
+          seen.add(k); q.push([nx, ny]);
+        }
+      }
+    }
+  }
+  // doorways and window bays stay standard height, so door slabs and
+  // window slits keep lining up with what they draw
+  for (let y = 0; y < MAP_H; y++) for (let x = 0; x < MAP_W; x++) {
+    const t = MAP[y * MAP_W + x];
+    if (!DOOR_TILES.has(t) && t !== 18) continue;
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]])
+      if (open(x + dx, y + dy)) ceilMap[(y + dy) * MAP_W + (x + dx)] = 1;
+  }
+}
+// Light sources: fixtures set into normal and tunnel ceilings, standing
+// lamps where the ceiling is too high or gone. Both brighten the floor
+// beneath them; a few flicker on a bad ballast.
+function placeLights() {
+  lightMap = new Uint8Array(MAP_W * MAP_H);
+  lightNow = new Float32Array(MAP_W * MAP_H);
+  litCells = [];
+  const hell = levelIdx >= 18;
+  for (let y = 1; y < MAP_H - 1; y++) for (let x = 1; x < MAP_W - 1; x++) {
+    const idx = y * MAP_W + x;
+    if (MAP[idx] !== 0 || floorMap[idx]) continue;   // dry open floor only
+    const c = ceilMap[idx];
+    const h = (x * 37 + y * 61 + levelIdx * 11) % 97;
+    const bigNeighbor = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => {
+      const nc = ceilMap[(y + dy) * MAP_W + (x + dx)];
+      return MAP[(y + dy) * MAP_W + (x + dx)] === 0 && (nc === SKY || nc > 1);
+    });
+    if (c > 0 && c <= 1 && !bigNeighbor && h % 9 === 0) {
+      let v = 128 | (hell ? 2 : (h % 5 === 0 ? 3 : 1));   // fixture: red in hell, else white/blue
+      if (h % 4 === 0) v |= 64;                           // flickers
+      lightMap[idx] = v;
+      litCells.push(idx);
+    } else if ((c > 0 && c <= 1 && bigNeighbor && h % 6 === 0) ||
+               ((c >= CEIL_HIGH - 0.01 || c === SKY) && h % 23 === 0 &&
+                [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => MAP[(y + dy) * MAP_W + (x + dx)] !== 0))) {
+      // the rim of a big or open-air room: a standing lamp on a pole
+      const color = hell ? 2 : (h % 3 === 0 ? 3 : 1);
+      lightMap[idx] = color | (h % 5 === 0 ? 64 : 0);
+      litCells.push(idx);
+      decors.push({ x: x + 0.5, y: y + 0.5, lamp: color });
+    }
+  }
+}
 function loadLevel() {
   const L = LEVELS[levelIdx];
   MAP_W = L.rows[0].length;
@@ -4114,6 +4313,48 @@ function loadLevel() {
         MAP[y * MAP_W + x] = 8;
     }
   }
+  let winPlaced = 0;   // a level keeps a handful of windows, not a colander
+  // Windows: a slit cut through any single-thickness wall with open floor
+  // on both sides. You can see and shoot through one; nothing walks or
+  // flies through. Hash-picked, so they never move between visits.
+  for (let y = 1; y < MAP_H - 1; y++) for (let x = 1; x < MAP_W - 1; x++) {
+    const idx = y * MAP_W + x;
+    const t = MAP[idx];
+    if (t !== 1 && t !== 2 && t !== 3 && t !== 5 && t !== 6 && t !== 7) continue;   // plain walls only, never a door
+    if ((x * 23 + y * 41 + levelIdx * 17) % 7 !== 0) continue;
+    const ns = MAP[(y - 1) * MAP_W + x] === 0 && MAP[(y + 1) * MAP_W + x] === 0;
+    const ew = MAP[y * MAP_W + x - 1] === 0 && MAP[y * MAP_W + x + 1] === 0;
+    if (!(ns || ew)) continue;
+    // keep clear of doors, switches, exits and monitors
+    const special = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => {
+      const tt = MAP[(y + dy) * MAP_W + (x + dx)];
+      return DOOR_TILES.has(tt) || tt === 8 || tt === 9 || tt === 10 || tt === 15;
+    });
+    if (!special) { MAP[idx] = 18; winPlaced++; }
+  }
+  // most walls here are two cells thick: a window through one of those is
+  // a pair of window cells back to back, reading as one deep embrasure
+  const plainWall = i2 => { const t2 = MAP[i2]; return t2 >= 1 && t2 <= 7 && t2 !== 4; };
+  const specialNear = (x, y) => [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => {
+    const tt = mapAt(x + dx, y + dy);
+    return DOOR_TILES.has(tt) || tt === 8 || tt === 9 || tt === 10 || tt === 15;
+  });
+  for (let y = 1; y < MAP_H - 1 && winPlaced < 10; y++) for (let x = 1; x < MAP_W - 3; x++) {
+    if (winPlaced >= 10) break;
+    if ((x * 19 + y * 47 + levelIdx * 13) % 5 !== 0) continue;
+    const i0 = y * MAP_W + x;
+    // east-west pair with open floor beyond each face
+    if (plainWall(i0) && plainWall(i0 + 1) && mapAt(x - 1, y) === 0 && mapAt(x + 2, y) === 0 &&
+        !specialNear(x, y) && !specialNear(x + 1, y)) {
+      MAP[i0] = 18; MAP[i0 + 1] = 18; winPlaced++;
+    } else if (y < MAP_H - 3 && plainWall(i0) && plainWall(i0 + MAP_W) &&
+        mapAt(x, y - 1) === 0 && mapAt(x, y + 2) === 0 &&
+        !specialNear(x, y) && !specialNear(x, y + 1)) {
+      MAP[i0] = 18; MAP[i0 + MAP_W] = 18; winPlaced++;
+    }
+  }
+  computeCeilings();
+  placeLights();
   player.keys = { blue: false, yellow: false, red: false };
   player.kills = 0;
   player.eyeDrop = 0; player.bobAmp = 0; player.bob = 0; player.pitch = 0;
@@ -4763,10 +5004,12 @@ addEventListener("contextmenu", e => e.preventDefault());
 // ---------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------
-function hasLOS(x0, y0, x1, y1) {
+function hasLOS(x0, y0, x1, y1, blockWindows) {
   // Exact DDA over the grid: every cell the segment crosses is tested, so
   // a sight line (or a shot) can never slip through the corner of a wall
   // between two samples the way the old fixed-step version could.
+  // Windows (tile 18) pass sight and hitscan; anything with a body -
+  // monsters, fireballs, blast waves - asks for blockWindows.
   let cx = x0 | 0, cy = y0 | 0;
   const tx = x1 | 0, ty = y1 | 0;
   const dx = x1 - x0, dy = y1 - y0;
@@ -4778,7 +5021,7 @@ function hasLOS(x0, y0, x1, y1) {
   for (let i = Math.abs(tx - cx) + Math.abs(ty - cy); i > 0; i--) {
     if (sX < sY) { sX += dDX; cx += stepX; }
     else         { sY += dDY; cy += stepY; }
-    if (solidCell(cx, cy)) return false;
+    if (solidCell(cx, cy) && (blockWindows || mapAt(cx, cy) !== 18)) return false;
   }
   return true;
 }
@@ -4952,7 +5195,7 @@ function nearestTarget(maxDist, maxAng) {
     let da = Math.atan2(dy, dx) - player.ang;
     while (da >  Math.PI) da -= 2 * Math.PI;
     while (da < -Math.PI) da += 2 * Math.PI;
-    if (dist < bd && Math.abs(da) < maxAng && hasLOS(player.x, player.y, tgt.o.x, tgt.o.y)) { best = tgt; bd = dist; }
+    if (dist < bd && Math.abs(da) < maxAng && hasLOS(player.x, player.y, tgt.o.x, tgt.o.y, true)) { best = tgt; bd = dist; }
   }
   return best;
 }
@@ -5007,7 +5250,8 @@ function wallPoint(x0, y0, ang, maxDist) {
     if (sX < sY) { t = sX; sX += dDX; cx += stepX; }
     else         { t = sY; sY += dDY; cy += stepY; }
     if (t > maxDist) return null;
-    if (solidCell(cx, cy)) return { x: x0 + dx * (t - 0.02), y: y0 + dy * (t - 0.02), dist: t };
+    // a shot passes clean through a window slit; sparks land beyond it
+    if (solidCell(cx, cy) && mapAt(cx, cy) !== 18) return { x: x0 + dx * (t - 0.02), y: y0 + dy * (t - 0.02), dist: t };
   }
   return null;
 }
@@ -5018,13 +5262,13 @@ function explodeAt(x, y, radius, dmg, hurtSelf) {
   for (const e of enemies) {
     if (e.dead) continue;
     const d = Math.hypot(e.x - x, e.y - y);
-    if (d < radius && hasLOS(x, y, e.x, e.y)) damageEnemy(e, (dmg * (1 - d / radius)) | 0, distToPlayer(e.x, e.y));
+    if (d < radius && hasLOS(x, y, e.x, e.y, true)) damageEnemy(e, (dmg * (1 - d / radius)) | 0, distToPlayer(e.x, e.y));
   }
   for (const b of barrels)
-    if (b.fuse < 0 && Math.hypot(b.x - x, b.y - y) < radius && hasLOS(x, y, b.x, b.y)) b.fuse = 0.1 + Math.random() * 0.1;
+    if (b.fuse < 0 && Math.hypot(b.x - x, b.y - y) < radius && hasLOS(x, y, b.x, b.y, true)) b.fuse = 0.1 + Math.random() * 0.1;
   if (hurtSelf) {
     const pd = distToPlayer(x, y);
-    if (pd < radius * 0.8 && hasLOS(x, y, player.x, player.y)) {
+    if (pd < radius * 0.8 && hasLOS(x, y, player.x, player.y, true)) {
       player.hp -= dmgToPlayer((dmg * 0.5 * (1 - pd / (radius * 0.8))) | 0);
       player.hurtFlash = 0.35; faceTimer = 0.8;
       sfx("playerPain", 0.8);
@@ -5035,7 +5279,7 @@ function explodeBarrel(b) {
   effects.push({ x: b.x, y: b.y, t: 0, kind: "boom" });
   const pd = distToPlayer(b.x, b.y);
   sfx("barrel", volAt(pd));
-  if (pd < 2.2 && hasLOS(b.x, b.y, player.x, player.y)) {
+  if (pd < 2.2 && hasLOS(b.x, b.y, player.x, player.y, true)) {
     player.hp -= dmgToPlayer((50 * (1 - pd / 2.2)) | 0);
     player.hurtFlash = 0.4; faceTimer = 0.8;
     sfx("playerPain", 0.9);
@@ -5043,10 +5287,10 @@ function explodeBarrel(b) {
   for (const e of enemies) {
     if (e.dead) continue;
     const d = Math.hypot(e.x - b.x, e.y - b.y);
-    if (d < 2.2 && hasLOS(b.x, b.y, e.x, e.y)) damageEnemy(e, (90 * (1 - d / 2.2)) | 0, distToPlayer(e.x, e.y));
+    if (d < 2.2 && hasLOS(b.x, b.y, e.x, e.y, true)) damageEnemy(e, (90 * (1 - d / 2.2)) | 0, distToPlayer(e.x, e.y));
   }
   for (const ob of barrels) {   // chain reaction
-    if (ob !== b && ob.fuse < 0 && Math.hypot(ob.x - b.x, ob.y - b.y) < 1.8 && hasLOS(b.x, b.y, ob.x, ob.y))
+    if (ob !== b && ob.fuse < 0 && Math.hypot(ob.x - b.x, ob.y - b.y) < 1.8 && hasLOS(b.x, b.y, ob.x, ob.y, true))
       ob.fuse = 0.12 + Math.random() * 0.15;
   }
 }
@@ -5144,7 +5388,7 @@ function update(dt) {
     const p = pProjectiles[i];
     const fromX = p.x, fromY = p.y;
     p.x += p.vx * dt; p.y += p.vy * dt;
-    let hit = solidCell(p.x | 0, p.y | 0) || !hasLOS(fromX, fromY, p.x, p.y);
+    let hit = solidCell(p.x | 0, p.y | 0) || !hasLOS(fromX, fromY, p.x, p.y, true);
     let victim = null;
     if (!hit) {
       for (const tgt of collectTargets()) {
@@ -5299,7 +5543,7 @@ function update(dt) {
         projectiles.push({ x: e.x, y: e.y, vx: Math.cos(pa) * ps, vy: Math.sin(pa) * ps, dmg: e.dmg, img: e.ball });
       }
       sfx(e.atkSfx, volAt(dist));
-    } else if (!e.ranged && dist < 1.1 && e.attackT <= 0 && hasLOS(e.x, e.y, player.x, player.y)) {
+    } else if (!e.ranged && dist < 1.1 && e.attackT <= 0 && hasLOS(e.x, e.y, player.x, player.y, true)) {
       e.state = "attack"; e.stateT = 0; e.attackT = e.cool;
       player.hp -= dmgToPlayer(e.dmg);
       player.hurtFlash = 0.35; faceTimer = 0.8;
@@ -5341,7 +5585,7 @@ function update(dt) {
     p.x += p.vx * dt; p.y += p.vy * dt;
     // sweep the whole frame's travel, not just the endpoint, so a fast
     // shot cannot clip through a wall corner between frames
-    if (solidCell(p.x | 0, p.y | 0) || !hasLOS(fromX, fromY, p.x, p.y)) {
+    if (solidCell(p.x | 0, p.y | 0) || !hasLOS(fromX, fromY, p.x, p.y, true)) {
       sfx(p.img === "rocket" ? "rocketHit" : "fireballHit", volAt(distToPlayer(p.x, p.y)) * 0.8);
       if (p.img === "rocket") effects.push({ x: p.x, y: p.y, t: 0, kind: "boom" });
       projectiles.splice(i, 1);
@@ -5421,6 +5665,27 @@ function shade(px, f) {
   const r = (px & 0xff) * f, g = ((px >> 8) & 0xff) * f, b = ((px >> 16) & 0xff) * f;
   return 0xff000000 | (b << 16) | (g << 8) | r;
 }
+// fixture glass by color index (ABGR), and how brightly each shot burns
+const LIGHT_PX = [0, 0xffe8f6f8, 0xff4050ff, 0xffff9a50];   // -, white, red, blue
+const SHOT_LIGHT = { rocket: 0.7, plasmaball: 0.5, bfgball: 0.9, fireball: 0.45, greenball: 0.45, tracer: 0.15 };
+// the standing lamps: lit and guttering frames per color
+function lampSprite(color, on) {
+  return makeSprite(g => {
+    const cols = { 1: ["#f0f0e0", "#8a8a80"], 2: ["#ff5a40", "#6a1810"], 3: ["#5a9aff", "#18306a"] }[color];
+    g.fillStyle = "#23262b"; g.fillRect(26, 56, 12, 6);    // base
+    g.fillStyle = "#3a3f46"; g.fillRect(30, 14, 4, 44);    // pole
+    g.fillStyle = "#23262b"; g.fillRect(25, 6, 14, 12);    // head
+    if (on) {
+      g.fillStyle = color === 1 ? "rgba(255,255,220,0.28)" : color === 2 ? "rgba(255,90,60,0.28)" : "rgba(90,150,255,0.28)";
+      g.beginPath(); g.ellipse(32, 12, 15, 13, 0, 0, 7); g.fill();
+    }
+    g.fillStyle = on ? cols[0] : cols[1];
+    g.fillRect(27, 8, 10, 8);
+  });
+}
+const lampFrames = { 1: [lampSprite(1, true), lampSprite(1, false)],
+                     2: [lampSprite(2, true), lampSprite(2, false)],
+                     3: [lampSprite(3, true), lampSprite(3, false)] };
 
 function renderWorld() {
   const dirX = Math.cos(player.ang), dirY = Math.sin(player.ang);
@@ -5453,6 +5718,47 @@ function renderWorld() {
     flBeam[x] = Math.max(0, 1 - t * t);
   }
 
+  // this frame's fixture brightness, flicker applied per lit cell
+  for (const li of litCells) {
+    let b2 = 0.55;
+    if (lightMap[li] & 64) {
+      const tt = gameT * 9 + li * 0.7;
+      b2 *= (Math.sin(tt) * Math.sin(tt * 1.31 + 1.7) > -0.3) ? 1 : 0.22;
+    }
+    lightNow[li] = b2;
+  }
+
+  // which sky-strip column each screen column faces (the sky is glued to
+  // the world, not the screen, so it pans as you turn)
+  for (let x = 0; x < W; x++) {
+    const a = player.ang + Math.atan((2 * x / W - 1) * halfTan);
+    skyU[x] = ((a * (SKY_W / Math.PI)) % SKY_W + SKY_W) % SKY_W;
+  }
+
+  // true dynamic light: every flying shot projects to a screen column and
+  // lights the geometry near that column, strongest at its own depth
+  colLight.fill(0);
+  const invDet = 1 / (planeX * dirY - dirX * planeY);
+  const addShotLight = (lx, ly, power) => {
+    const sx2 = lx - posX, sy2 = ly - posY;
+    const tY = invDet * (-planeY * sx2 + planeX * sy2);
+    if (tY <= 0.15) return;
+    const tX = invDet * (dirY * sx2 - dirX * sy2);
+    const scx = (W / 2) * (1 + tX / tY);
+    const rad = Math.min(W * 0.6, (W * 0.45) / tY);
+    const x0 = Math.max(0, (scx - rad) | 0), x1 = Math.min(W - 1, (scx + rad) | 0);
+    const pw = power / (0.7 + tY * 0.22);
+    for (let x = x0; x <= x1; x++) {
+      const tt = (x - scx) / rad;
+      const val = pw * (1 - tt * tt);
+      if (val > colLight[x]) { colLight[x] = val; colLightD[x] = tY; }
+    }
+  };
+  for (const q of projectiles)  addShotLight(q.x, q.y, SHOT_LIGHT[q.img] || 0.4);
+  for (const q of pProjectiles) addShotLight(q.x, q.y, SHOT_LIGHT[q.wp.proj] || 0.5);
+  // walls take the shot light only near the shot's own depth
+  const dynAt = (x, dist) => colLight[x] > 0 ? colLight[x] * Math.max(0, 1 - Math.abs(dist - colLightD[x]) / 5) : 0;
+
   // --- floor & ceiling casting (per row) ---
   const fData = floorTex.data, cData = ceilTex.data;
   const wLiq = waterTex.data, nLiq = nukeTex.data, pPad = padTex.data;
@@ -5473,11 +5779,60 @@ function renderWorld() {
     let fy = posY + rowDist * (dirY - planeY);
     const rowBase = y * W;
     if (!isFloor) {
+      // Ceilings live at several heights now, so the row is cast against
+      // all of them at once - the pressed-down tunnel plane, the standard
+      // one, the high one - and each pixel keeps whichever its cell says.
+      // A cell with no ceiling at all shows the sky.
+      const dT = VIEW_H * (CEIL_TUNNEL - eyeH) / p;
+      const dH = VIEW_H * (CEIL_HIGH - eyeH) / p;
+      const tStepX = dT * (2 * planeX) / W, tStepY = dT * (2 * planeY) / W;
+      const hStepX = dH * (2 * planeX) / W, hStepY = dH * (2 * planeY) / W;
+      let tx2 = posX + dT * (dirX - planeX), ty2 = posY + dT * (dirY - planeY);
+      let hx2 = posX + dH * (dirX - planeX), hy2 = posY + dH * (dirY - planeY);
+      const fogT = Math.min(1, 2.1 / dT * (1 + flashEnv * 2)) * 0.55;
+      const fogH = Math.min(1, 2.1 / dH * (1 + flashEnv * 2)) * 0.5;
+      const skyRow = Math.max(0, Math.min(SKY_H - 1, (((y - horizon) / VIEW_H + 1) * (SKY_H - 1)) | 0)) * SKY_W;
       for (let x = 0; x < W; x++) {
-        const tx = ((fx - Math.floor(fx)) * TEX) | 0;
-        const ty = ((fy - Math.floor(fy)) * TEX) | 0;
-        fb[rowBase + x] = shade(cData[ty * TEX + tx], fog + flRow * flBeam[x]);
-        fx += stepX; fy += stepY;
+        const cx = fx | 0, cy = fy | 0;
+        const inb = cx >= 0 && cy >= 0 && cx < MAP_W && cy < MAP_H;
+        const c1 = inb ? ceilMap[cy * MAP_W + cx] : 1;
+        let px;
+        if (c1 === SKY || c1 > 1) {
+          // no low roof overhead: whatever the high plane finds decides -
+          // a tall roof out there is nearer than the sky, so it wins, and
+          // that is what lets a roof rim show beyond an open hole
+          const hcx = hx2 | 0, hcy = hy2 | 0;
+          const ch = (hcx >= 0 && hcy >= 0 && hcx < MAP_W && hcy < MAP_H) ? ceilMap[hcy * MAP_W + hcx] : 1;
+          if (ch > 1) {
+            // in-bounds coords are non-negative, so |0 is the floor
+            const tx = ((hx2 - (hx2 | 0)) * TEX) | 0;
+            const ty = ((hy2 - (hy2 | 0)) * TEX) | 0;
+            px = shade(cData[ty * TEX + tx], fogH + flRow * flBeam[x] * 0.7);
+          } else px = skyTex[skyRow + skyU[x]];
+        } else {
+          // standard ceiling, or a tunnel pressing down on its own plane
+          let u = fx, v = fy, br = fog, li = inb ? cy * MAP_W + cx : -1;
+          if (c1 < 1) {
+            u = tx2; v = ty2; br = fogT;
+            const tcx = u | 0, tcy = v | 0;
+            li = (tcx >= 0 && tcy >= 0 && tcx < MAP_W && tcy < MAP_H) ? tcy * MAP_W + tcx : -1;
+          }
+          let uu = u % 1; if (uu < 0) uu += 1;
+          let vv = v % 1; if (vv < 0) vv += 1;
+          const lm = li >= 0 ? lightMap[li] : 0;
+          if (lm & 128) {
+            if ((uu - 0.5) * (uu - 0.5) + (vv - 0.5) * (vv - 0.5) < 0.03) {
+              px = shade(LIGHT_PX[lm & 3], 0.45 + lightNow[li]);   // the fixture itself
+              fb[rowBase + x] = px;
+              fx += stepX; fy += stepY; tx2 += tStepX; ty2 += tStepY; hx2 += hStepX; hy2 += hStepY;
+              continue;
+            }
+            br += lightNow[li] * 0.5;                              // glow around it
+          }
+          px = shade(cData[((vv * TEX) | 0) * TEX + ((uu * TEX) | 0)], br + flRow * flBeam[x]);
+        }
+        fb[rowBase + x] = px;
+        fx += stepX; fy += stepY; tx2 += tStepX; ty2 += tStepY; hx2 += hStepX; hy2 += hStepY;
       }
     } else {
       // The sunken plane is further away for the same screen row, so the
@@ -5495,8 +5850,10 @@ function renderWorld() {
       const sunkFog = Math.min(1, 2.1 / sunkDist) * 0.8;
       for (let x = 0; x < W; x++) {
         const cx = fx | 0, cy = fy | 0;
-        const ft = (cx >= 0 && cy >= 0 && cx < MAP_W && cy < MAP_H) ? floorMap[cy * MAP_W + cx] : 0;
-        let tex = fData, u = fx, v = fy, br = fog;
+        const inb = cx >= 0 && cy >= 0 && cx < MAP_W && cy < MAP_H;
+        const ft = inb ? floorMap[cy * MAP_W + cx] : 0;
+        // light pooling on the floor under a fixture or a lamp
+        let tex = fData, u = fx, v = fy, br = fog + (inb ? lightNow[cy * MAP_W + cx] * 0.9 : 0);
         if (ft === 3) { tex = pPad; br = Math.min(1, fog * 1.4); }
         else if (ft === 0) {
           // a shaded curb on the dry side of every pool edge, so the pool
@@ -5537,6 +5894,8 @@ function renderWorld() {
 
   // the wall monitors' static crawls: flip which frame tile 8 shows
   textures[8] = monitorFrames[((gameT * 5) | 0) % 3];
+  // what the faces above ceiling steps are dressed in
+  const upperTexData = (levelIdx >= 18 ? textures[2] : textures[1]).data;
 
   // --- walls (DDA per column) ---
   for (let x = 0; x < W; x++) {
@@ -5552,13 +5911,45 @@ function renderWorld() {
     else         { stepY = 1;  sideY = (mapY + 1 - posY) * dY; }
     let hit = 0, side = 0;
     let doorOver = null;   // a partially-risen door the ray passed under
+    let winOver = null;    // a window wall the ray's sightline pierced
+    // the ceiling of the space the ray is travelling through: walls stand
+    // as tall as the room they face, and every drop in ceiling along the
+    // way is a visible upper face
+    let curCeil = ceilEff(ceilAt(mapX, mapY));
+    const uppers = [];
     while (!hit) {
       if (sideX < sideY) { sideX += dX; mapX += stepX; side = 0; }
       else               { sideY += dY; mapY += stepY; side = 1; }
       if (mapX >= 0 && mapY >= 0 && mapX < MAP_W && mapY < MAP_H)
         explored[mapY * MAP_W + mapX] = 1;   // fog of war: seen by this ray
       const t = mapAt(mapX, mapY);
-      if (!t) continue;
+      if (!t) {
+        const cEff = ceilEff(ceilMap[mapY * MAP_W + mapX]);
+        if (cEff < curCeil - 0.01) {
+          const pd = side === 0 ? sideX - dX : sideY - dY;
+          let wx = side === 0 ? posY + pd * rdY : posX + pd * rdX;
+          wx -= Math.floor(wx);
+          // coming in from under the sky, the face above the opening is a
+          // building silhouette rather than an infinite slab
+          uppers.push({ d: pd, hi: curCeil > 10 ? Math.max(SKY_WALL, cEff + 0.35) : curCeil,
+                        lo: cEff, wx, side,
+                        flip: (side === 0 && rdX > 0) || (side === 1 && rdY < 0) });
+        }
+        curCeil = cEff;
+        continue;
+      }
+      if (t === 18) {
+        // a window: the wall stands, the sightline carries on through the
+        // slit; the wall (minus its slit) is drawn over the result
+        if (!winOver) {
+          const pd = side === 0 ? sideX - dX : sideY - dY;
+          let wx = side === 0 ? posY + pd * rdY : posX + pd * rdX;
+          wx -= Math.floor(wx);
+          winOver = { dist: pd, wx, side,
+                      flip: (side === 0 && rdX > 0) || (side === 1 && rdY < 0) };
+        }
+        continue;
+      }
       if (DOOR_TILES.has(t)) {
         // Doors open the way the originals did: the slab rises into the
         // ceiling. Once it has started moving it is no longer a wall to
@@ -5582,8 +5973,20 @@ function renderWorld() {
     const perpDist = side === 0 ? sideX - dX : sideY - dY;
     zBuffer[x] = perpDist;
 
-    const lineH = (VIEW_H / perpDist) | 0;
-    const wallTop = horizon - lineH * (1 - eyeH), wallBot = horizon + lineH * eyeH;
+    // The wall is as tall as the room it faces. A wall seen from under
+    // the sky is a silhouette - and if the same wall also fronts a tall
+    // room on another side, it keeps that height, so corners between
+    // open-air and tall interiors meet instead of tearing.
+    let hWall = curCeil;
+    if (curCeil > 10) {
+      hWall = SKY_WALL;
+      for (const [dx2, dy2] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nc = ceilAt(mapX + dx2, mapY + dy2);
+        if (nc > 1 && nc < 10 && mapAt(mapX + dx2, mapY + dy2) === 0) hWall = Math.max(hWall, nc + 0.35);
+      }
+    }
+    const lineH = (VIEW_H / perpDist) | 0;   // pixels per wall unit
+    const wallTop = horizon - lineH * (hWall - eyeH), wallBot = horizon + lineH * eyeH;
     let drawStart = Math.max(0, wallTop | 0);
     let drawEnd = Math.min(VIEW_H - 1, wallBot | 0);
 
@@ -5598,12 +6001,33 @@ function renderWorld() {
     const step = TSZ / lineH;
     let texPos = (drawStart - wallTop) * step;
     let fog = Math.min(1, 2.8 / perpDist + flashEnv * Math.max(0, 1 - perpDist / 7)
+                        + dynAt(x, perpDist)
                         + (flOn ? flBeam[x] * Math.min(0.85, 4 / (1 + perpDist)) : 0));
     if (side === 1) fog *= 0.72;
     for (let y = drawStart; y <= drawEnd; y++) {
-      const texY = Math.min(TSZ - 1, texPos | 0);
+      const texY = (texPos | 0) % TSZ;   // taller walls tile the texture
       texPos += step;
       fb[y * W + x] = shade(tex[texY * TSZ + texX], fog);
+    }
+
+    // upper faces where the ceiling stepped down along the ray, nearest
+    // first - their bands sit strictly above one another, so order is free
+    for (const uw of uppers) {
+      const u2 = VIEW_H / uw.d;
+      const y0 = Math.max(0, (horizon - u2 * (uw.hi - eyeH)) | 0);
+      const y1 = Math.min(VIEW_H - 1, (horizon - u2 * (uw.lo - eyeH)) | 0);
+      if (y1 < y0) continue;
+      let uTexX = (uw.wx * TEX) | 0;
+      if (uw.flip) uTexX = TEX - uTexX - 1;
+      let uFog = Math.min(1, 2.8 / uw.d + dynAt(x, uw.d)
+                           + (flOn ? flBeam[x] * Math.min(0.85, 4 / (1 + uw.d)) : 0));
+      if (uw.side === 1) uFog *= 0.72;
+      for (let y = y0; y <= y1; y++) {
+        const z = (horizon - y) / u2 + eyeH;      // world height at this row
+        const zf = z - Math.floor(z);
+        const ty = Math.min(TEX - 1, ((1 - zf) * TEX) | 0);
+        fb[y * W + x] = shade(upperTexData[ty * TEX + uTexX], uFog);
+      }
     }
 
     if (doorOver) {
@@ -5621,7 +6045,7 @@ function renderWorld() {
       if (doorOver.flip) dTexX = DSZ - dTexX - 1;
       const dStep = DSZ / dLineH;
       let dPos = doorOver.o * DSZ + (ds - dTop) * dStep;
-      let dFog = Math.min(1, 2.8 / doorOver.dist
+      let dFog = Math.min(1, 2.8 / doorOver.dist + dynAt(x, doorOver.dist)
                            + (flOn ? flBeam[x] * Math.min(0.85, 4 / (1 + doorOver.dist)) : 0));
       if (doorOver.side === 1) dFog *= 0.72;
       for (let y = ds; y <= de; y++) {
@@ -5633,6 +6057,37 @@ function renderWorld() {
       // open one lets them show through the gap. zBuffer is per column,
       // so the nearer claim wins by whichever state dominates the doorway.
       if (doorOver.o < 0.5) zBuffer[x] = doorOver.dist;
+    }
+
+    if (winOver) {
+      // the window wall, drawn whole except its slit band - the world the
+      // ray found beyond stays visible through the gap. A door slab that
+      // hangs NEARER than the window keeps the rows it already painted.
+      const wTex = textures[18].data;
+      const uLine = (VIEW_H / winOver.dist) | 0;
+      const wTop = horizon - uLine * (1 - eyeH);
+      const slitTop = horizon - uLine * (WIN_HI - eyeH);
+      const slitBot = horizon - uLine * (WIN_LO - eyeH);
+      const ws = Math.max(0, wTop | 0), we = Math.min(VIEW_H - 1, (horizon + uLine * eyeH) | 0);
+      let nearDoorBot = -1;
+      if (doorOver && doorOver.dist < winOver.dist) {
+        const dLine = (VIEW_H / doorOver.dist) | 0;
+        nearDoorBot = (horizon - dLine * (1 - eyeH) + dLine * (1 - doorOver.o)) | 0;
+      }
+      let wTexX = (winOver.wx * TEX) | 0;
+      if (winOver.flip) wTexX = TEX - wTexX - 1;
+      const wStep = TEX / uLine;
+      let wPos = (ws - wTop) * wStep;
+      let wFog = Math.min(1, 2.8 / winOver.dist + dynAt(x, winOver.dist)
+                           + (flOn ? flBeam[x] * Math.min(0.85, 4 / (1 + winOver.dist)) : 0));
+      if (winOver.side === 1) wFog *= 0.72;
+      for (let y = ws; y <= we; y++) {
+        if ((y > slitTop && y < slitBot) || y <= nearDoorBot) { wPos += wStep; continue; }
+        const ty = Math.min(TEX - 1, wPos | 0);
+        wPos += wStep;
+        fb[y * W + x] = shade(wTex[ty * TEX + wTexX], wFog);
+      }
+      zBuffer[x] = Math.min(zBuffer[x], winOver.dist);
     }
   }
 
@@ -5677,6 +6132,16 @@ function renderWorld() {
   // enemy corpses draw squashed low and wide, flat against the floor
   // enemy corpses draw squashed low and wide, flat against the floor
   for (const d of decors) {
+    if (d.lamp) {
+      // a standing lamp: its glow frame follows the same flicker its
+      // floor light does, so the pool of light and the head gutter as one
+      const on = lightNow[(d.y | 0) * MAP_W + (d.x | 0)] > 0.3;
+      // lamps have no collision, so someone will stand inside one: fade it
+      // out at point-blank rather than filling the view with pole
+      items.push({ x: d.x, y: d.y, img: lampFrames[d.lamp][on ? 0 : 1], hScale: 1.0,
+                   sink: liquidSink(d.x, d.y), lightFloor: on ? 0.7 : 0.2, grounded: true, minDepth: 0.55 });
+      continue;
+    }
     const raw = sprites[d.spr] || sprites.corpse;
     const img = Array.isArray(raw) ? raw[raw.length - 1] : raw;
     if (img) items.push(d.pool
@@ -5699,7 +6164,6 @@ function renderWorld() {
     bright: f.kind !== "blood" && f.kind !== "gib",
   });
 
-  const invDet = 1 / (planeX * dirY - dirX * planeY);
   for (const s of items) {
     const sx = s.x - posX, sy = s.y - posY;
     s.tY = invDet * (-planeY * sx + planeX * sy);       // depth in camera space
@@ -5710,13 +6174,15 @@ function renderWorld() {
 
   for (const s of items) {
     const transX = s.tX, transY = s.tY;
-    if (transY <= 0.1) continue;
+    if (transY <= (s.minDepth || 0.1)) continue;
     const screenX = ((W / 2) * (1 + transX / transY)) | 0;
     const baseH = Math.abs((VIEW_H / transY)) | 0;
-    // A grounded giant taller than the room pokes through the ceiling
-    // (there is no per-pixel ceiling clip). Cap it just above wall height
-    // until tall arena ceilings exist - see ROADMAP Batch 3.
-    const hClamped = s.grounded ? Math.min(s.hScale, 1.15 + Math.max(0, s.sink)) : s.hScale;
+    // A grounded giant taller than its room still pokes through the roof
+    // (there is no per-pixel ceiling clip), so cap it against the ceiling
+    // where it stands - under a tall arena or the open sky, no cap at all.
+    const hClamped = s.grounded
+      ? Math.min(s.hScale, ceilEff(ceilAt(s.x | 0, s.y | 0)) + 0.15 + Math.max(0, s.sink))
+      : s.hScale;
     const sprH = (baseH * hClamped) | 0;
     const sprW = (sprH * (s.aspect || 1)) | 0;
     const vShift = (baseH * eyeH - sprH / 2 + s.sink * baseH) | 0;
@@ -5725,9 +6191,13 @@ function renderWorld() {
     const drawStartX = Math.max(0, (screenX - sprW / 2) | 0);
     const drawEndX = Math.min(W - 1, (screenX + sprW / 2) | 0);
     // distance fog would sink the near-black boss art into a dark
-    // arena floor; a light floor keeps the thing you must aim at visible
-    const fog = s.bright ? 1 : Math.max(s.lightFloor || 0, Math.min(1, 2.8 / transY
-      + (flOn ? flBeam[Math.max(0, Math.min(W - 1, screenX))] * Math.min(0.85, 4 / (1 + transY)) : 0)));
+    // arena floor; a light floor keeps the thing you must aim at visible.
+    // Standing under a fixture, or near a passing shot, lifts it further.
+    const scrX = Math.max(0, Math.min(W - 1, screenX));
+    const sIdx = (s.y | 0) * MAP_W + (s.x | 0);
+    const lit = (s.x >= 0 && s.y >= 0 && (s.x | 0) < MAP_W && (s.y | 0) < MAP_H) ? lightNow[sIdx] * 0.8 : 0;
+    const fog = s.bright ? 1 : Math.max(s.lightFloor || 0, Math.min(1, 2.8 / transY + lit + dynAt(scrX, transY)
+      + (flOn ? flBeam[scrX] * Math.min(0.85, 4 / (1 + transY)) : 0)));
     for (let x = drawStartX; x <= drawEndX; x++) {
       if (transY >= zBuffer[x]) continue;
       const texX = (((x - (screenX - sprW / 2)) * SPR) / sprW) | 0;

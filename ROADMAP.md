@@ -59,25 +59,39 @@ placeholder in the meantime — drop the real art in and it takes over.
 - [x] **Exit door** — the exit is now a recessed doorway under a glowing red
   EXIT sign.
 
-## Batch 3 — renderer (the hard ones)
+## Batch 3 — renderer (DONE, except stairs)
 
-- [ ] **Variable ceiling heights** — per-area ceiling levels; tall boss
-  arenas (the real fix for the boss/roof clamp). The plan, per Pixel: every
-  map distinct — some rooms with no ceiling at all, big rooms with open
-  strips or one big hole, small corridors reading as tunnels, high perches
-  with windows; variety in wall/ceiling dressing per area.
-- [ ] **Open-sky areas** — zones with no ceiling showing a hell skybox, plus
-  distance terrain on the horizon. *Needs asset: skybox art; procedural sky
-  until then.*
-- [ ] **Ceiling lights** — fixtures in white/red/blue by area, some
-  flickering, lighting the cells beneath.
-- [ ] **Slitted walls & windows** — partially see-through wall types you
-  can't walk through.
-- [ ] **Tall standing lights** and other solid props.
-- [ ] **Stairs / slopes** — genuinely hard in a 2D-grid raycaster; needs a
-  floor-height pass like the ceiling one. Feasibility after variable
-  ceilings.
-- [ ] **True dynamic lights** — fireballs/plasma lighting walls as they fly.
+- [x] **Variable ceiling heights** — every cell now has one, derived from
+  the level's own shape: squeezed corridors press down into tunnels, big
+  rooms rise to 2.2, boss arenas higher still. Walls stand as tall as the
+  room they face (textures tile up), and every ceiling step shows a real
+  upper face. Each level rolls one of three habits — holes, strips, or
+  closed-and-tall — so no two maps read alike.
+- [x] **Open-sky areas** — rooms with no ceiling show a procedural skybox
+  (Mars dusk for the installations, a blood sky for hell) with silhouetted
+  distance terrain, stars, a sick sun, and embers on the crags. The sky
+  pans with the view and shears with mouselook. *Still happy to take real
+  skybox art.*
+- [x] **Ceiling lights** — fixtures set into normal and tunnel ceilings
+  (white/blue on Mars, red in hell), pooling light on the floor beneath;
+  roughly one in four guns its ballast and flickers, and anything standing
+  in the pool is lit too.
+- [x] **Slitted walls & windows** — window walls with a see-through slit:
+  sight and hitscan pass, bodies and fireballs don't. Placed on
+  single-thickness walls between open areas; that geometry is rare in the
+  current maps, so they're sparse — density grows when maps gain authored
+  perches.
+- [x] **Tall standing lights** — pole lamps ring the big and open-air rooms
+  (where there's no ceiling to hang a fixture from), glowing and guttering
+  in step with the light they cast.
+- [ ] **Stairs / slopes** — the one Batch 3 item still open. Feasibility
+  read: the ceiling pass proves the multi-plane approach works, so a
+  floor-height pass (raised platforms, real perches) is doable the same
+  way — but it touches movement, collision, projectiles and sprite
+  anchoring everywhere, so it's a batch of its own.
+- [x] **True dynamic lights** — every flying shot projects to the screen
+  and lights the walls, doors and sprites near its column, strongest at
+  its own depth. Rockets and BFG bursts light rooms as they cross them.
 
 ## Assets wanted (everything has a placeholder until provided)
 
