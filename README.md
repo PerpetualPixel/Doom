@@ -54,21 +54,24 @@ dedicated tracks; other levels rotate through the rest. When the optional
 local `Doom OST/` folder is present it serves as a fallback, and a
 synthesized loop backs everything as a last resort.
 
-## Optional local assets
+## Assets
 
-The game looks for optional local folders and auto-detects what's present:
+The custom monster sheets (`sprites/`) and weapon art (`Guns/`) ship with the
+repo and are also inlined as data URIs in `assets.js`, so the real art loads
+even when `index.html` is opened straight from the files — no local server
+needed. After changing anything in `sprites/` or `Guns/`, regenerate with:
 
-- `SFX/` — classic Doom sound effect WAVs (`dspistol.wav`, `dsdoropn.wav`, ...)
-- `Doom OST/` — the soundtrack MP3s (each level plays its matching track,
-  plus intermission and victory music)
-- `sprites/` — monster sprite sheets (`Imp.png`, `Demon.png`, `Baron Of Hell.png`),
-  auto-sliced at runtime (requires serving over http, e.g. `python -m http.server`;
-  browsers block pixel access to local images on `file://`)
+    python3 tools/embed_assets.py
 
-Whatever is missing falls back to fully synthesized WebAudio sound, an original
-metal-style music loop, and procedural sprite art. These folders are
-git-ignored and not distributed with the repo — they are id Software's
-copyrighted assets.
+The game also looks for optional local folders and auto-detects what's present:
+
+- `SFX/` — sound effect files (the shipped MP3s, plus classic `ds*.wav`
+  names if you drop them in)
+- `Doom OST/` — soundtrack MP3s (each level plays its matching track,
+  plus intermission and victory music); git-ignored, not distributed
+
+Whatever is missing falls back to fully synthesized WebAudio sound and an
+original metal-style music loop.
 
 ## Features
 

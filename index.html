@@ -44,6 +44,7 @@
     Three levels. Find the exit switch in each.
   </p>
 </div>
+<script src="assets.js"></script>
 <script>
 "use strict";
 
@@ -71,6 +72,14 @@ const overlay = document.getElementById("overlay");
 const frame = ctx.createImageData(W, VIEW_H);
 const fb = new Uint32Array(frame.data.buffer);   // ABGR little-endian
 const zBuffer = new Float64Array(W);
+
+// Art that gets its pixels read back loads through here: assets.js holds
+// the same images as data URIs, which keep working when the game is
+// opened straight from the files (file:// taints canvases fed from disk
+// images, and the slicing/keying then silently falls back to the
+// procedural placeholder art). Missing assets.js falls through to the
+// plain path, so serving over http works with or without it.
+const assetSrc = p => (typeof EMBEDDED_ASSETS !== "undefined" && EMBEDDED_ASSETS[p]) || p;
 
 // ---------------------------------------------------------
 // Levels. Grid recreations of the original 27 maps: each one
@@ -2445,7 +2454,7 @@ for (const { file, set } of SHEET_MAP) {
     sprites[set + "Pain"] = frames[Math.min(2, frames.length - 1)];
   };
   img.onerror = () => {};
-  img.src = "sprites/" + file;
+  img.src = assetSrc("sprites/" + file);
 }
 // Rasterize one labeled component into a 64x64 sprite. Pixels outside
 // the component are flooded in from the bounding-box edges only, so
@@ -2693,7 +2702,7 @@ const ENEMY_GRID = {
     }
   };
   img.onerror = () => {};
-  img.src = "sprites/" + ENEMY_GRID.file;
+  img.src = assetSrc("sprites/" + ENEMY_GRID.file);
 })();
 
 // hell knight fallback art: tinted reuse of the baron drawings until
@@ -2788,7 +2797,7 @@ for (const { file, apply } of CUSTOM_ART) {
     if (frames && frames.length) apply(frames);
   };
   img.onerror = () => {};
-  img.src = "sprites/" + file;
+  img.src = assetSrc("sprites/" + file);
 }
 
 // -----------------------------------------------------
@@ -3120,7 +3129,7 @@ function loadMyGun(cfg) {
     art.fire = null;
   };
   img.onerror = () => {};
-  img.src = "Guns/" + cfg.file;
+  img.src = assetSrc("Guns/" + cfg.file);
 }
 MY_GUN_ART.forEach(loadMyGun);
 
@@ -4278,12 +4287,21 @@ addEventListener("mouseup",   e => { if (e.button === 0) { mouseDown = false; dr
 // Helpers
 // ---------------------------------------------------------
 function hasLOS(x0, y0, x1, y1) {
+  // Exact DDA over the grid: every cell the segment crosses is tested, so
+  // a sight line (or a shot) can never slip through the corner of a wall
+  // between two samples the way the old fixed-step version could.
+  let cx = x0 | 0, cy = y0 | 0;
+  const tx = x1 | 0, ty = y1 | 0;
   const dx = x1 - x0, dy = y1 - y0;
-  const dist = Math.hypot(dx, dy);
-  const steps = Math.ceil(dist * 6);
-  for (let i = 1; i < steps; i++) {
-    const t = i / steps;
-    if (solidCell((x0 + dx * t) | 0, (y0 + dy * t) | 0)) return false;
+  const stepX = dx > 0 ? 1 : -1, stepY = dy > 0 ? 1 : -1;
+  const dDX = dx !== 0 ? Math.abs(1 / dx) : Infinity;
+  const dDY = dy !== 0 ? Math.abs(1 / dy) : Infinity;
+  let sX = dx !== 0 ? (dx > 0 ? cx + 1 - x0 : x0 - cx) * dDX : Infinity;
+  let sY = dy !== 0 ? (dy > 0 ? cy + 1 - y0 : y0 - cy) * dDY : Infinity;
+  for (let i = Math.abs(tx - cx) + Math.abs(ty - cy); i > 0; i--) {
+    if (sX < sY) { sX += dDX; cx += stepX; }
+    else         { sY += dDY; cy += stepY; }
+    if (solidCell(cx, cy)) return false;
   }
   return true;
 }
@@ -4418,7 +4436,7 @@ function nearestTarget(maxDist, maxAng) {
     let da = Math.atan2(dy, dx) - player.ang;
     while (da >  Math.PI) da -= 2 * Math.PI;
     while (da < -Math.PI) da += 2 * Math.PI;
-    if (dist < bd && Math.abs(da) < maxAng) { best = tgt; bd = dist; }
+    if (dist < bd && Math.abs(da) < maxAng && hasLOS(player.x, player.y, tgt.o.x, tgt.o.y)) { best = tgt; bd = dist; }
   }
   return best;
 }
@@ -4455,16 +4473,18 @@ function hitscanShot(jitter, dmg) {
 }
 function explodeAt(x, y, radius, dmg, hurtSelf) {
   effects.push({ x, y, t: 0, kind: "boom" });
+  // a wall between the blast and the target blocks the damage - nothing
+  // hurts anything through solid rock or a closed door
   for (const e of enemies) {
     if (e.dead) continue;
     const d = Math.hypot(e.x - x, e.y - y);
-    if (d < radius) damageEnemy(e, (dmg * (1 - d / radius)) | 0, distToPlayer(e.x, e.y));
+    if (d < radius && hasLOS(x, y, e.x, e.y)) damageEnemy(e, (dmg * (1 - d / radius)) | 0, distToPlayer(e.x, e.y));
   }
   for (const b of barrels)
-    if (b.fuse < 0 && Math.hypot(b.x - x, b.y - y) < radius) b.fuse = 0.1 + Math.random() * 0.1;
+    if (b.fuse < 0 && Math.hypot(b.x - x, b.y - y) < radius && hasLOS(x, y, b.x, b.y)) b.fuse = 0.1 + Math.random() * 0.1;
   if (hurtSelf) {
     const pd = distToPlayer(x, y);
-    if (pd < radius * 0.8) {
+    if (pd < radius * 0.8 && hasLOS(x, y, player.x, player.y)) {
       player.hp -= dmgToPlayer((dmg * 0.5 * (1 - pd / (radius * 0.8))) | 0);
       player.hurtFlash = 0.35; faceTimer = 0.8;
       sfx("playerPain", 0.8);
@@ -4475,7 +4495,7 @@ function explodeBarrel(b) {
   effects.push({ x: b.x, y: b.y, t: 0, kind: "boom" });
   const pd = distToPlayer(b.x, b.y);
   sfx("barrel", volAt(pd));
-  if (pd < 2.2) {
+  if (pd < 2.2 && hasLOS(b.x, b.y, player.x, player.y)) {
     player.hp -= dmgToPlayer((50 * (1 - pd / 2.2)) | 0);
     player.hurtFlash = 0.4; faceTimer = 0.8;
     sfx("playerPain", 0.9);
@@ -4483,10 +4503,10 @@ function explodeBarrel(b) {
   for (const e of enemies) {
     if (e.dead) continue;
     const d = Math.hypot(e.x - b.x, e.y - b.y);
-    if (d < 2.2) damageEnemy(e, (90 * (1 - d / 2.2)) | 0, distToPlayer(e.x, e.y));
+    if (d < 2.2 && hasLOS(b.x, b.y, e.x, e.y)) damageEnemy(e, (90 * (1 - d / 2.2)) | 0, distToPlayer(e.x, e.y));
   }
   for (const ob of barrels) {   // chain reaction
-    if (ob !== b && ob.fuse < 0 && Math.hypot(ob.x - b.x, ob.y - b.y) < 1.8)
+    if (ob !== b && ob.fuse < 0 && Math.hypot(ob.x - b.x, ob.y - b.y) < 1.8 && hasLOS(b.x, b.y, ob.x, ob.y))
       ob.fuse = 0.12 + Math.random() * 0.15;
   }
 }
@@ -4568,8 +4588,9 @@ function update(dt) {
   // --- player projectiles ---
   for (let i = pProjectiles.length - 1; i >= 0; i--) {
     const p = pProjectiles[i];
+    const fromX = p.x, fromY = p.y;
     p.x += p.vx * dt; p.y += p.vy * dt;
-    let hit = solidCell(p.x | 0, p.y | 0);
+    let hit = solidCell(p.x | 0, p.y | 0) || !hasLOS(fromX, fromY, p.x, p.y);
     let victim = null;
     if (!hit) {
       for (const tgt of collectTargets()) {
@@ -4697,7 +4718,7 @@ function update(dt) {
         projectiles.push({ x: e.x, y: e.y, vx: Math.cos(pa) * ps, vy: Math.sin(pa) * ps, dmg: e.dmg, img: e.ball });
       }
       sfx(e.atkSfx, volAt(dist));
-    } else if (!e.ranged && dist < 1.1 && e.attackT <= 0) {
+    } else if (!e.ranged && dist < 1.1 && e.attackT <= 0 && hasLOS(e.x, e.y, player.x, player.y)) {
       e.state = "attack"; e.stateT = 0; e.attackT = e.cool;
       player.hp -= dmgToPlayer(e.dmg);
       player.hurtFlash = 0.35; faceTimer = 0.8;
@@ -4735,8 +4756,11 @@ function update(dt) {
   // --- projectiles ---
   for (let i = projectiles.length - 1; i >= 0; i--) {
     const p = projectiles[i];
+    const fromX = p.x, fromY = p.y;
     p.x += p.vx * dt; p.y += p.vy * dt;
-    if (solidCell(p.x | 0, p.y | 0)) {
+    // sweep the whole frame's travel, not just the endpoint, so a fast
+    // shot cannot clip through a wall corner between frames
+    if (solidCell(p.x | 0, p.y | 0) || !hasLOS(fromX, fromY, p.x, p.y)) {
       sfx(p.img === "rocket" ? "rocketHit" : "fireballHit", volAt(distToPlayer(p.x, p.y)) * 0.8);
       if (p.img === "rocket") effects.push({ x: p.x, y: p.y, t: 0, kind: "boom" });
       projectiles.splice(i, 1);
@@ -4914,7 +4938,7 @@ function renderWorld() {
     else         { stepX = 1;  sideX = (mapX + 1 - posX) * dX; }
     if (rdY < 0) { stepY = -1; sideY = (posY - mapY) * dY; }
     else         { stepY = 1;  sideY = (mapY + 1 - posY) * dY; }
-    let hit = 0, side = 0, doorShift = 0;
+    let hit = 0, side = 0, doorU = -1;
     while (!hit) {
       if (sideX < sideY) { sideX += dX; mapX += stepX; side = 0; }
       else               { sideY += dY; mapY += stepY; side = 1; }
@@ -4922,16 +4946,44 @@ function renderWorld() {
         explored[mapY * MAP_W + mapX] = 1;   // fog of war: seen by this ray
       const t = mapAt(mapX, mapY);
       if (!t) continue;
-      if (DOOR_TILES.has(t)) {
-        // sliding door: the slab covers [0, 1-open) of the cell face
+      if (DOOR_TILES.has(t) && t !== 14) {
+        // A doorway several cells wide is one slab: its texture spans the
+        // whole bank and the whole thing slides aside as a unit, instead
+        // of each cell drawing (and sliding) its own little door. Secret
+        // doors are exempt - stretching stone across the bank would make
+        // them stand out from the wall they hide in.
+        const d = doors.get(mapY * MAP_W + mapX);
+        const openness = d ? d.open : 0;
+        const pd = side === 0 ? sideX - dX : sideY - dY;
+        // The bank axis is the doorway's own orientation - which way its
+        // neighbouring cells are also door tiles - not whichever face this
+        // ray happened to enter through.
+        let axisY = mapAt(mapX, mapY - 1) === t || mapAt(mapX, mapY + 1) === t;
+        if (!axisY && !(mapAt(mapX - 1, mapY) === t || mapAt(mapX + 1, mapY) === t))
+          axisY = side === 0;   // single-cell door: fall back to the face axis
+        const wc = axisY ? posY + pd * rdY : posX + pd * rdX;
+        let b0 = axisY ? mapY : mapX, b1 = b0;   // bank extent on that axis
+        if (axisY) {
+          while (mapAt(mapX, b0 - 1) === t) b0--;
+          while (mapAt(mapX, b1 + 1) === t) b1++;
+        } else {
+          while (mapAt(b0 - 1, mapY) === t) b0--;
+          while (mapAt(b1 + 1, mapY) === t) b1++;
+        }
+        const g = (wc - b0) / (b1 - b0 + 1);   // 0..1 across the whole doorway
+        if (openness > 0 && g < openness) continue;   // the gap the slab slid out of
+        doorU = Math.min(0.999, Math.max(0, g - openness));   // texture rides the slab
+      } else if (t === 14) {
         const d = doors.get(mapY * MAP_W + mapX);
         const openness = d ? d.open : 0;
         if (openness > 0) {
           const pd = side === 0 ? sideX - dX : sideY - dY;
           let wx = side === 0 ? posY + pd * rdY : posX + pd * rdX;
           wx -= Math.floor(wx);
-          if (wx + openness >= 1) continue;   // ray passes through the opening
-          doorShift = openness;
+          if (wx + openness >= 1) continue;
+          // per-cell slide, per-cell stone texture: it must keep looking
+          // like the wall around it
+          doorU = Math.min(0.999, wx + openness);
         }
       }
       hit = t;
@@ -4944,11 +4996,17 @@ function renderWorld() {
     let drawStart = Math.max(0, wallTop | 0);
     let drawEnd = Math.min(VIEW_H - 1, wallBot | 0);
 
-    let wallX = side === 0 ? posY + perpDist * rdY : posX + perpDist * rdX;
-    wallX -= Math.floor(wallX);
-    if (doorShift > 0) wallX = Math.min(0.999, wallX + doorShift);   // texture slides with the door
-    let texX = (wallX * TEX) | 0;
-    if ((side === 0 && rdX > 0) || (side === 1 && rdY < 0)) texX = TEX - texX - 1;
+    let texX;
+    if (doorU >= 0) {
+      // door texture coordinate is bank-global and world-anchored, so the
+      // slab reads the same from both sides and slides as one piece
+      texX = (doorU * TEX) | 0;
+    } else {
+      let wallX = side === 0 ? posY + perpDist * rdY : posX + perpDist * rdX;
+      wallX -= Math.floor(wallX);
+      texX = (wallX * TEX) | 0;
+      if ((side === 0 && rdX > 0) || (side === 1 && rdY < 0)) texX = TEX - texX - 1;
+    }
 
     const texEntry = textures[hit === 14 ? 1 : hit] || textures[1];   // secret doors look like stone
     const tex = texEntry.data;
