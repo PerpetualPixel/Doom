@@ -3427,6 +3427,33 @@ try {
 function saveAudioPrefs() {
   try { localStorage.setItem("doomAudio", JSON.stringify({ musicVol, sfxVol, musicOn })); } catch {}
 }
+
+// ---------------------------------------------------------
+// Automap preferences. Size is a multiplier on the cell size
+// the level would otherwise get; the default is a quarter
+// smaller than the map used to draw at.
+// ---------------------------------------------------------
+const MAP_SCALE_MIN = 0.4, MAP_SCALE_MAX = 1.6;
+const MAP_ALPHA_MIN = 0.15;
+let mapScale = 0.75, mapAlpha = 0.85, mapRotate = false;
+try {
+  const saved = JSON.parse(localStorage.getItem("doomMap") || "null");
+  if (saved) {
+    if (typeof saved.scale === "number") mapScale = saved.scale;
+    if (typeof saved.alpha === "number") mapAlpha = saved.alpha;
+    if (typeof saved.rotate === "boolean") mapRotate = saved.rotate;
+  }
+} catch {}
+function saveMapPrefs() {
+  try { localStorage.setItem("doomMap", JSON.stringify({ scale: mapScale, alpha: mapAlpha, rotate: mapRotate })); } catch {}
+}
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+// the sliders run 0..1, so each setting maps onto that range
+const getMapScale = () => (mapScale - MAP_SCALE_MIN) / (MAP_SCALE_MAX - MAP_SCALE_MIN);
+const setMapScale = v => { mapScale = MAP_SCALE_MIN + clamp(v, 0, 1) * (MAP_SCALE_MAX - MAP_SCALE_MIN); saveMapPrefs(); };
+const getMapAlpha = () => (mapAlpha - MAP_ALPHA_MIN) / (1 - MAP_ALPHA_MIN);
+const setMapAlpha = v => { mapAlpha = MAP_ALPHA_MIN + clamp(v, 0, 1) * (1 - MAP_ALPHA_MIN); saveMapPrefs(); };
+function toggleMapRotate() { mapRotate = !mapRotate; saveMapPrefs(); }
 const musicEl = new Audio();
 musicEl.loop = true;
 musicEl.volume = musicVol;
@@ -3873,8 +3900,8 @@ function menuLayout() {
   // the skill list is six rows long, so it sits higher and tighter
   const lineH = menuMode === "skill" ? 40 : 44;
   const startY = menuMode === "skill" ? 128
-               : menuMode === "audio" ? (gameState === "paused" ? 130 : 190)
-                                      : (gameState === "paused" ? 148 : 208);
+               : menuMode === "audio" || menuMode === "map" ? (gameState === "paused" ? 130 : 190)
+               : gameState === "paused" ? 136 : 190;
   return items.map((it, i) => ({ ...it, i, x: W / 2 - 170, y: startY + i * lineH, w: 340, h: 36 }));
 }
 function menuHitTest(mx, my) {
@@ -3899,6 +3926,12 @@ function menuItems() {
     { label: "INFERNO" }, { label: "BACK" },
   ];
   if (menuMode === "skill") return SKILLS.map(sk => ({ label: sk.name })).concat([{ label: "BACK" }]);
+  if (menuMode === "map") return [
+    { label: "MAP SIZE",    kind: "slider", get: getMapScale, set: setMapScale },
+    { label: "MAP OPACITY", kind: "slider", get: getMapAlpha, set: setMapAlpha },
+    { label: "ROTATE WITH PLAYER: " + (mapRotate ? "ON" : "OFF") },
+    { label: "BACK" },
+  ];
   if (menuMode === "audio") return [
     { label: "MUSIC VOLUME", kind: "slider", get: () => musicVol, set: setMusicVol },
     { label: "SFX VOLUME",   kind: "slider", get: () => sfxVol,   set: setSfxVol },
@@ -3907,18 +3940,21 @@ function menuItems() {
     { label: "BACK" },
   ];
   if (menuMode === "paused") return [
-    { label: "RESUME" }, { label: "RESTART LEVEL" }, { label: "AUDIO OPTIONS" }, { label: "END GAME" },
+    { label: "RESUME" }, { label: "RESTART LEVEL" },
+    { label: "AUDIO OPTIONS" }, { label: "AUTOMAP OPTIONS" }, { label: "END GAME" },
   ];
-  return [{ label: "NEW GAME" }, { label: "AUDIO OPTIONS" }, { label: "READ THIS!" }];
+  return [{ label: "NEW GAME" }, { label: "AUDIO OPTIONS" }, { label: "AUTOMAP OPTIONS" }, { label: "READ THIS!" }];
 }
-let audioMenuFrom = "main";   // where AUDIO OPTIONS was opened from
+let audioMenuFrom = "main";   // where an options screen was opened from
 let pendingEpisode = 0;       // episode chosen, waiting on a skill
 function openAudioMenu() { audioMenuFrom = menuMode; menuMode = "audio"; menuSel = 0; }
+function openMapMenu()   { audioMenuFrom = menuMode; menuMode = "map";   menuSel = 0; }
 function menuActivate() {
   sfx("switch", 0.6);
   if (menuMode === "main") {
     if (menuSel === 0) { menuMode = "episodes"; menuSel = 0; }
     else if (menuSel === 1) openAudioMenu();
+    else if (menuSel === 2) openMapMenu();
     else menuMode = "help";
   } else if (menuMode === "episodes") {
     if (menuSel < 3) { pendingEpisode = menuSel; menuMode = "skill"; menuSel = skill; }
@@ -3930,10 +3966,14 @@ function menuActivate() {
     if (menuSel === 2) toggleMusic();
     else if (menuSel === 3) musicTogglePlay();
     else if (menuSel === 4) menuBack();
+  } else if (menuMode === "map") {
+    if (menuSel === 2) toggleMapRotate();
+    else if (menuSel === 3) menuBack();
   } else if (menuMode === "paused") {
     if (menuSel === 0) resumeGame();
     else if (menuSel === 1) { player.hp = 100; resetLoadout(); loadLevel(); resumeGame(); }
     else if (menuSel === 2) openAudioMenu();
+    else if (menuSel === 3) openMapMenu();
     else goToTitle();
   }
 }
@@ -3945,7 +3985,7 @@ function menuAdjust(dir) {
   else if (it.kind === "player") musicSkip(dir);
 }
 function menuBack() {
-  if (menuMode === "audio") { menuMode = audioMenuFrom === "paused" ? "paused" : "main"; menuSel = 0; }
+  if (menuMode === "audio" || menuMode === "map") { menuMode = audioMenuFrom === "paused" ? "paused" : "main"; menuSel = 0; }
   else if (menuMode === "skill") { menuMode = "episodes"; menuSel = pendingEpisode; }
   else if (menuMode === "episodes" || menuMode === "help") { menuMode = "main"; menuSel = 0; }
   else if (menuMode === "paused") resumeGame();
@@ -5059,9 +5099,31 @@ function renderHUD() {
 }
 
 function renderMinimap() {
-  const s = Math.min(6, ((VIEW_H - 20) / MAP_H) | 0), ox = 10, oy = 10;
+  // mapScale 1 is the size the automap used to draw at; the panel keeps
+  // the level's proportions either way, so the size slider means the same
+  // thing whether the map is held north-up or turned with the player
+  const base = Math.min(6, ((VIEW_H - 20) / MAP_H) | 0);
+  // however big the slider asks for, the panel still has to fit on screen
+  const fits = Math.min((W - 24) / MAP_W, (VIEW_H - 34) / MAP_H);
+  const s = Math.min(base * mapScale, fits), ox = 10, oy = 10;
+  const pw = MAP_W * s, ph = MAP_H * s;
+  const dot = Math.max(1, s - 1), pad = Math.max(1, s - 3);
+  const mark = Math.max(2, s * 0.55);        // markers shrink with the map
+  const item = Math.max(2, s * 0.6);
+  ctx.save();
+  ctx.globalAlpha = mapAlpha;
   ctx.fillStyle = "rgba(0,0,0,0.55)";
-  ctx.fillRect(ox - 2, oy - 2, MAP_W * s + 4, MAP_H * s + 4);
+  ctx.fillRect(ox - 2, oy - 2, pw + 4, ph + 4);
+  ctx.save();
+  if (mapRotate) {
+    // the panel becomes a window onto the level, turned so you face up
+    ctx.beginPath(); ctx.rect(ox, oy, pw, ph); ctx.clip();
+    ctx.translate(ox + pw / 2, oy + ph / 2);
+    ctx.rotate(-player.ang - Math.PI / 2);
+    ctx.translate(-player.x * s, -player.y * s);
+  } else {
+    ctx.translate(ox, oy);
+  }
   for (let y = 0; y < MAP_H; y++) for (let x = 0; x < MAP_W; x++) {
     if (!explored[y * MAP_W + x]) continue;   // fog of war
     const t = MAP[y * MAP_W + x];
@@ -5072,10 +5134,10 @@ function renderMinimap() {
         t === 4  ? "#c8a020" :
         t === 11 ? "#3060e0" : t === 12 ? "#d8b820" : t === 13 ? "#d02020" :
         t === 9 || t === 10 ? "#d02020" : "#8a8a8a";   // secret doors (14) stay wall-gray
-      ctx.fillRect(ox + x * s, oy + y * s, s - 1, s - 1);
+      ctx.fillRect(x * s, y * s, dot, dot);
     } else if (floorMap[y * MAP_W + x] === 3) {   // teleporter pad
       ctx.fillStyle = "#40c8c8";
-      ctx.fillRect(ox + x * s + 1, oy + y * s + 1, s - 3, s - 3);
+      ctx.fillRect(x * s + 1, y * s + 1, pad, pad);
     }
   }
   // discovered items (keycards deliberately not shown)
@@ -5083,20 +5145,25 @@ function renderMinimap() {
     if (p.kind !== "medkit" && p.kind !== "ammo" && p.kind !== "weapon") continue;
     if (!explored[(p.y | 0) * MAP_W + (p.x | 0)]) continue;
     ctx.fillStyle = p.kind === "medkit" ? "#e05050" : p.kind === "weapon" ? "#ff9020" : "#d8c060";
-    ctx.fillRect(ox + p.x * s - 1, oy + p.y * s - 1, 3, 3);
+    ctx.fillRect(p.x * s - item / 2, p.y * s - item / 2, item, item);
   }
   ctx.fillStyle = "#30d030";
   ctx.beginPath();
-  ctx.arc(ox + player.x * s, oy + player.y * s, 3, 0, 7);
+  ctx.arc(player.x * s, player.y * s, mark, 0, 7);
   ctx.fill();
   ctx.strokeStyle = "#30d030";
+  ctx.lineWidth = Math.max(1, s * 0.25);
   ctx.beginPath();
-  ctx.moveTo(ox + player.x * s, oy + player.y * s);
-  ctx.lineTo(ox + (player.x + Math.cos(player.ang) * 2) * s, oy + (player.y + Math.sin(player.ang) * 2) * s);
+  ctx.moveTo(player.x * s, player.y * s);
+  ctx.lineTo((player.x + Math.cos(player.ang) * 2.5) * s, (player.y + Math.sin(player.ang) * 2.5) * s);
   ctx.stroke();
+  ctx.lineWidth = 1;
+  ctx.restore();
+  ctx.textAlign = "left";
   ctx.font = "bold 12px 'Courier New', monospace";
   ctx.fillStyle = "#ddd";
-  ctx.fillText(LEVELS[levelIdx].name, ox, oy + MAP_H * s + 14);
+  ctx.fillText(LEVELS[levelIdx].name + (mapRotate ? "" : "   N\u2191"), ox, oy + ph + 14);
+  ctx.restore();
 }
 
 function renderOverlays() {
@@ -5274,8 +5341,9 @@ function drawHelp() {
     "E .............. USE DOORS + SWITCHES",
     "SHIFT .......... RUN",
     "M .............. AUTOMAP    N ... MUSIC",
+    "                 (SIZE / OPACITY / ROTATE IN OPTIONS)",
     "[ ] ............ PREV / NEXT TRACK",
-    "ESC ............ PAUSE + AUDIO OPTIONS",
+    "ESC ............ PAUSE + OPTIONS",
     "",
     "FIND THE EXIT SWITCH IN EACH LEVEL.",
     "COLORED DOORS NEED KEYCARDS.",
