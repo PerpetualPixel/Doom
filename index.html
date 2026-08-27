@@ -1968,10 +1968,12 @@ sprites.knightPain = sprites.baronPain;
 // Doom-style rotation sheet: leading rows are facing angles (front
 // view first, walk frames then aim/fire), the second-to-last row is
 // the death fall, and the last row is the gib burst.
-function applyRotationSheet(fr, set) {
+function applyRotationSheet(fr, set, opts = {}) {
   const rows = fr.rows && fr.rows.length >= 3 ? fr.rows : null;
   if (!rows) { sprites[set + "Idle"] = fr[0]; return; }
-  const front = rows[0], death = rows[rows.length - 2], gibs = rows[rows.length - 1];
+  // some sheets end with a death row, others with a separate gib row
+  const deathIdx = opts.deathLast ? rows.length - 1 : rows.length - 2;
+  const front = rows[0], death = rows[deathIdx], gibs = rows[deathIdx + 1] || [];
   const walk = front.length > 4 ? front.slice(0, front.length - 2) : front;
   sprites[set + "Idle"] = walk.length > 1 ? walk : walk[0];
   sprites[set + "Attack"] = front[front.length - 1];
@@ -2004,6 +2006,7 @@ const CUSTOM_ART = [
   // gib row. Only the front-facing row is used for live states.
   { file: "zombie custom 2.png", apply: fr => applyRotationSheet(fr, "zombie") },
   { file: "Zombie_Sergeant.png", apply: fr => applyRotationSheet(fr, "sergeant") },
+  { file: "pinky custom.png",    apply: fr => applyRotationSheet(fr, "pinky", { deathLast: true }) },
   { file: "hell skill custom 2.png", apply: fr => {
       // rows: skull sizes | scream + cracks | burst, burn, debris | remains
       const rows = fr.rows || [];
@@ -2767,7 +2770,8 @@ const ENEMY_TYPES = {
               ball: "fireball", atkSfx: "fireball",
               sfxSight: "impSight", sfxPain: "impPain", sfxDie: "impDie", sfxAct: "impAct" },
   pinky:    { hp: 150, speed: 2.6, dmg: 25, ranged: false, cool: 1.0, scale: 1.15,
-              idle: "pinkyIdle", attack: "pinkyAttack", pain: "pinkyPain", corpse: "pinkyCorpse",
+              idle: "pinkyIdle", attack: "pinkyAttack", pain: "pinkyPain",
+              death: "pinkyDeath", corpse: "pinkyCorpse",
               ball: "fireball", atkSfx: "bite",
               sfxSight: "pinkySight", sfxPain: "pinkyPain", sfxDie: "pinkyDie", sfxAct: "pinkyAct" },
   baron:    { hp: 320, speed: 1.5, dmg: 22, ranged: true,  cool: 1.7, pspeed: 6, scale: 1.35,
