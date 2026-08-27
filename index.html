@@ -2029,6 +2029,25 @@ function keyOutGunFrame(g, w, h) {
     g.putImageData(d, 0, 0);
   } catch {}   // file://: pixels unreadable, draw the frame as-is
 }
+function contentBBox(g, w, h) {
+  try {
+    const p = g.getImageData(0, 0, w, h).data;
+    let x0 = w, x1 = -1, y0 = h, y1 = -1;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++)
+      if (p[(y * w + x) * 4 + 3] >= 16) {
+        if (x < x0) x0 = x; if (x > x1) x1 = x;
+        if (y < y0) y0 = y; if (y > y1) y1 = y;
+      }
+    if (x1 < x0) return null;
+    return { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
+  } catch { return null; }
+}
+function cropCanvas(c, r) {
+  const out = document.createElement("canvas");
+  out.width = r.w; out.height = r.h;
+  out.getContext("2d").drawImage(c, r.x, r.y, r.w, r.h, 0, 0, r.w, r.h);
+  return out;
+}
 function loadGunImage(file, slot, key) {
   const img = new Image();
   img.onload = () => {
@@ -2093,7 +2112,7 @@ const MY_GUN_ART = [
   { file: "fist.png",           slot: 0, mode: "single", use: "fire" },
   { file: "pistol.png",         slot: 1, mode: "single", use: "idle" },
   { file: "pistol shooting.png", slot: 1, mode: "single", use: "fire" },
-  { file: "shotgun.png",        slot: 2, mode: "single", use: "idle", zoom: 0.62 },
+  { file: "shotgun.png",        slot: 2, mode: "single", use: "idle" },
   { file: "chaingun.png",       slot: 3, mode: "grid", cols: 4, rows: 2, idle: 0, fire: [1, 2, 3], inset: 0.085 },
   { file: "rocketlauncher.png", slot: 4, mode: "grid", cols: 4, rows: 3, idle: 0, fire: [2, 3, 4], inset: 0.02 },
   { file: "plasma gun.png",     slot: 5, mode: "grid", cols: 3, rows: 2, idle: 0, fire: [1, 2, 4], inset: 0.07, capBottom: 0.09 },
@@ -2130,7 +2149,22 @@ function loadMyGun(cfg) {
       keyOutGunFrame(g, c.width, c.height);
       cells.push(c);
     }
-    const frames = [cells[cfg.idle], ...cfg.fire.filter(i => i < cells.length).map(i => cells[i])];
+    let frames = [cells[cfg.idle], ...cfg.fire.filter(i => i < cells.length).map(i => cells[i])];
+    // crop all frames to their combined content box so the gun keeps
+    // one size and position across the animation, and every weapon
+    // normalizes to the same on-screen scale
+    let union = null;
+    for (const fc of frames) {
+      const r = contentBBox(fc.getContext("2d"), fc.width, fc.height);
+      if (!r) continue;
+      if (!union) union = { ...r };
+      else {
+        const x1 = Math.max(union.x + union.w, r.x + r.w), y1 = Math.max(union.y + union.h, r.y + r.h);
+        union.x = Math.min(union.x, r.x); union.y = Math.min(union.y, r.y);
+        union.w = x1 - union.x; union.h = y1 - union.y;
+      }
+    }
+    if (union) frames = frames.map(fc => cropCanvas(fc, union));
     art.frames = frames;
     art.durs = frames.map((_, i) => i === 0 ? 0.1 : 0.07);
     art.fireTotal = art.durs.slice(1).reduce((a, b) => a + b, 0);
@@ -3472,7 +3506,8 @@ function renderWeapon() {
   }
   if (img) {
     ctx.imageSmoothingEnabled = false;
-    const scale = Math.min(340 / img.width, 260 / img.height) * (art.zoom || 1);
+    // one uniform on-screen size for every weapon (pistol-scale)
+    const scale = Math.min(300 / img.width, 165 / img.height) * (art.zoom || 1);
     const dw = img.width * scale, dh = img.height * scale;
     const dx = W / 2 - dw / 2 + bobX, dy = VIEW_H - dh + bobY + (muzzle > 0 ? -4 : 2);
     if (muzzle > 0 && !art.fire && !animating && !WEAPONS[w].melee) {   // generic flash when no firing art exists
