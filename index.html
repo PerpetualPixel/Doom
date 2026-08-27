@@ -588,23 +588,23 @@ const LEVELS = [
     rows: [
       "############################",
       "#P.........................#",
-      "#..........................#",
+      "#.........i.......i........#",
       "#...BB..............BB.....#",
       "#...BB..............BB.....#",
-      "#..........................#",
+      "#....Z................Z....#",
       "#...r.....a....h......E....#",
       "#..........................#",
-      "#......b..............b....#",
-      "#..........................#",
+      "#......b......N.......b....#",
+      "#..F....................F..#",
       "#............y.............#",
-      "#..........................#",
-      "#......b..............b....#",
+      "#..A....................E..#",
+      "#......b......N.......b....#",
       "#..........................#",
       "#...BB..............BB.....#",
       "#...BB..............BB.....#",
-      "#..........................#",
+      "#....Z................Z....#",
       "#....h....a....h....a......#",
-      "#..........................#",
+      "#...h....m.......m.....h...#",
       "#BBBBBBBBBBBBDBBBBBBBBBBBBB#",
       "#..........................#",
       "#.............X............#",
@@ -853,23 +853,23 @@ const LEVELS = [
     rows: [
       "############################",
       "#P.........................#",
-      "#..........................#",
+      "#.......i.....o.....i......#",
       "#...BB...............BB....#",
-      "#..........................#",
+      "#....N................N....#",
       "#........h.....a....G......#",
-      "#..........................#",
+      "#...h..................h...#",
       "#......b.....F.....b.......#",
-      "#..........................#",
-      "#..........................#",
+      "#...n.................n....#",
+      "#..A....................A..#",
       "#.............q............#",
-      "#..........................#",
-      "#..........................#",
+      "#..F....................F..#",
+      "#...n.................n....#",
       "#......b.....F.....b.......#",
-      "#..........................#",
+      "#...h..................h...#",
       "#....a.....h......a...E....#",
-      "#..........................#",
+      "#....N................N....#",
       "#...BB...............BB....#",
-      "#..........................#",
+      "#.......m.....m.....m......#",
       "#............X.............#",
       "#..........................#",
       "############################",
@@ -1197,6 +1197,26 @@ function buildBgKeyer(d, w, h) {
       };
       for (let x = 0; x < w; x += 3) { sample(x, 0); sample(x, h - 1); }
       for (let y = 0; y < h; y += 3) { sample(0, y); sample(w - 1, y); }
+      // A creature that touches the sheet edge offers its own colour as
+      // a background shade, and one dark enough then swallows every
+      // dark sprite on the sheet. Keep only shades that really line the
+      // border; a backdrop covers a good part of it, a stray limb does
+      // not.
+      if (bgKeys.length > 1) {
+        const hits = new Array(bgKeys.length).fill(0);
+        let seen = 0;
+        const score = (x, y) => {
+          const i = (y * w + x) * 4;
+          if (d[i + 3] < 200) return;
+          seen++;
+          for (let j = 0; j < bgKeys.length; j++)
+            if (near(d[i], d[i + 1], d[i + 2], bgKeys[j])) { hits[j]++; break; }
+        };
+        for (let x = 0; x < w; x++) { score(x, 0); score(x, h - 1); }
+        for (let y = 0; y < h; y++) { score(0, y); score(w - 1, y); }
+        const keep = bgKeys.filter((k, j) => hits[j] >= seen * 0.1);
+        if (keep.length) bgKeys.splice(0, bgKeys.length, ...keep);
+      }
     }
   }
   const shadowRule = bgKeys.length === 1 && bgKeys[0][0] + bgKeys[0][1] + bgKeys[0][2] > 600;
@@ -2994,11 +3014,15 @@ const ENEMY_TYPES = {
               death: "soulDeath", corpse: "soulCorpse",
               ball: "fireball", atkSfx: "soulAtk",
               sfxSight: "soulSight", sfxPain: "soulPain", sfxDie: "soulDie", sfxAct: "soulAct" },
-  cyber:    { hp: 650, speed: 1.3, dmg: 38, ranged: true,  cool: 1.4, pspeed: 8, scale: 1.6,
+  // The two bosses: they tower over the room, they barely flinch, they
+  // fire in bursts, and they keep firing while you are stood on them.
+  cyber:    { hp: 3000, speed: 1.5, dmg: 26, ranged: true,  cool: 0.8, pspeed: 9, scale: 2.1,
+              volley: 3, spread: 0.1, painChance: 0.08, minRange: 0.9, lightFloor: 0.5,
               idle: "cyberIdle", attack: "cyberAttack", pain: "cyberPain", corpse: "cyberCorpse",
               ball: "rocket", atkSfx: "rocket",
               sfxSight: "cyberSight", sfxPain: "cyberPain", sfxDie: "cyberDie", sfxAct: "cyberAct" },
-  spider:   { hp: 650, speed: 1.1, dmg: 9,  ranged: true,  cool: 0.55, pspeed: 12, scale: 1.7,
+  spider:   { hp: 2600, speed: 1.35, dmg: 10, ranged: true,  cool: 0.3, pspeed: 14, scale: 2.0,
+              volley: 3, spread: 0.05, painChance: 0.12, minRange: 0.9, lightFloor: 0.5,
               idle: "spiderIdle", attack: "spiderAttack", pain: "spiderPain", corpse: "spiderCorpse",
               ball: "tracer", atkSfx: "gatling",
               sfxSight: "spiderSight", sfxPain: "spiderPain", sfxDie: "spiderDie", sfxAct: "spiderAct" },
@@ -3404,8 +3428,16 @@ function updateDoors(dt) {
 function damageEnemy(e, amt, dist) {
   if (e.dead || e.state === "dying" || amt <= 0) return;
   e.hp -= amt;
-  if (e.hp <= 0) { e.state = "dying"; e.stateT = 0; sfx(e.sfxDie, volAt(dist)); }
-  else { e.state = "pain"; e.stateT = 0; sfx(e.sfxPain, volAt(dist)); }
+  if (e.hp <= 0) { e.state = "dying"; e.stateT = 0; sfx(e.sfxDie, volAt(dist)); return; }
+  // Every hit staggers an ordinary monster for 0.3s. A boss with that
+  // rule is a statue: chaingun or plasma re-triggers the flinch faster
+  // than it wears off, so it never gets a shot away. Bosses shrug most
+  // of it off - but a hit always wakes them.
+  if (e.painChance !== undefined && Math.random() >= e.painChance) {
+    if (e.state === "idle") { e.state = "chase"; e.stateT = 0; sfx(e.sfxSight, volAt(dist)); }
+    return;
+  }
+  e.state = "pain"; e.stateT = 0; sfx(e.sfxPain, volAt(dist));
 }
 function collectTargets() {
   const targets = [];
@@ -3643,7 +3675,11 @@ function update(dt) {
     }
     // chase
     e.attackT -= dt;
-    if (e.ranged && los && dist > 2.5 && e.attackT <= 0) {
+    // How close a shooter will let you get before it stops firing.
+    // Ordinary monsters hold you off at arm's length; a boss has no
+    // safe pocket to hide in, so hugging it no longer defangs it.
+    const minR = e.minRange !== undefined ? e.minRange : 2.5;
+    if (e.ranged && los && dist > minR && e.attackT <= 0) {
       e.state = "attack"; e.stateT = 0; e.attackT = e.cool + Math.random() * 0.6;
       const base = Math.atan2(dy, dx);
       const ps = e.pspeed || 6;
@@ -3659,7 +3695,7 @@ function update(dt) {
       player.hurtFlash = 0.35; faceTimer = 0.8;
       sfx(e.atkSfx);
       sfx("playerPain", 0.9);
-    } else if (dist > (e.ranged ? 3.5 : 0.8)) {
+    } else if (dist > (e.ranged ? minR + 1 : 0.8)) {
       if (dist < 9 && Math.random() < dt * 0.18) sfx(e.sfxAct, volAt(dist) * 0.7);
       const step = e.speed * dt;
       let vx = dx / dist, vy = dy / dist;
@@ -3883,7 +3919,7 @@ function renderWorld() {
       const phase = walking ? (performance.now() / 130 + e.x * 7) % 1 : 0;
       img = animPick(sprites[e.idle], phase);
     }
-    if (img) items.push({ x: e.x, y: e.y, img, hScale, sink });
+    if (img) items.push({ x: e.x, y: e.y, img, hScale, sink, lightFloor: e.lightFloor });
   }
   for (const p of pickups)     items.push({ x: p.x, y: p.y, img: sprites[p.spr || p.kind], hScale: 0.7, sink: 0.18 });
   for (const p of projectiles) items.push({ x: p.x, y: p.y, img: sprites[p.img] || sprites.fireball, hScale: 0.5, sink: 0 });
@@ -3926,7 +3962,9 @@ function renderWorld() {
     const drawEndY = Math.min(VIEW_H - 1, (horizon + sprH / 2 + vShift) | 0);
     const drawStartX = Math.max(0, (screenX - sprW / 2) | 0);
     const drawEndX = Math.min(W - 1, (screenX + sprW / 2) | 0);
-    const fog = s.bright ? 1 : Math.min(1, 2.8 / transY);
+    // distance fog would sink the near-black boss art into a dark
+    // arena floor; a light floor keeps the thing you must aim at visible
+    const fog = s.bright ? 1 : Math.max(s.lightFloor || 0, Math.min(1, 2.8 / transY));
     for (let x = drawStartX; x <= drawEndX; x++) {
       if (transY >= zBuffer[x]) continue;
       const texX = (((x - (screenX - sprW / 2)) * SPR) / sprW) | 0;
