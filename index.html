@@ -2074,45 +2074,83 @@ const GUN_ART_FILES = [   // [idle, fire] per weapon slot 0-6
 ];
 const GUN_SLOTS = 8;   // fist..chainsaw (WEAPONS is defined further down)
 const gunArt = Array.from({ length: GUN_SLOTS }, () => ({ idle: null, fire: null }));
+// Collect the background shades sitting on a frame border (handles
+// two-tone checkerboards and solid colors alike), bucketed by 12-bit
+// color so the same backdrop reads alike from frame to frame.
+function borderShades(g, w, h) {
+  const p = g.getImageData(0, 0, w, h).data;
+  const counts = new Map();
+  let borderOpaque = 0;
+  const tally = (x, y) => {
+    const i = (y * w + x) * 4;
+    if (p[i + 3] < 200) return;
+    borderOpaque++;
+    const q = ((p[i] >> 4) << 8) | ((p[i + 1] >> 4) << 4) | (p[i + 2] >> 4);
+    const e = counts.get(q) || { n: 0, sr: 0, sg: 0, sb: 0 };
+    e.n++; e.sr += p[i]; e.sg += p[i + 1]; e.sb += p[i + 2];
+    counts.set(q, e);
+  };
+  for (let x = 0; x < w; x++) { tally(x, 0); tally(x, h - 1); }
+  for (let y = 1; y < h - 1; y++) { tally(0, y); tally(w - 1, y); }
+  // A mostly transparent border with a few opaque pixels means a
+  // panel frame line clipped into the cell - key those pixels too.
+  const shareMin = borderOpaque >= 24 ? borderOpaque * 0.06 : 1;
+  const shades = [];
+  for (const [q, e] of counts) {
+    if (e.n < shareMin) continue;
+    const k = [e.sr / e.n, e.sg / e.n, e.sb / e.n];
+    if (Math.max(k[0], k[1], k[2]) - Math.min(k[0], k[1], k[2]) >= 40) continue;   // an arm crossing the border
+    shades.push({ q, k, n: e.n });
+  }
+  return { borderOpaque, shades };
+}
+// Every cell of one sheet sits on the same backdrop, so a shade found
+// on the border of most cells is that backdrop - including on the
+// frame where a muzzle flash floods the border and the per-frame
+// dominance test would otherwise write the backdrop off as gun metal.
+function sheetBgKeys(cells) {
+  const votes = new Map();
+  for (const c of cells) {
+    let shades;
+    try { shades = borderShades(c.getContext("2d"), c.width, c.height).shades; }
+    catch { return []; }   // file://: pixels unreadable
+    for (const s of shades) {
+      const e = votes.get(s.q) || { n: 0, sr: 0, sg: 0, sb: 0 };
+      e.n++; e.sr += s.k[0]; e.sg += s.k[1]; e.sb += s.k[2];
+      votes.set(s.q, e);
+    }
+  }
+  const need = Math.max(2, Math.ceil(cells.length / 2));
+  const keys = [];
+  for (const e of votes.values())
+    if (e.n >= need) keys.push([e.sr / e.n, e.sg / e.n, e.sb / e.n]);
+  return keys;
+}
 // Key out a weapon frame's background: find the dominant opaque color
 // around the frame border and clear everything near it. Works whether
 // the corner pixel is transparent or not; frames with genuinely
-// transparent backgrounds are left untouched.
-function keyOutGunFrame(g, w, h) {
+// transparent backgrounds are left untouched. sharedKeys carries the
+// backdrop the rest of the sheet agrees on, for frames whose own
+// border is too obscured to name it.
+function keyOutGunFrame(g, w, h, sharedKeys) {
   try {
     const d = g.getImageData(0, 0, w, h);
     const p = d.data;
-    // Collect the background shades present on the frame border
-    // (handles two-tone checkerboards and solid colors alike).
-    const counts = new Map();
-    let borderOpaque = 0;
-    const tally = (x, y) => {
-      const i = (y * w + x) * 4;
-      if (p[i + 3] < 200) return;
-      borderOpaque++;
-      const q = ((p[i] >> 4) << 8) | ((p[i + 1] >> 4) << 4) | (p[i + 2] >> 4);
-      const e = counts.get(q) || { n: 0, sr: 0, sg: 0, sb: 0 };
-      e.n++; e.sr += p[i]; e.sg += p[i + 1]; e.sb += p[i + 2];
-      counts.set(q, e);
-    };
-    for (let x = 0; x < w; x++) { tally(x, 0); tally(x, h - 1); }
-    for (let y = 1; y < h - 1; y++) { tally(0, y); tally(w - 1, y); }
+    const { borderOpaque, shades } = borderShades(g, w, h);
     if (!borderOpaque) return;   // fully transparent border: leave the art alone
-    // A mostly transparent border with a few opaque pixels means a
-    // panel frame line clipped into the cell - key those pixels too.
-    const shareMin = borderOpaque >= 24 ? borderOpaque * 0.06 : 1;
     const bgKeys = [];
-    for (const e of counts.values()) {
-      if (e.n < shareMin) continue;
-      const k = [e.sr / e.n, e.sg / e.n, e.sb / e.n];
-      const lum = Math.max(k[0], k[1], k[2]);
-      if (lum - Math.min(k[0], k[1], k[2]) >= 40) continue;   // an arm crossing the border
+    for (const s of shades) {
+      const lum = Math.max(s.k[0], s.k[1], s.k[2]);
       // mid-gray shades (gun-metal territory) only count as background
       // when they truly dominate the border - stray JPEG compression
       // bands must never poison the key set
-      if (lum >= 100 && lum <= 200 && e.n < borderOpaque * 0.3) continue;
-      bgKeys.push(k);
+      if (lum >= 100 && lum <= 200 && s.n < borderOpaque * 0.3) continue;
+      bgKeys.push(s.k);
     }
+    // shades the rest of the sheet vouches for count too
+    for (const k of sharedKeys || [])
+      if (!bgKeys.some(b => Math.abs(k[0] - b[0]) < 12 && Math.abs(k[1] - b[1]) < 12 && Math.abs(k[2] - b[2]) < 12))
+        bgKeys.push(k);
     if (!bgKeys.length) return;
     // dark and bright backgrounds fade independently: dark vignettes
     // run down toward black, bright ones cast light-gray shadows just
@@ -2311,11 +2349,13 @@ function loadMyGun(cfg) {
       const sw = cw * (1 - inset * 2), sh = ch * (1 - inset * 2);
       c.width = Math.max(1, Math.round(sw));
       c.height = Math.max(1, Math.round(sh));
-      const g = c.getContext("2d");
-      g.drawImage(img, col * cw + cw * inset, r * ch + ch * inset, sw, sh, 0, 0, c.width, c.height);
-      keyOutGunFrame(g, c.width, c.height);
+      c.getContext("2d").drawImage(img, col * cw + cw * inset, r * ch + ch * inset, sw, sh, 0, 0, c.width, c.height);
       cells.push(c);
     }
+    // key every cell against the whole sheet's backdrop, so the frames
+    // buried in muzzle flash lose their checkerboard like the rest
+    const shared = sheetBgKeys(cells);
+    for (const c of cells) keyOutGunFrame(c.getContext("2d"), c.width, c.height, shared);
     let frames = [cells[cfg.idle], ...cfg.fire.filter(i => i < cells.length).map(i => cells[i])];
     // crop all frames to their combined content box so the gun keeps
     // one size and position across the animation, and every weapon
