@@ -1919,42 +1919,60 @@ function keyOutGunFrame(g, w, h) {
   try {
     const d = g.getImageData(0, 0, w, h);
     const p = d.data;
-    // histogram over all opaque pixels; per color bucket track count,
-    // border presence, mean color, and bounding box
-    const buckets = new Map();
-    let opaque = 0, borderOpaque = 0;
-    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-      const j = (y * w + x) * 4;
-      if (p[j + 3] < 200) continue;
-      opaque++;
-      const border = x === 0 || y === 0 || x === w - 1 || y === h - 1;
-      if (border) borderOpaque++;
-      const q = ((p[j] >> 4) << 8) | ((p[j + 1] >> 4) << 4) | (p[j + 2] >> 4);
-      let e = buckets.get(q);
-      if (!e) { e = { n: 0, b: 0, sr: 0, sg: 0, sb: 0, x0: x, x1: x, y0: y, y1: y }; buckets.set(q, e); }
-      e.n++;
-      if (border) e.b++;
-      e.sr += p[j]; e.sg += p[j + 1]; e.sb += p[j + 2];
-      if (x < e.x0) e.x0 = x; if (x > e.x1) e.x1 = x;
-      if (y < e.y0) e.y0 = y; if (y > e.y1) e.y1 = y;
+    // Collect the background shades present on the frame border
+    // (handles two-tone checkerboards and solid colors alike).
+    const counts = new Map();
+    let borderOpaque = 0;
+    const tally = (x, y) => {
+      const i = (y * w + x) * 4;
+      if (p[i + 3] < 200) return;
+      borderOpaque++;
+      const q = ((p[i] >> 4) << 8) | ((p[i + 1] >> 4) << 4) | (p[i + 2] >> 4);
+      const e = counts.get(q) || { n: 0, sr: 0, sg: 0, sb: 0 };
+      e.n++; e.sr += p[i]; e.sg += p[i + 1]; e.sb += p[i + 2];
+      counts.set(q, e);
+    };
+    for (let x = 0; x < w; x++) { tally(x, 0); tally(x, h - 1); }
+    for (let y = 1; y < h - 1; y++) { tally(0, y); tally(w - 1, y); }
+    if (borderOpaque < 24) return;   // transparent-background art: leave it alone
+    const bgKeys = [];
+    for (const e of counts.values()) {
+      if (e.n < borderOpaque * 0.06) continue;
+      const k = [e.sr / e.n, e.sg / e.n, e.sb / e.n];
+      if (Math.max(k[0], k[1], k[2]) - Math.min(k[0], k[1], k[2]) < 40) bgKeys.push(k);   // skip an arm crossing the border
     }
-    if (!opaque) return;
-    // background = color dominating the border, OR a large flat color
-    // filling its own bounding box like a backdrop rectangle (shaded
-    // gun pixels are scattered, so they never satisfy the density bar)
-    let bg = null;
-    for (const e of buckets.values()) {
-      const density = e.n / ((e.x1 - e.x0 + 1) * (e.y1 - e.y0 + 1));
-      const mr = e.sr / e.n, mg = e.sg / e.n, mb = e.sb / e.n;
-      const dark = Math.max(mr, mg, mb) < 52;
-      const borderDominant = borderOpaque > 20 && e.b >= borderOpaque * 0.4;
-      const solidBox = e.n >= opaque * 0.25 && density >= (dark ? 0.8 : 0.55);
-      if ((borderDominant || solidBox) && (!bg || e.n > bg.n)) bg = { mr, mg, mb, n: e.n };
+    if (!bgKeys.length) return;
+    const lums = bgKeys.map(k => Math.max(k[0], k[1], k[2]));
+    const loLum = Math.min(...lums) - 34, hiLum = Math.max(...lums) + 34;
+    const isBg = i => {
+      if (p[i + 3] === 0) return true;
+      const r = p[i], g2 = p[i + 1], b = p[i + 2];
+      if (bgKeys.some(k => Math.abs(r - k[0]) < 30 && Math.abs(g2 - k[1]) < 30 && Math.abs(b - k[2]) < 30)) return true;
+      const mx = Math.max(r, g2, b), mn = Math.min(r, g2, b);
+      return mx - mn < 22 && mx >= loLum && mx <= hiLum;   // vignette / soft shadow shades
+    };
+    // Flood fill from the border: only background-connected pixels are
+    // cleared, so dark details enclosed inside the weapon silhouette
+    // (sights, grip shadows) are never punched out.
+    const seen = new Uint8Array(w * h);
+    const queue = [];
+    const push = (x, y) => {
+      const idx = y * w + x;
+      if (seen[idx]) return;
+      seen[idx] = 1;
+      if (isBg(idx * 4)) queue.push(idx);
+    };
+    for (let x = 0; x < w; x++) { push(x, 0); push(x, h - 1); }
+    for (let y = 0; y < h; y++) { push(0, y); push(w - 1, y); }
+    while (queue.length) {
+      const idx = queue.pop();
+      p[idx * 4 + 3] = 0;
+      const x = idx % w, y = (idx / w) | 0;
+      if (x > 0) push(x - 1, y);
+      if (x < w - 1) push(x + 1, y);
+      if (y > 0) push(x, y - 1);
+      if (y < h - 1) push(x, y + 1);
     }
-    if (!bg) return;
-    for (let j = 0; j < p.length; j += 4)
-      if (p[j + 3] > 0 && Math.abs(p[j] - bg.mr) < 16 && Math.abs(p[j + 1] - bg.mg) < 16 && Math.abs(p[j + 2] - bg.mb) < 16)
-        p[j + 3] = 0;
     g.putImageData(d, 0, 0);
   } catch {}   // file://: pixels unreadable, draw the frame as-is
 }
