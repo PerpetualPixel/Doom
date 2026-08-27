@@ -206,7 +206,7 @@ const LEVELS = [
       "#....a......F....i...........#",
       "#............................#",
       "####s#########################",
-      "#.h.a...d....................#",
+      "#.h.a...d......H.............#",
       "##############################",
     ],
   },
@@ -416,7 +416,7 @@ const LEVELS = [
       "#..........W..W............#",
       "#...WWW.........WWW....a...#",
       "#.....................WWW..#",
-      "#..o......h................#",
+      "#..o......h.......H........#",
       "#....WWWW........WWWW......#",
       "#....W..............W......#",
       "#....W....j.........W..p...#",
@@ -1491,6 +1491,12 @@ const sprites = {
     g.fillStyle = "#23262b"; g.fillRect(44, 46, 10, 5);
     g.fillStyle = "#4fc3f7"; g.fillRect(18, 46, 4, 5); g.fillRect(26, 46, 4, 5);
   }),
+  wpn7: makeSprite(g => {   // chainsaw
+    g.fillStyle = "#6a6e76"; g.fillRect(12, 46, 32, 6);
+    g.fillStyle = "#33363c";
+    for (let i = 0; i < 6; i++) g.fillRect(14 + i * 5, 44, 3, 2);
+    g.fillStyle = "#8a2020"; g.fillRect(42, 42, 12, 14);
+  }),
   wpn6: makeSprite(g => {   // BFG9000
     g.fillStyle = "#3e5a3e"; g.fillRect(10, 40, 38, 14);
     g.fillStyle = "#28402a"; g.fillRect(44, 38, 12, 18);
@@ -1843,7 +1849,7 @@ const GUN_ART_FILES = [   // [idle, fire] per weapon slot 0-6
   ["200px-DevDoom1993-PlasmaRifle_anim_0.gif", "200px-DevDoom1993-PlasmaRifle_b_0.gif"],
   ["200px-DevDoom1993-BFG-2704_anim1.gif", null],
 ];
-const gunArt = GUN_ART_FILES.map(() => ({ idle: null, fire: null }));
+const gunArt = Array.from({ length: WEAPONS.length }, () => ({ idle: null, fire: null }));
 // Key out a weapon frame's background: find the dominant opaque color
 // around the frame border and clear everything near it. Works whether
 // the corner pixel is transparent or not; frames with genuinely
@@ -1894,6 +1900,7 @@ function keyOutGunFrame(g, w, h) {
 function loadGunImage(file, slot, key) {
   const img = new Image();
   img.onload = () => {
+    if (gunArt[slot].custom) return;   // player-made art wins
     const c = document.createElement("canvas");
     c.width = img.width; c.height = img.height;
     const g = c.getContext("2d");
@@ -1934,6 +1941,7 @@ async function loadGunAnim(file, slot) {
       durs.push(image.duration ? Math.max(0.03, image.duration / 1e6) : 0.1);
       image.close();
     }
+    if (gunArt[slot].custom) return;   // player-made art wins
     gunArt[slot].frames = frames;
     gunArt[slot].durs = durs;
     gunArt[slot].fireTotal = durs.slice(1).reduce((a, b) => a + b, 0);
@@ -1942,6 +1950,62 @@ async function loadGunAnim(file, slot) {
 }
 GUN_ART_FILES.forEach(([idle], i) => loadGunAnim(idle, i));
 let gunFireT = 99;   // seconds since the current weapon last fired
+
+// -----------------------------------------------------
+// The player's own weapon art from Guns/My Guns/ (part of
+// the repo). Single stills, or numbered grid sheets that
+// become firing animations. Always outranks the gif art.
+// -----------------------------------------------------
+const MY_GUN_ART = [
+  { file: "hand idle.png",      slot: 0, mode: "single", use: "idle" },
+  { file: "fist.png",           slot: 0, mode: "single", use: "fire" },
+  { file: "shotgun.png",        slot: 2, mode: "single", use: "idle" },
+  { file: "chaingun.png",       slot: 3, mode: "grid", cols: 4, rows: 2, idle: 0, fire: [1, 2, 3], inset: 0.06 },
+  { file: "rocketlauncher.png", slot: 4, mode: "grid", cols: 4, rows: 3, idle: 0, fire: [2, 3, 4], inset: 0.02 },
+  { file: "plasma gun.png",     slot: 5, mode: "grid", cols: 3, rows: 2, idle: 0, fire: [1, 2, 4], inset: 0.07, capBottom: 0.09 },
+  { file: "BFG2704.png",        slot: 6, mode: "single", use: "idle" },
+  { file: "chainsaw.png",       slot: 7, mode: "grid", cols: 4, rows: 2, idle: 0, fire: [1, 2, 3, 4, 5], inset: 0.02, capBottom: 0.06 },
+];
+function loadMyGun(cfg) {
+  const img = new Image();
+  img.onload = () => {
+    const art = gunArt[cfg.slot];
+    art.custom = true;
+    if (cfg.mode === "single") {
+      const c = document.createElement("canvas");
+      c.width = img.width; c.height = img.height;
+      const g = c.getContext("2d");
+      g.drawImage(img, 0, 0);
+      keyOutGunFrame(g, c.width, c.height);
+      art[cfg.use] = c;
+      art.frames = null;
+      return;
+    }
+    const usableH = img.height * (1 - (cfg.capBottom || 0));
+    const cw = img.width / cfg.cols, ch = usableH / cfg.rows;
+    const inset = cfg.inset || 0;
+    const cells = [];
+    for (let r = 0; r < cfg.rows; r++) for (let col = 0; col < cfg.cols; col++) {
+      const c = document.createElement("canvas");
+      const sw = cw * (1 - inset * 2), sh = ch * (1 - inset * 2);
+      c.width = Math.max(1, Math.round(sw));
+      c.height = Math.max(1, Math.round(sh));
+      const g = c.getContext("2d");
+      g.drawImage(img, col * cw + cw * inset, r * ch + ch * inset, sw, sh, 0, 0, c.width, c.height);
+      keyOutGunFrame(g, c.width, c.height);
+      cells.push(c);
+    }
+    const frames = [cells[cfg.idle], ...cfg.fire.filter(i => i < cells.length).map(i => cells[i])];
+    art.frames = frames;
+    art.durs = frames.map((_, i) => i === 0 ? 0.1 : 0.07);
+    art.fireTotal = art.durs.slice(1).reduce((a, b) => a + b, 0);
+    art.idle = frames[0];
+    art.fire = null;
+  };
+  img.onerror = () => {};
+  img.src = "Guns/My Guns/" + cfg.file;
+}
+MY_GUN_ART.forEach(loadMyGun);
 
 // ---------------------------------------------------------
 // Audio. Real files from SFX/ and Doom OST/ when available,
@@ -1978,6 +2042,7 @@ const SFX_FILES = {
   teleport: "dstelept.wav",
   shotgun: "dsshotgn.wav", sgcock: "dssgcock.wav",
   punch: "dspunch.wav", plasma: "dsplasma.wav", bfg: "dsbfg.wav",
+  saw: "dssawhit.wav", sawup: "dssawup.wav",
   zombieSight: "dsposit1.wav", zombieDie: "dspodth1.wav",
   cacoSight: "dscacsit.wav",   cacoDie: "dscacdth.wav",
   soulSight: "dssklatk.wav",   soulDie: "dsskldth.wav",
@@ -2020,6 +2085,7 @@ const SYNTH_ALIAS = {
   knightDie: "die",
   rocket: "fireball", rocketHit: "boom",
   shotgun: "shoot", sgcock: "pickup", punch: "hit", plasma: "fireball", bfg: "boom",
+  saw: "hit", sawup: "growl",
 };
 function synthSfx(kind, vol = 1) {
   if (!audio || audio.state !== "running") return;
@@ -2245,6 +2311,7 @@ const WEAPONS = [
   { name: "ROCKET LAUNCHER", ammoType: "rockets", rate: 0.85, dmg: 110, rnd: 40, use: 1, proj: "rocket", pspeed: 12, splash: 1.9, splashDmg: 90, sfx: "rocket" },
   { name: "PLASMA RIFLE",    ammoType: "cells",   rate: 0.12, dmg: 23, rnd: 12, use: 1, proj: "plasmaball", pspeed: 14, sfx: "plasma" },
   { name: "BFG9000",         ammoType: "cells",   rate: 1.7,  dmg: 300, rnd: 100, use: 40, proj: "bfgball", pspeed: 9, splash: 3.2, splashDmg: 160, sfx: "bfg" },
+  { name: "CHAINSAW",        ammoType: null,      rate: 0.25, melee: true, dmg: 10, rnd: 6, sfx: "saw" },
 ];
 const AMMO_MAX = { bullets: 200, shells: 50, rockets: 50, cells: 300 };
 const ENEMY_DROPS = {   // clearing a fight always pays something
@@ -2263,6 +2330,7 @@ const WEAPON_PICKUPS = {   // map char -> weapon index + ammo it comes with
   r: { w: 4, give: { rockets: 2 } },
   d: { w: 5, give: { cells: 40 } },
   G: { w: 6, give: { cells: 40 } },
+  H: { w: 7, give: {} },   // chainsaw
 };
 const AMMO_PICKUPS = {   // map char -> ammo pickup
   a: { kind: "clip",      give: { bullets: 20 } },
@@ -2277,7 +2345,7 @@ const player = {
 };
 function resetLoadout() {
   player.weapon = 1;
-  player.weapons = [true, true, false, false, false, false, false];
+  player.weapons = [true, true, false, false, false, false, false, false];
   player.ammo = { bullets: 48, shells: 0, rockets: 0, cells: 0 };
 }
 resetLoadout();
@@ -2512,7 +2580,7 @@ addEventListener("keydown", e => {
       player.weapon = n;
       fireCooldown = Math.max(fireCooldown, 0.3);
       gunFireT = 99;
-      sfx("sgcock", 0.7);
+      sfx(n === 7 ? "sawup" : "sgcock", 0.7);
     }
   }
   if (["Space", "ArrowUp", "ArrowDown"].includes(e.code)) e.preventDefault();
@@ -3145,20 +3213,20 @@ function renderWeapon() {
   const art = gunArt[w];
   let img = null, animating = false;
   if (art.frames && gunFireT < art.fireTotal) {
-    // play the gif's own firing frames (1..n) with their own timings
+    // play the firing frames (1..n) with their own timings
     let t = gunFireT, idx = 1;
     while (idx < art.frames.length - 1 && t > art.durs[idx]) { t -= art.durs[idx]; idx++; }
     img = art.frames[idx];
     animating = true;
   } else {
-    img = (muzzle > 0 && art.fire) ? art.fire : art.idle;
+    img = ((muzzle > 0 || gunFireT < 0.25) && art.fire) ? art.fire : art.idle;
   }
   if (img) {
     ctx.imageSmoothingEnabled = false;
     const scale = Math.min(340 / img.width, 260 / img.height);
     const dw = img.width * scale, dh = img.height * scale;
     const dx = W / 2 - dw / 2 + bobX, dy = VIEW_H - dh + bobY + (muzzle > 0 ? -4 : 2);
-    if (muzzle > 0 && !art.fire && !animating && w !== 0) {   // generic flash when no firing art exists
+    if (muzzle > 0 && !art.fire && !animating && !WEAPONS[w].melee) {   // generic flash when no firing art exists
       const col = w === 6 ? ["rgba(80,255,80,0.9)", "rgba(200,255,180,0.9)"]
                : ["rgba(255,220,80,0.9)", "rgba(255,255,200,0.9)"];
       ctx.fillStyle = col[0];
@@ -3216,13 +3284,22 @@ function renderWeapon() {
     ctx.fillStyle = "#4fc3f7";
     ctx.fillRect(-12, -70, 24, 5); ctx.fillRect(-12, -58, 24, 5);
     ctx.fillStyle = "#23262b"; ctx.fillRect(-8, -90, 16, 8);
-  } else {   // BFG9000
+  } else if (w === 6) {   // BFG9000
     ctx.fillStyle = "#3e5a3e"; ctx.fillRect(-28, -86, 56, 56);
     ctx.fillStyle = "#28402a"; ctx.fillRect(-28, -86, 56, 10);
     ctx.fillStyle = "#1f8f1f";
     ctx.beginPath(); ctx.ellipse(0, -82, 17, 9, 0, 0, 7); ctx.fill();
     ctx.fillStyle = "#a8ff70";
     ctx.beginPath(); ctx.ellipse(0, -82, 8, 4, 0, 0, 7); ctx.fill();
+  } else {   // chainsaw
+    ctx.save();
+    ctx.rotate(-0.45);
+    ctx.fillStyle = "#6a6e76"; ctx.fillRect(-8, -95, 14, 70);
+    ctx.fillStyle = "#33363c";
+    for (let i = 0; i < 7; i++) ctx.fillRect(6, -92 + i * 10 + (muzzle > 0 ? 4 : 0), 4, 5);
+    ctx.restore();
+    ctx.fillStyle = "#8a2020"; ctx.fillRect(-24, -34, 48, 22);
+    ctx.fillStyle = "#5a1414"; ctx.fillRect(-24, -34, 48, 6);
   }
   // hands
   ctx.fillStyle = "#4a3524";
@@ -3286,10 +3363,10 @@ function renderHUD() {
   drawDigits(wpn.ammoType ? String(player.ammo[wpn.ammoType]) : "-", 20, mid + 10, 30, "#e03030");
   drawDigits("HEALTH", 140, mid - 14, 13, "#888");
   drawDigits(player.hp + "%", 140, mid + 10, 30, player.hp > 30 ? "#e03030" : "#ff6060");
-  drawDigits("ARMS", 252, mid - 16, 13, "#888");
-  for (let i = 2; i <= 7; i++) {
-    const col = (i - 2) % 3, row = (i - 2) / 3 | 0;
-    drawDigits(String(i), 252 + col * 18, mid + row * 18, 17, player.weapons[i - 1] ? "#e8c840" : "#555");
+  drawDigits("ARMS", 250, mid - 16, 13, "#888");
+  for (let i = 2; i <= 8; i++) {
+    const col = (i - 2) % 4, row = (i - 2) / 4 | 0;
+    drawDigits(String(i), 248 + col * 15, mid + row * 18, 15, player.weapons[i - 1] ? "#e8c840" : "#555");
   }
   renderFace(345, mid);
   // collected keycards next to the face
