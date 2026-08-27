@@ -38,7 +38,7 @@
   <h1>DOOM</h1>
   <p>
     <span class="key">CLICK</span> to enter the map (locks mouse)<br>
-    <span class="key">WASD</span> move &nbsp; <span class="key">MOUSE / ARROWS</span> turn &nbsp; <span class="key">SHIFT</span> run<br>
+    <span class="key">WASD</span> move &nbsp; <span class="key">MOUSE / ARROWS</span> turn &nbsp; <span class="key">RMB</span> aim<br>
     <span class="key">CLICK / SPACE</span> fire &nbsp; <span class="key">E</span> use doors / switches &nbsp; <span class="key">M</span> map<br>
     <span class="key">N</span> music on/off &nbsp; <span class="key">R</span> restart<br><br>
     Three levels. Find the exit switch in each.
@@ -64,7 +64,7 @@ const FOV = Math.PI / 3;         // 60 degrees
 // Water and nukage sit in a pit this far below the walking surface, so a
 // pool reads as sunk into the floor rather than painted onto it. Wall
 // height is 1, so this is roughly a knee-high step.
-const LIQUID_DROP = 0.18;
+const LIQUID_DROP = 0.3;
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
@@ -115,7 +115,7 @@ const LEVELS = [
       "##TT....TT....T......a...TTT############################",
       "##TT.h........TTTTTTTT...TTT############################",
       "##TT..........TTTTTTTT...TTT############################",
-      "##TT........g.TTTTTTTT...TTT############################",
+      "##TT........g.TTTTTTTT..1TTT############################",
       "##TTTTsTTTTTTTTTTTTTTT...TTT############################",
       "##TT......TTTTTTTTTTTT......i......#####################",
       "##TT......TTTTTTTTTTTT.............#####################",
@@ -129,12 +129,12 @@ const LEVELS = [
       "##TTTTTTTTTTTTTTTTTTTTTTTT###..i................Z..#####",
       "##TTTTTTTTTTTTTTTTTTTTTTTT###............i.........#####",
       "#############################....%%%%%%%%%%%%%%....#####",
-      "#############################....%%%h%%%%%%%%%%....#####",
+      "#############################....%%%h%%%%%%%%2%....#####",
       "#############################.b..%%%%%%%%%%%%%%....#####",
       "#############################....%%%%......%%%%..h.#####",
       "####RRRRRRRRRRRRRRRRRR#######....%%%%..f.a.%%%%....#####",
       "####RR............RRRR#######....%%%%......%%a%....#####",
-      "####RR..........a.RRRR#######....%%%%%%%%%%%%%%....#####",
+      "####RR......1...a.RRRR#######....%%%%%%%%%%%%%%....#####",
       "####RR..g.........RRRR#######.b..%%%Z%%%%%%%%%%....#####",
       "####RR............RRRR#######....%%%%%%%%%%%%%%....#####",
       "####RR......X......Rg..............................#####",
@@ -178,7 +178,7 @@ const LEVELS = [
       "####TT...........a.TTT#################..g##################",
       "####TT.......h.....TTT##########........................####",
       "####TTTTTTJTTTTTTTTTTT##########..................a.....####",
-      "#########g..####################..p...................i.####",
+      "#########g..####################..p.........1.........i.####",
       "#########...####################........................####",
       "#########...####################...%%%%%%%%%%%%%%%%%%...####",
       "#########...####################...%%%%%%%%%%%%%%%%%%...####",
@@ -191,7 +191,7 @@ const LEVELS = [
       "####RR...RR......RR.RR##########...%%%%%%%%%%%%%%%Z%%..A####",
       "####RR...RR......RR.RR##########...%%%%%%%%%%%%%%%%%%...####",
       "####RR...RR..RR..RR.RR##########...%%%p%%%%%%%%%%%%%%...####",
-      "####RR...RR..RR.iRR..R.i.....g..........................####",
+      "####RR.1.RR..RR.iRR..R.i.....g..........................####",
       "####RR...RR..RR......D............Z..................p..####",
       "####RR...RR..RR......R.....................i....h.......####",
       "####RR.......RR.....RR######################################",
@@ -215,7 +215,7 @@ const LEVELS = [
       "##TT.........TTTTTTTTTTT##################################",
       "##TT..P......T....g.....##################################",
       "##TT.........D..........##################################",
-      "##TT.........T..........##################################",
+      "##TT.........T.........1##################################",
       "##TT.......a.TTTTTTTT...##################################",
       "##TT.........TTTTTTTT...##################################",
       "##TTTTTTTTTTTTTTTTTTT...##################################",
@@ -245,8 +245,8 @@ const LEVELS = [
       "####TT....h.TTRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR...RR##",
       "####TT......TT#####################################...####",
       "####TTTTTKTTTT#####################################...####",
-      "########................i..........................a..####",
-      "########......a.........................i.............####",
+      "########................i......................2...a..####",
+      "########..1...a.........................i.............####",
       "########........................i.....................####",
       "########............p.................................####",
       "########....................................g....Z..######",
@@ -266,7 +266,7 @@ const LEVELS = [
       "##CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC##",
       "##CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC##",
       "##CC....................CCCCCCCC......................CC##",
-      "##CC.................h..CCCCCCCC..........g........e..CC##",
+      "##CC............1....h..CCCCCCCC..........g........e..CC##",
       "##CC..P.....i...........CCCCCCCC...g..................CC##",
       "##CC.....CC....CC.......CCCCCCCC......CC.....CC.......CC##",
       "##CC.....CC....CC..............a......CC.....CC.......CC##",
@@ -297,7 +297,7 @@ const LEVELS = [
       "######TT....................TT########RR..............RR##",
       "######TT...........h......h.TT########RR....A.......h.RR##",
       "######TT..i..........................#..h.............RR##",
-      "######TT.............................J........X.......RR##",
+      "######TT............................1J........X.......RR##",
       "######TT.j......Z..............i.....#................RR##",
       "######TT............i.......TT########RR............g.RR##",
       "######TT....F............N..TT########RR..a...........RR##",
@@ -344,7 +344,7 @@ const LEVELS = [
       "#######..i#CCCCCCCCCCCCC#########################.Z.####",
       "#######...#CCCCCCCCCCCCC#########################...####",
       "#######...#CCCCCCCCCCCCC##...........a...N...g......####",
-      "#######...#..............#..........................####",
+      "#######...#.....1........#..........................####",
       "#######...#............F.#..p...g.................i.####",
       "#######...D.........N....#.....%%%%%%%%%%%%%%%%.....####",
       "#######...#..p...........#.....%%%%%%%%%i%%%%%%.....####",
@@ -370,7 +370,7 @@ const LEVELS = [
       "##TTTTTTTTTTTTTTTTTTTTTTTTCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC##",
       "##TTTTTTTTTTTTTTTTTTTTTTTTCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC##",
       "##TT..........TTTTTTTTTTTTCC............................CC##",
-      "##TT..........TTTTTTTTTTTTCC...g......a.......f.......i.CC##",
+      "##TT..........TTTTTTTTTTTTCC...g......a.......f...1...i.CC##",
       "##TT..P.......T.....g...................................CC##",
       "##TT..........D..................CCC......ACCC..........CC##",
       "##TT..........Tp.........g.......CCC.......CCC..........CC##",
@@ -388,7 +388,7 @@ const LEVELS = [
       "##############################...##################...######",
       "##############################...##################i..######",
       "##########..................i...........................####",
-      "##########...##Z...##....##....##....#p....##A...##.....####",
+      "##########...##Z...##....##....##1...#p....##A...##.....####",
       "##########...##....##i...##....##....##....##....##.....####",
       "##########.i.##....##....##....##....##....##....##.....####",
       "##########......##....##....##....##....##....##....##..####",
@@ -426,7 +426,7 @@ const LEVELS = [
       "##CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC##",
       "##CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC##",
       "##CCC....................g...............Z.........CCC##",
-      "##CCC.........................a....................CCC##",
+      "##CCC...........3.............a....................CCC##",
       "##CCC..P......CC....g..............................CCC##",
       "##CCC.........CC......................i.....p......CCC##",
       "##CCC....a......................................e..CCC##",
@@ -449,15 +449,15 @@ const LEVELS = [
       "##CCC......CCCTT.....CCCC......CCCC.....TTCCC......CCC##",
       "##CCC......CCCTT.....CCCC......CCCC.....TTCCC...i..CCC##",
       "##CCC....g.CCCTT.....CCCC......CCCC.....TTCCC......CCC##",
-      "##CCC......CCCTT........................TTCCC......CCC##",
+      "##CCC......CCCTT.................1......TTCCC......CCC##",
       "##CCC......CCCTT........................TTCCC......CCC##",
       "##CCC.a....CCCTT..p........h..........N.TTCCC......CCC##",
       "##CCC......CCCTT........................TTCCC......CCC##",
-      "##CCC......CCCTTTTTTTTTTTTTTTTTTTTTTTTTTTTCCC......CCC##",
+      "##CCC......CCCTTTTTTTTTTTTTTTTTTTTTTTTTTTTCCC....1.CCC##",
       "##CCC......CCCTTTTTTTTTTTTTTTTTTTTTTTTTTTTCCC......CCC##",
       "##CCC......CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCZ.....CCC##",
       "##CCC......CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC......CCC##",
-      "##CCC...............................i..............CCC##",
+      "##CCC..........................2....i..............CCC##",
       "##CCC..............................................CCC##",
       "##CCC........Z...........i..CC..........g..........CCC##",
       "##CCC..h............Z.......CC.....................CCC##",
@@ -483,7 +483,7 @@ const LEVELS = [
       "##TT..P.......................E.####################",
       "##TT....................g.......####################",
       "##TT..h...........TTTTTT........####################",
-      "##TT..............TTTTTT........####################",
+      "##TT...........1..TTTTTT........####################",
       "##TTTTTTTTTTTTTTTTTTTTTT.....h..####################",
       "##TTTTTTTTTTTTTTTTTTTTTT........####################",
       "##TTTTTTTTTTTTTTTTTTTTTT.r......####################",
@@ -501,7 +501,7 @@ const LEVELS = [
       "######BBBBBBBBBBBB...................BBBBBBBBBBB####",
       "######BBBBBBBBBBB.....................BBBBBBBBBB####",
       "######BBBBBBBBBBB...h.............h...BBBBBBBBBB####",
-      "######BBBBBBBBBB.......................BBBBBBBBB####",
+      "######BBBBBBBBBB...........1...........BBBBBBBBB####",
       "######BBBBBBBBB........................mBBBBBBBB####",
       "######BBBBBBBBB.A.......................BBBBBBBB####",
       "######BBBBBBBBB...BBB..n.......n..BBB...BBBBBBBB####",
@@ -544,7 +544,7 @@ const LEVELS = [
       "##RRRR###...##TT....TT....TT########TT..F.....h...TT##",
       "##RRRR###...##TTTDTTTTTDTTTT########TT............TT##",
       "##RRRR##..................A...h.......TTTTDTTTTTTTTT##",
-      "##RRRR##......i.................................TTTT##",
+      "##RRRR##......i......................2..........TTTT##",
       "##RRRR##..Z...........a......................g..##RR##",
       "##RRRR##..........a.........###..g..............##RR##",
       "##RRRR##..................g.###.................##RR##",
@@ -552,8 +552,8 @@ const LEVELS = [
       "##RRRR##a.....%%%%%%%g%%%%.....................g##RR##",
       "##RRRR##......%%%%%%%%%%%%......................##RR##",
       "##RRRR##......%Z%%%%%%%%%%.....Z................##RR##",
-      "##RRRR##......%%%%%%%%%%%%......................##RR##",
-      "##RRRR##...................N..............a.....##RR##",
+      "##RRRR##......%%%%%%%%%%%%...........1..........##RR##",
+      "##RRRR##..............1....N..............a.....##RR##",
       "##RRRR##.A.....................%%%%%%%%%%%%...a.##RR##",
       "##RRRR##..........p............%%%%%%%%%%%%.....##RR##",
       "##RRRR##.......................%%%Z%%%p%%%%.....##RR##",
@@ -641,10 +641,10 @@ const LEVELS = [
       "##TT.......a.TTTRRRR.......WWWWW...WWWWW...WWWWW......RRRR##",
       "##TT.........TTTRRRR.......WWWWW.Z.WWWWW...WWWWW......RRRR##",
       "##TTTTTTTTTTTTTTRRRR.......WWWWW...WWWWW...WWWWW......RRRR##",
-      "##TTTTTTTTTTTTTTRRRR.......WWWWW...WWWgW...WWWWW....a.RRRR##",
+      "##TTTTTTTTTTTTTTRRRR.1.....WWWWW...WWWgW...WWWWW....a.RRRR##",
       "##TTTTTTTTTTTTTTRRRR......Z...........................RRRR##",
       "####CCCCCCCCCCCCRRRR..................................RRRR##",
-      "####CZ........CCRRRR..................................RRRR##",
+      "####CZ...1....CCRRRR..................................RRRR##",
       "####C.........CCRRRR...WWWWW...WWWWW...WWWWW...WWWWW..RRRR##",
       "####C....X....CCRRRR.a.WWWWb...WWWWW...WWWWW...WWWWW..RRRR##",
       "####C.......a.CCRRRR...WWWWW...WWWWW...WWWWW...WWWWW..RRRR##",
@@ -656,7 +656,7 @@ const LEVELS = [
       "#######...######RRRR..a....WWWWW...WWWWW...WWWWW....A.RRRR##",
       "#######i..######RRRR.......WWWWW...WWWWW...WWWWW......RRRR##",
       "#######...######RRRR.......WWWWW...WWWWW...WWWWW......RRRR##",
-      "#######...######RRRR.........................o........RRRR##",
+      "#######...######RRRR........2................o........RRRR##",
       "#######...######RRRR...Z.........A.......p............RRRR##",
       "#######...######RRRR..................................RRRR##",
       "#######...######RRRR...WWWWW...WWWWW...WWWWW...WWWWW..RRRR##",
@@ -689,7 +689,7 @@ const LEVELS = [
       "##RRRRRRRRRRRRRRRRRRRR####################################",
       "##RR..........RRRRRRRR####################################",
       "##RR..........RRRRRRRR####################################",
-      "##RR..P.......R.....g...............................######",
+      "##RR..P.......R.....g..........1....................######",
       "##RR..........D.....................p........E......######",
       "##RR..........R.a........o.i......................g.######",
       "##RR..h....a..RRRRRRRR####...%%%%%%%%....i%%%%%%%...######",
@@ -713,7 +713,7 @@ const LEVELS = [
       "####RRRR....................a.......................RRRR##",
       "####RRRR..Z...b.................A...i......m.....p..RRRR##",
       "####RRRR.............Z..............................RRRR##",
-      "####RRRR....%%%%%%%%%%%%%%%....%%%%%%%%%%%%%%%%%....RRRR##",
+      "####RRRR....%%%%%%%%%%%%%1%....%%%%%%%%%%%%%%%%%....RRRR##",
       "####RRRR....%%%%%%%%%%%%%%%....%%%%%%%%%%%%%%%%%....RRRR##",
       "####RRRR....%%%%%%%%%%%%%%%....%%%%%%%%%%%%%%%%%....RRRR##",
       "####RRRR....................i.......................RRRR##",
@@ -753,12 +753,12 @@ const LEVELS = [
       "########.o.###############################################",
       "########...###############################################",
       "########...###############################################",
-      "######........................a.....................######",
+      "######........................a...............1.....######",
       "######....##.m..##.i..##A...##....##....##....##..a.######",
       "######..m.##....##....##....##....##....#g....##....######",
       "######....##....##....##....##...p##.i..##....##....######",
       "######....##....##....##....##....##....##....##....######",
-      "######....##i...##....##....##....##....##....##....######",
+      "######....##i...##....##....##....##....##....##...2######",
       "######....##.##.##.##.##.##.##i##.##.##.##.##h##.##.######",
       "######.h..##.##.##.##.##.##.##.##.##.##h##.##.##.##.######",
       "######....##.##a##.##a##.#i.##.##.##.##.##.##.##.##.######",
@@ -775,7 +775,7 @@ const LEVELS = [
       "#################################################..Z######",
       "######CCCCCCCCCCCCCCCCTTTTTTTTTTTTTTTTTTTTTTTTTTT...TTTT##",
       "######CCCCCCCCCCCCCCCCTTTTTTTTTTTTTTTTTTTTTTTTTTT...TTTT##",
-      "######CC.............C.......F................Z.......TT##",
+      "######CC.............C.......F.........1......Z.......TT##",
       "######CC..........h..C.............d..................TT##",
       "######CC.m...........C..o.............................TT##",
       "######CC...X.A.......J...............................oTT##",
@@ -861,7 +861,7 @@ const LEVELS = [
       "#######...#####...#####...#####...#####...#####...########",
       "#######.............A.............................########",
       "#######.................a...............o.........########",
-      "#######...........................................########",
+      "#######.....................1.....................########",
       "#######...#####.m.#####...#####.o.WWWWW...WWWWW...########",
       "#######i..#####...#####...#####...WWWWW...WWWWW...########",
       "#######...#####...#####...#####...WW........h.W.g.########",
@@ -875,7 +875,7 @@ const LEVELS = [
       "#######...#####....i..............#####...#####...########",
       "#######...#####.............m...h.#####...#####...########",
       "#######...#####...#####...#####...#####...#####...########",
-      "#######...#####...#####...#####...#####...#####...########",
+      "#######...#####...#####...#####...#####.2.#####...########",
       "#######...#####...#####...#####...#####...#####.m.########",
       "#######...#####...#####...#####.i.#####...#####...########",
       "#######.g.#####...#####.o.#####...#####...#####...########",
@@ -883,7 +883,7 @@ const LEVELS = [
       "#######...#####...#####...#####...#####...#####...########",
       "#######...#####...#####...#####...#####...#####...########",
       "#######..a#####...#####...#####...#####...#####.A.########",
-      "#######...#####...#####..h#####...................########",
+      "#######...#####...#####..h#####......1............########",
       "#######...#####.i.#####...#####..o................########",
       "#######...#####...#####...#####...................########",
       "#######...#####...#####...#####...#####.N.#####...########",
@@ -933,12 +933,12 @@ const LEVELS = [
       "####RR....%%%%%%....%%%%%%....%%%N%%....%%%%%%........RR##",
       "####RR.........................................m......RR##",
       "####RR................................................RR##",
-      "####RR.F......i...m...........N...........m.........E.RR##",
+      "####RR.F......i...m...........N......1....m.........E.RR##",
       "####RR.................Z..............................RR##",
       "####RR....%%%%%%....%%%%%%....%%%%%%....%%%%%%........RR##",
       "####RR....%%%%%%....%%%%%%....%%%%%%....%%%%%a........RR##",
       "####RR...m%%%%%%.N..%%%%%%....%%%%%%....%%%%%%........RR##",
-      "####RR....%%%%%%....%%%%%%....%%%%%%....%%%%%%........RR##",
+      "####RR....%%%%%%....%%%%%%....%%%%%%....1%%%%%........RR##",
       "####RR....%%%%%%....%%%%%%....%a%%%%....%%%%%%........RR##",
       "####RR................................................RR##",
       "####RR................................................RR##",
@@ -963,7 +963,7 @@ const LEVELS = [
       "##BB.........BBBBBBBBB##############################",
       "##BB..P.........Z.....##############################",
       "##BB..................##############################",
-      "##BB..................##############################",
+      "##BB................2.##############################",
       "##BB..h....a.BBBBBB...##############################",
       "##BB.........BBBBBB...##############################",
       "##BBBBBBBBBBBBBBBBB...####.#########################",
@@ -973,7 +973,7 @@ const LEVELS = [
       "####BBBBBBBBBBB.......................BBBBBBBBBBBB##",
       "####BBBBBBBBBB....m..BBBB...BBBB.......BBBBBBBBBBB##",
       "####BBBBBBBBB......BBBBBB.Z.BBBBBB......BBBBBBBBBB##",
-      "####BBBBBBBB.....BBBB...........BBBB...i.BBBBBBBBB##",
+      "####BBBBBBBB1....BBBB...........BBBB...i.BBBBBBBBB##",
       "####BBBBBBB.......BB.............BB.......BBBBBBBB##",
       "####BBBBBB........h........................BBBBBBB##",
       "####BBBBBB....B.......................B....BBBBBBB##",
@@ -994,7 +994,7 @@ const LEVELS = [
       "####BBBB.....BE.....i....BB.....N.....mB.....BBBBB##",
       "####BBBBB....BBB.........BB..........BBB....BBBBBB##",
       "####BBBBB.....BB.......A..E..F.......BB.....BBBBBB##",
-      "####BBBBBB.Z..B.......................B....BBBBBBB##",
+      "####BBBBBB.Z..B..1....................B....BBBBBBB##",
       "####BBBBBB........................h........BBBBBBB##",
       "####BBBBBBB.......BB.............BB.......BBBBBBBB##",
       "####BBBBBBBB.....BBBB...........BBBB.....BBBBBBBBB##",
@@ -1004,7 +1004,7 @@ const LEVELS = [
       "####BBBBBBBBBBBB.....................BBBBBBBBBBBBB##",
       "####BBBBBBBBBBBBBB........a...................BBBB##",
       "####BBBBBBBBBBBBBBBB.................h......X.BBBB##",
-      "####BBBBBBBBBBBBBBBBBBBBB.....................BBBB##",
+      "####BBBBBBBBBBBBBBBBBBBBB........3............BBBB##",
       "####BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB##",
       "####BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB##",
     ],
@@ -1042,13 +1042,13 @@ const LEVELS = [
       "##BBWW................WW...R................RRBB##",
       "##BBWW................WW...R................RRBB##",
       "##BBWW...n.........n..WW...R...o.........o..RRBB##",
-      "##BBWW................WWm..R................RRBB##",
+      "##BBWW................WWm..R.......1........RRBB##",
       "##BBWW................WW...R................RRBB##",
       "##BBWWWWWWWWWWWWWWWWWWWW...RRRRRRRRRRRRRRRRRRRBB##",
       "##BBWWWWWWWWWWWWWWWWWWWW...RRRRRRRRRRRRRRRRRRRBB##",
       "##BBBBBBBBBBBBBBBBBBBBBB...BBBBBBBBBBBBBBBBBBBBB##",
       "##BBBBBBBBBBBBBBBBBBBBBB...BBBBBBBBBBBBBBBBBBBBB##",
-      "##BBBBBBBBBBBB##########...#########BBBBBBBBBBBB##",
+      "##BBBBBBBBBBBB##########1..#########BBBBBBBBBBBB##",
       "##BBBBBBBBBBBB###########K##########BBBBBBBBBBBB##",
       "##BBBBBBBBBBBB##..................##BBBBBBBBBBBB##",
       "##BBBBBBBBBBBB##..................##BBBBBBBBBBBB##",
@@ -1117,7 +1117,7 @@ const LEVELS = [
       "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
       "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
       "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
-      "BBBBBBBBBBBBBBBBBBBBBBBBBBB.......BBBBBBBBBBBBBBBBBBBBBB",
+      "BBBBBBBBBBBBBBBBBBBBBBBBBBB1......BBBBBBBBBBBBBBBBBBBBBB",
       "BBBBBBBBBBBBBBBBBB.......BB....l..BBBBBBBBBBBBBBBBBBBBBB",
       "BBBBBBBBBBBBBBBBBB....h..BB.......BBBBBBBBBBBBBBBBBBBBBB",
       "BBBBBBBBBBBBBBBBBB.......BB...N...B......pBBBBBBBBBBBBBB",
@@ -1146,7 +1146,7 @@ const LEVELS = [
       "BBBBBBBBBBBBBBBBBBBBB.........A..BBBBBBBBBB...o....BBBBB",
       "BBBBBBBBBBBBBBBBBBBBBB............BBBBBBBBB........BBBBB",
       "BBBBBBBBBBBBBBBBBBBBBB...m.........BBBBBBB...d.....BBBBB",
-      "BBBBBBBBBBBBBBBBBBBBBB............mBBBBBB..........BBBBB",
+      "BBBBBBBBBBBBBBBBBBBBBB............mBBBBBB........1.BBBBB",
       "BBBBBBBBBBBBBBBBBBBBm...............BBB.m..........BBBBB",
       "BBBBBBBBBBBBBBBBBBBBB...............BB......BBBBBBBBBBBB",
       "BBBBBBBBBBBBBBBBBBBBB...............B......BBBBBBBBBBBBB",
@@ -1193,12 +1193,12 @@ const LEVELS = [
       "BBBBWWWWWW...WWWBB..WW..r..~~~~~~..a..WW..BB.m.WWWWWBBBB",
       "BBBBWWWWWW...WWWBB..WW.....~~~~~~.....WW..BB...WWWWWBBBB",
       "BBBBWWWWWW...WWWBB..h......~~~~~~......h..BB...WWWWWBBBB",
-      "BBBBWWWWWW...WWWBB.........~~~~~~.........BB...WWWWWBBBB",
+      "BBBBWWWWWW...WWWBB.........2~~~~~.........BB...WWWWWBBBB",
       "BBBBWWWWWW.o.WWWBB...~~~~~~~~~~~~~~~~~~...BB...WWWWWBBBB",
-      "BBBBWWWWWW.......B...~~~~~~~~~~~~~~~~~~...B....WWWWWBBBB",
+      "BBBBWWWWWW.......B...~~~~~~~~~~~1~~~~~~...B....WWWWWBBBB",
       "BBBBWWWWWW......aD..m~~~~~~~~~~~~~~~~~~m..D..o.WWWWWBBBB",
       "BBBBWWWWWW.......B...~~~n~~~F~~~~~~~~~~...B....WWWWWBBBB",
-      "BBBBWWWWWW...WWWBB.........~~~~~~.........BB...WWWWWBBBB",
+      "BBBBWWWWWW.1.WWWBB.........~~~~~~.........BB...WWWWWBBBB",
       "BBBBWWWWWW...WWWBB.........~~~~~A.........BB...WWWWWBBBB",
       "BBBBWWWWWW...WWWBB..WW.....~~~~~~.....WW..BB..hWWWWWBBBB",
       "BBBBWWWWWW...WWWBB..WW.....~~~~~~.....WW..BB...WWWWWBBBB",
@@ -1231,7 +1231,7 @@ const LEVELS = [
       "BBRR..............................................RRBB",
       "BBRR.....a..........A...N........a................RRBB",
       "BBRR..P.................................h.........RRBB",
-      "BBRR...........N..................................RRBB",
+      "BBRR...........N...............................3..RRBB",
       "BBRR....RRRRWWWDWWWWWWWDWWWWWWWDWWWWWWWDWWWWRR....RRBB",
       "BBRR....RRRRWW....WWWW....WWWW....WWWW....WWRR....RRBB",
       "BBRR....RRRRWW....WWWW....WWWW....WWWW....WWRR....RRBB",
@@ -1250,7 +1250,7 @@ const LEVELS = [
       "BBRR....RRBB....~~~~~~~~~~~~~~~~m~~~~~....BBRR....RRBB",
       "BBRR.o..RRBB....~~~~m~~~~~~~~~~~~~~~~~....BBRR....RRBB",
       "BBRR....RRBB....~~~~~~~~~BBBB~~~~~~~~~....BBRR....RRBB",
-      "BBRR.......B....~~~~~~~~hBBBB~~~~~~~~~......R.....RRBB",
+      "BBRR.......B....~~~~~~~~hBBBB~~~~~~~~~......R1....RRBB",
       "BBRR.....o.D.F..~E~~~~~~~BBBB~~~~~~~~~..F...D.....RRBB",
       "BBRR.o.....B....~~~~~~~~~BBBB~~~~~~~~~......R.....RRBB",
       "BBRR....RRBB....~~~~~~~~~~~~~~~~~~~~~~....BBRR....RRBB",
@@ -1262,7 +1262,7 @@ const LEVELS = [
       "BBRR....RRBB.........h.........i..........BBRR....RRBB",
       "BBRR....RRBBBBBBBBBBBBBBBB...BBBBBBBBBBBBBBBRR.A..RRBB",
       "BBRR....RRBBBBBBBBBBBBBBBB...BBBBBBBBBBBBBBBRR....RRBB",
-      "BBRR....RRRRRRRRRRTTTTTTTTTLTTTTTTTTRRRRRRRRRR....RRBB",
+      "BBRR..1.RRRRRRRRRRTTTTTTTTTLTTTTTTTTRRRRRRRRRR....RRBB",
       "BBRR....RRRRRRRRRRTT.......h......TTRRRRRRRRRR....RRBB",
       "BBRR.............N................................RRBB",
       "BBRR...................n..X....h.....i............RRBB",
@@ -1351,14 +1351,14 @@ const LEVELS = [
       "BBBBBBBR%%........%%RB%%%%%%%%......%%%%RR%%%%%%%%%%%%RB",
       "BBBBBBBR%%..P...%%%%%%%......%......%..%%%%%........%%RB",
       "BBBBBBBR%%......%......%%%%%%%......%%%..%%%........%%RB",
-      "BBBBBBBR%%......%%%%%%%%BRa%........m.%%%..%%%.n....%%RB",
+      "BBBBBBBR%%......%%%%%%%%BRa%........m.%%%..1%%.n....%%RB",
       "BBBBBBBR%%..%%%.a.%%RBBBBR%%..........%%%%%..%......%%RB",
       "BBBBBBBR%%..%.%...%%RBBBBR%%%%%%%%%%%%%%RR%%%%......%%RB",
       "BBBBBBBR%%%%%.%%%%%%RBBBBR%%%%%%%%%%%%%%RR%%........%%RB",
       "BBBBBBBR%%%%%.%%%%%%RBBBBRRRRRRRRRRRRRRRRR%%......E.%%RB",
       "BBBBBBBRRRRR%.%RRRRRRBBBBBBBBBBBBBBBBBBBBR%%..%%%...%%RB",
       "BBBBBBBBBBBB%.%BBBBBBBBBBBBBBBBBBBBBBBBBBR%%%%%.%%%%%%RB",
-      "BBBBBBBBBBB%%.%BBBBBBBBRRRRRRRRRRRRRRRRRRR%%%%%.%%%%%%RB",
+      "BBBBBBBBBBB%%.%BBBBBBBBRRRRRRRRRRRRRRRRRRR%%1%%.%%%%%%RB",
       "BBBBBBBBBBB%i%%BBBBBBBBR%%%i%%%%%%%%%%%mRRRRRR%.%RRRRRRB",
       "BBBBBBRRRRR%.%RRRRRRRBBR%%%%%%%%%%%%%%%%RBBBBB%.%BBBBBBB",
       "BBBBBBR%%%%%.%%%%%%%RBBR%%............%%RBBBBB%.NBBBBBBB",
@@ -1426,16 +1426,16 @@ const LEVELS = [
       "BBBBBB..o.......................N.BBWW..N...........o.WWBB",
       "BBBBBB...~~~~~~o~~....~~~~~~~~~...BBWW................WWBB",
       "BBBBBB...~~~~~~~~~....~~~~~~~~~...BBWW....WWW.........WWBB",
-      "BBBBBB...~~~~~~~~~....~~~i~~~m~...BBWW....WWW.........WWBB",
+      "BBBBBB...~~~~~~~~~....~~~i~~~m~...BBWW....WWW...1.....WWBB",
       "BBBBBB...~~~~~~~~~..m.~~~~~~~~~...BBWW....WWW.......h.WWBB",
       "BBBBBB...~~~~m~~~~....~~~~~~~~~...BBWW................WWBB",
       "BBBBBB...~~~~~~~~~....~~~~~~~~~......W.......m........WWBB",
       "BBBBBB.l.~~~~~~~~~....~~~~~~a~~..F...L.d........WWW...WWBB",
-      "BBBBBB...~~~~~~~~F....~~N~~~~~~......W..........WWW...WWBB",
+      "BBBBBB...~~~~~~~~F....~~N~~~~~~......W..........WWW.1.WWBB",
       "BBBBBB...~~~~~~~~~....~~~~~~~~~...BBWW..........WWW...WWBB",
       "BBBBBB...~~~n~~~~~....~~~~~~~~~...BBWW......h.........WWBB",
       "BBBBBB...~~~~~~~~~..m.~~~~~~~~~...BBWW................WWBB",
-      "BBBBBB...~~~~~~~m~....~~~~~~i~~...BBWW................WWBB",
+      "BBBBBB...~~~~~~~m~....~~2~~~i~~...BBWW................WWBB",
       "BBBBBB............................BBWW..............N.WWBB",
       "BBBBBB..N.......................o.BBWW..o....u........WWBB",
       "BBBBBB.....b.......a..............BBWW................WWBB",
@@ -1465,7 +1465,7 @@ const LEVELS = [
       "BBBBBBBBBBBBBBBBBBB...BBBBB~BBBBBBBBBBBBBBBBBBBBBBBBBB",
       "BBBBBBBBBBBBBBBBBBBm..~~~~~~~~~~~~BBBBBBBBBBBBBBBBBBBB",
       "BBBBBBBBBBBBBBBBBBB...~~~~~~~~~~~~~~BBBBBBBBBBBBBBBBBB",
-      "BBBBBBBBBBBBBBBBB~~...~~~~~.~~~~~~~~~~BBBBBBBBBBBBBBBB",
+      "BBBBBBBBBBBBBBBBB~~...~~~~~.~~~~~~3~~~BBBBBBBBBBBBBBBB",
       "BBBBBBBBBBBBBBB~~~~..............~~~~~~~BBBBBBBBBBBBBB",
       "BBBBBBBBBBBBBB~~~~~.....h.....a.....~~~~~BBBBBBBBBBBBB",
       "BBBBBBBBBBBBB...~~.h.................~~...BBBBBBBBBBBB",
@@ -1476,7 +1476,7 @@ const LEVELS = [
       "BBBBBBBBBB~~~.............................~~~BBBBBBBBB",
       "BBBBBBBBB~~~...........BB..o.BB..........i.~~~BBBBBBBB",
       "BBBBBBBBB~~~...........BB....BB............~~~BBBBBBBB",
-      "BBBBBBBB~~~~.........n...........n.........~~~~BBBBBBB",
+      "BBBBBBBB1~~~.........n...........n.........~~~~BBBBBBB",
       "BBBBBBBB~~~......F...................A......~~~BBBBBBB",
       "BBBBBBBB~~~.h......BB......G.....BB......E..~~~BBBBBBB",
       "BBBBBBBB~~~........BB...b.....b..BB.........~~~BBBBBBB",
@@ -1500,7 +1500,7 @@ const LEVELS = [
       "BBBBBBBBBBBBBB~~~~~.....a.....h.....~~~~~BBBBBBBBBBBBB",
       "BBBBBBBBBBBBBBB~~~~~~~........................BBBBBBBB",
       "BBBBBBBBBBBBBBBBB~~~~~~~~~..................X.BBBBBBBB",
-      "BBBBBBBBBBBBBBBBBBB~~~~~~~....................BBBBBBBB",
+      "BBBBBBBBBBBBBBBBBBB1~~~~~~....................BBBBBBBB",
       "BBBBBBBBBBBBBBBBBBBBB~~~~~~~~~~~~~BBBBBBBBBBBBBBBBBBBB",
       "BBBBBBBBBBBBBBBBBBBBBBBBBBB~BBBBBBBBBBBBBBBBBBBBBBBBBB",
       "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
@@ -1525,19 +1525,19 @@ const LEVELS = [
       "BBBBBB...BBBBBBB.......~i~~~~.~~~~~~......BBBBBBBB",
       "BBBBBB...BBBBBBB......~~~.........~~~.....BBBBBBBB",
       "BBBBBB...BBBBBBB.....~~~....i......~~~....BBBBBBBB",
-      "BBBBBB.m.BBBBBBB...o~~~.............~~~.h.BBBBBBBB",
+      "BBBBBB.m.BBBBBBB...o~~~...........1.~~~.h.BBBBBBBB",
       "BBBBBB...BBBBBBB....~~..a............~~...BBBBBBBB",
       "BBBBBB...BBBBBBB...~~.................~~..BBBBBBBB",
       "BBBBBB...BBBBBBB...~~.................~~..BBBBBBBB",
       "BBBBBBN..BBBBBBB...~~......n...h......~~..BBBBBBBB",
-      "BBBBBB.........o...~~..F..............~~........BB",
+      "BBBBBB.........o...~~..F............1.~~........BB",
       "BBBBBB...........e~#####D####l.........~.A...o..BB",
       "BBBBBB.....m.......~~.................~~........BB",
       "BBBBBBBBBBBBBBBB...~~......F...n......~~..BB...BBB",
       "BBBBBBBBBBBBBBBB...~~.................~~..BB...BBB",
       "BBBBBBBBBBBBBBBBi..~~i................~~..BB...BBB",
       "BBBBBBBBBBBBBBBB....~~...............~~...BB..mBBB",
-      "BBBBBBBBBBBBBBBB....~~~....A....h...m~~...BB...BBB",
+      "BBBBBBBBBBBBBBBB....~~~....A....h...m~~.2.BB...BBB",
       "BBBBBBBBBBBBBBBB.....~~~...........~~~....BB...BBB",
       "BBBBBBBBBBBBBBBB......~~~.........~~~.....BB...BBB",
       "BBBBBBBBBBBBBBBB.......~~~~~~.~~~~~~......BB..aBBB",
@@ -1582,7 +1582,7 @@ const LEVELS = [
       "BBBBBBBBBBBBBBBBBBB...BB....m.....m..NBB....BBBBBBBBBBBBBBBBBB",
       "BBBBBBBBBBBBBBBBBBB.........................BBBBBBBBBBBBBBBBBB",
       "BBBBBBBBBBBBBBBBBBB......N..................BBBBBBBBBBBBBBBBBB",
-      "BBBBBBBBBBBBBBBBBB.nh......y.......q......hn.BBBBBBBBBBBBBBBBB",
+      "BBBBBBBBBBBBBBBBBB.nh......y...1...q......hn.BBBBBBBBBBBBBBBBB",
       "BBBBBBBBBBBBBBBBBBB..................N......BBBBBBBBBBBBBBBBBB",
       "BBBBBBBBBBBBBBBBBBB...BB..............BB....BBBBBBBBBBBBBBBBBB",
       "BBBBBBBBBBBBBBBBBBB...BB.N..m.....m...BB....BBBBBBBBBBBBBBBBBB",
@@ -1616,7 +1616,7 @@ const LEVELS = [
       "BBRRRRRRRRRRRRRRRRBBBB...i~~~~~~~~~~~~.i..BBBBBBBBBBBBBBBBBBBB",
       "BBRR.e...f.....RRRBBBB..BB~~~~~~~~~~~~BB..BBBBBBBBBBBBBBBBBBBB",
       "BBRR.........G.RRRBBBB.mBB~~~~~~~~~~~~BB.mBBBBBBBBBBBBBBBBBBBB",
-      "BBRR......................~~~~~~~~~~~~....BBBBBBBBBBBBBBBBBBBB",
+      "BBRR......................~~~1~~~3~~~~....BBBBBBBBBBBBBBBBBBBB",
       "BBRR..P..................i~~~~~~~~~~~~.i..BBBBBBBBBBBBBBBBBBBB",
       "BBRR.....................................pBBBBBBBBBBBBBBBBBBBB",
       "BBRR.........d.RRRBBBB....................BBBBBBBBBBBBBBBBBBBB",
@@ -2349,6 +2349,35 @@ const sprites = {
   spiderIdle:   makeSprite(g => drawSpider(g, false, false)),
   spiderAttack: makeSprite(g => drawSpider(g, true,  false)),
   spiderPain:   makeSprite(g => drawSpider(g, false, true)),
+  // armor pickups (placeholder art until real sprites arrive)
+  helmet: makeSprite(g => {
+    g.fillStyle = "#2c5a2c";
+    g.beginPath(); g.arc(32, 40, 13, Math.PI, 0); g.fill();
+    g.fillRect(19, 40, 26, 7);
+    g.fillStyle = "#3f7a3f"; g.fillRect(21, 34, 5, 4);
+    g.fillStyle = "#141414"; g.fillRect(19, 45, 26, 2);
+  }),
+  armorG: makeSprite(g => {
+    g.fillStyle = "#1f6a1f";
+    g.beginPath(); g.moveTo(20, 26); g.lineTo(44, 26); g.lineTo(46, 36);
+    g.lineTo(40, 52); g.lineTo(24, 52); g.lineTo(18, 36); g.closePath(); g.fill();
+    g.fillStyle = "#33a033"; g.fillRect(29, 30, 6, 16);
+    g.fillStyle = "#0e3a0e"; g.fillRect(20, 27, 24, 2);
+  }),
+  armorB: makeSprite(g => {
+    g.fillStyle = "#1f3f8a";
+    g.beginPath(); g.moveTo(20, 26); g.lineTo(44, 26); g.lineTo(46, 36);
+    g.lineTo(40, 52); g.lineTo(24, 52); g.lineTo(18, 36); g.closePath(); g.fill();
+    g.fillStyle = "#3f6fd0"; g.fillRect(29, 30, 6, 16);
+    g.fillStyle = "#101f4a"; g.fillRect(20, 27, 24, 2);
+  }),
+  spark: makeSprite(g => {
+    g.fillStyle = "#fff3b0";
+    for (const [x, y, w] of [[30, 30, 4], [24, 34, 3], [37, 35, 3], [31, 38, 2], [27, 27, 2], [36, 28, 2]])
+      g.fillRect(x, y, w, w);
+    g.fillStyle = "#ffb54d";
+    g.fillRect(28, 32, 7, 3); g.fillRect(32, 26, 3, 10);
+  }),
   tracer: makeSprite(g => {
     g.fillStyle = "#ffd24d"; g.fillRect(28, 30, 8, 4);
     g.fillStyle = "#fff0a0"; g.fillRect(30, 31, 4, 2);
@@ -3114,7 +3143,7 @@ function finalizeSingleArt(art) {
     art.idle = cropCanvas(idle.canvas, idle.bbox);
     if (fire) art.fire = cropCanvas(fire.canvas, fire.bbox);
   }
-  art.scale = Math.min(260 / idle.bbox.w, 140 / idle.bbox.h);
+  art.scale = Math.min(215 / idle.bbox.w, 115 / idle.bbox.h);
 }
 function loadMyGun(cfg) {
   const img = new Image();
@@ -3169,8 +3198,8 @@ function loadMyGun(cfg) {
     // scale from the idle frame's own gun content, not the flames
     const ib = contentBBox(frames[0].getContext("2d"), frames[0].width, frames[0].height);
     art.scale = ib
-      ? Math.min(260 / ib.w, 140 / ib.h)
-      : Math.min(260 / frames[0].width, 140 / frames[0].height);
+      ? Math.min(215 / ib.w, 115 / ib.h)
+      : Math.min(215 / frames[0].width, 115 / frames[0].height);
     art.frames = frames;
     art.durs = frames.map((_, i) => i === 0 ? 0.1 : 0.07);
     art.fireTotal = art.durs.slice(1).reduce((a, b) => a + b, 0);
@@ -3420,7 +3449,31 @@ function synthSfx(kind, vol = 1) {
   master.connect(audio.destination);
   const out = audio.createGain();
   out.connect(master);
-  if (kind === "shoot") {
+  if (kind === "door" || kind === "doorClose") {
+    // a mechanical grind while the slab moves, and a thunk as it seats
+    const src = audio.createBufferSource(); src.buffer = noiseBuffer(0.5);
+    const f = audio.createBiquadFilter(); f.type = "bandpass"; f.Q.value = 2.5;
+    const rising = kind === "door";
+    f.frequency.setValueAtTime(rising ? 90 : 220, t);
+    f.frequency.exponentialRampToValueAtTime(rising ? 220 : 90, t + 0.45);
+    src.connect(f); f.connect(out);
+    out.gain.setValueAtTime(0.35, t); out.gain.exponentialRampToValueAtTime(0.02, t + 0.5);
+    src.start(t); src.stop(t + 0.5);
+    const o = audio.createOscillator(); o.type = "sine";
+    const og = audio.createGain(); og.connect(master);
+    o.frequency.setValueAtTime(70, t + 0.42);
+    og.gain.setValueAtTime(0.0001, t); og.gain.setValueAtTime(0.35, t + 0.42);
+    og.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
+    o.connect(og); o.start(t + 0.42); o.stop(t + 0.6);
+  } else if (kind === "ric") {
+    // a bright metallic ping sliding down: the ricochet
+    const o = audio.createOscillator(); o.type = "triangle";
+    o.frequency.setValueAtTime(2600 + Math.random() * 1200, t);
+    o.frequency.exponentialRampToValueAtTime(600, t + 0.18);
+    o.connect(out);
+    out.gain.setValueAtTime(0.2, t); out.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+    o.start(t); o.stop(t + 0.2);
+  } else if (kind === "shoot") {
     const src = audio.createBufferSource(); src.buffer = noiseBuffer(0.25);
     const f = audio.createBiquadFilter(); f.type = "lowpass";
     f.frequency.setValueAtTime(3000, t); f.frequency.exponentialRampToValueAtTime(200, t + 0.22);
@@ -3560,7 +3613,7 @@ function saveAudioPrefs() {
 // ---------------------------------------------------------
 const MAP_SCALE_MIN = 0.4, MAP_SCALE_MAX = 1.6;
 const MAP_ALPHA_MIN = 0.15;
-let mapScale = 0.75, mapAlpha = 0.85, mapRotate = false;
+let mapScale = MAP_SCALE_MIN, mapAlpha = 0.5, mapRotate = false;
 try {
   const saved = JSON.parse(localStorage.getItem("doomMap") || "null");
   if (saved) {
@@ -3721,7 +3774,7 @@ const WEAPONS = [
   { name: "FIST",            ammoType: null,      rate: 0.45, melee: true, dmg: 14, rnd: 8,  sfx: "punch" },
   { name: "PISTOL",          ammoType: "bullets", rate: 0.34, dmg: 20, rnd: 14, use: 1, sfx: "shoot" },
   { name: "SHOTGUN",         ammoType: "shells",  rate: 0.95, dmg: 7,  rnd: 5,  use: 1, pellets: 7, spread: 0.09, sfx: "shotgun" },
-  { name: "CHAINGUN",        ammoType: "bullets", rate: 0.09, dmg: 11, rnd: 7,  use: 1, spread: 0.03, sfx: "gatling" },
+  { name: "MINIGUN",         ammoType: "bullets", rate: 0.055, dmg: 10, rnd: 7, use: 1, spread: 0.045, spinup: 0.3, sfx: "gatling" },
   { name: "ROCKET LAUNCHER", ammoType: "rockets", rate: 0.85, dmg: 110, rnd: 40, use: 1, proj: "rocket", pspeed: 12, splash: 1.9, splashDmg: 90, sfx: "rocket" },
   { name: "PLASMA RIFLE",    ammoType: "cells",   rate: 0.12, dmg: 23, rnd: 12, use: 1, proj: "plasmaball", pspeed: 14, sfx: "plasma" },
   { name: "BFG9000",         ammoType: "cells",   rate: 1.7,  dmg: 300, rnd: 100, use: 40, proj: "bfgball", pspeed: 9, splash: 3.2, splashDmg: 160, sfx: "bfg" },
@@ -3730,11 +3783,11 @@ const WEAPONS = [
 const AMMO_MAX = { bullets: 200, shells: 50, rockets: 50, cells: 300 };
 const ENEMY_DROPS = {   // clearing a fight always pays something
   zombie:   { chance: 1.0, spr: "clip",     give: { bullets: 10 } },
-  sergeant: { chance: 1.0, spr: "shellbox", give: { shells: 4 } },
+  sergeant: { chance: 1.0, w: 2, spr: "wpn2", give: { shells: 4 } },   // drops his shotgun
   imp:    { chance: 0.5, spr: "clip",      give: { bullets: 10 } },
   pinky:  { chance: 0.5, spr: "shellbox",  give: { shells: 4 } },
   caco:   { chance: 0.6, spr: "shellbox",  give: { shells: 4 } },
-  baron:  { chance: 1.0, spr: "rocketbox", give: { rockets: 2 } },
+  baron:  { chance: 1.0, w: 4, spr: "wpn4", give: { rockets: 2 } },   // drops a rocket launcher
   knight: { chance: 1.0, spr: "shellbox",  give: { shells: 4 } },
   cyber:  { chance: 1.0, spr: "cellpack",  give: { cells: 40 } },
   spider: { chance: 1.0, spr: "cellpack",  give: { cells: 40 } },
@@ -3759,8 +3812,11 @@ const player = {
   weapon: 1, weapons: [], ammo: { bullets: 0, shells: 0, rockets: 0, cells: 0 },
   eyeDrop: 0,   // how far the camera has stepped down into a pool
   bobAmp: 0,    // walk bob eases in and out so the gun settles when you stop
+  armor: 0,     // soaks a third of incoming damage until it breaks (cap 200)
+  accelT: 0,    // how long forward has been held: speed builds toward a cap
 };
 function resetLoadout() {
+  player.armor = 0;
   player.weapon = 1;
   player.weapons = [true, true, false, false, false, false, false, false];
   player.ammo = { bullets: 48, shells: 0, rockets: 0, cells: 0 };
@@ -3772,6 +3828,8 @@ let explored = null;   // automap fog of war: cells the player has actually seen
 let nukeTimer = 0, teleports = [], teleCooldown = 0;
 let gameState = "title";   // title | play | intermission | dead | victory
 let fireCooldown = 0, muzzle = 0, showMap = false, faceTimer = 0, faceLook = 0;
+let spinT = 0;         // minigun barrels: they spin up before the stream starts
+let adsDown = false, aimZoom = 0;   // right mouse: aim-down-sights blend 0..1
 let totalEnemies = 0, pendingNext = null;
 let msg = "", msgT = 0;
 let gameT = 0;   // seconds of actual play: world animation runs off this, so
@@ -3821,13 +3879,13 @@ const ENEMY_TYPES = {
               sfxSight: "soulSight", sfxPain: "soulPain", sfxDie: "soulDie", sfxAct: "soulAct" },
   // The two bosses: they tower over the room, they never flinch, they
   // fire in bursts, and they keep firing while you are stood on them.
-  cyber:    { hp: 3000, speed: 1.5, dmg: 26, ranged: true,  cool: 0.8, pspeed: 9, scale: 2.1,
-              volley: 3, spread: 0.1, painChance: 0, minRange: 0.9, lightFloor: 0.5,
+  cyber:    { hp: 3000, speed: 2.0, dmg: 26, ranged: true,  cool: 0.55, pspeed: 10, scale: 2.1,
+              volley: 3, spread: 0.05, painChance: 0, minRange: 0.9, lightFloor: 0.5,
               idle: "cyberIdle", attack: "cyberAttack", pain: "cyberPain", corpse: "cyberCorpse",
               ball: "rocket", atkSfx: "rocket",
               sfxSight: "cyberSight", sfxPain: "cyberPain", sfxDie: "cyberDie", sfxAct: "cyberAct" },
-  spider:   { hp: 2600, speed: 1.35, dmg: 10, ranged: true,  cool: 0.3, pspeed: 14, scale: 2.0,
-              volley: 3, spread: 0.05, painChance: 0, minRange: 0.9, lightFloor: 0.5,
+  spider:   { hp: 2600, speed: 1.7, dmg: 10, ranged: true,  cool: 0.22, pspeed: 15, scale: 2.0,
+              volley: 3, spread: 0.03, painChance: 0, minRange: 0.9, lightFloor: 0.5,
               idle: "spiderIdle", attack: "spiderAttack", pain: "spiderPain", corpse: "spiderCorpse",
               ball: "tracer", atkSfx: "gatling",
               sfxSight: "spiderSight", sfxPain: "spiderPain", sfxDie: "spiderDie", sfxAct: "spiderAct" },
@@ -3869,6 +3927,9 @@ function loadLevel() {
     else if (ch === "y") enemies.push(makeEnemy("cyber", cx, cy));
     else if (ch === "q") enemies.push(makeEnemy("spider", cx, cy));
     else if (ch === "h") pickups.push({ kind: "medkit", spr: "medkit", x: cx, y: cy });
+    else if (ch === "1") pickups.push({ kind: "armorbonus", spr: "helmet", x: cx, y: cy });
+    else if (ch === "2") pickups.push({ kind: "armorgreen", spr: "armorG", x: cx, y: cy });
+    else if (ch === "3") pickups.push({ kind: "armorblue",  spr: "armorB", x: cx, y: cy });
     else if (AMMO_PICKUPS[ch]) {
       const ap = AMMO_PICKUPS[ch];
       pickups.push({ kind: "ammo", spr: ap.kind, give: ap.give, x: cx, y: cy });
@@ -4045,7 +4106,14 @@ const SK = () => SKILLS[skill];
 // join at Hurt Me Plenty, the last 2 only on Ultra-Violence upwards.
 const SPAWN_TIER = [0, 0, 1, 0, 2, 1, 0, 2];
 const BOSSES = new Set(["cyber", "spider"]);
-const dmgToPlayer = n => Math.round(n * SK().dmgTake);
+function dmgToPlayer(n) {
+  // one choke point for everything that hurts the player: skill scaling,
+  // then armor soaking a third of what remains until it breaks
+  const dmg = Math.round(n * SK().dmgTake);
+  const soak = Math.min(player.armor, Math.ceil(dmg / 3));
+  player.armor -= soak;
+  return dmg - soak;
+}
 const RESPAWN_DELAY = 12;            // seconds before a Nightmare monster returns
 const MAX_CORPSES = 96;              // corpses kept on the floor at once
 
@@ -4330,8 +4398,13 @@ addEventListener("mousedown", e => {
   initAudio();
   maybeTitleMusic();
   if (e.button === 0 && gameState === "play") mouseDown = true;
+  if (e.button === 2 && gameState === "play") adsDown = true;
 });
-addEventListener("mouseup",   e => { if (e.button === 0) { mouseDown = false; dragSlider = -1; } });
+addEventListener("mouseup",   e => {
+  if (e.button === 0) { mouseDown = false; dragSlider = -1; }
+  if (e.button === 2) adsDown = false;
+});
+addEventListener("contextmenu", e => e.preventDefault());
 
 // ---------------------------------------------------------
 // Helpers
@@ -4519,7 +4592,31 @@ function hitscanShot(jitter, dmg) {
       best = tgt; bestDist = dist;
     }
   }
-  if (best) hurtTarget(best, dmg, bestDist);
+  if (best) { hurtTarget(best, dmg, bestDist); return; }
+  // the shot went past everything: put sparks where it meets the wall
+  const wp2 = wallPoint(player.x, player.y, ang, 20);
+  if (wp2) {
+    effects.push({ x: wp2.x, y: wp2.y, t: 0, kind: "spark" });
+    if (Math.random() < 0.3) sfx("ric", 0.4 * volAt(wp2.dist));
+  }
+}
+// Walk the grid along an angle and return the exact point where the ray
+// meets the first solid cell - the impact point for wall sparks.
+function wallPoint(x0, y0, ang, maxDist) {
+  const dx = Math.cos(ang), dy = Math.sin(ang);
+  let cx = x0 | 0, cy = y0 | 0;
+  const stepX = dx > 0 ? 1 : -1, stepY = dy > 0 ? 1 : -1;
+  const dDX = Math.abs(1 / dx), dDY = Math.abs(1 / dy);
+  let sX = (dx > 0 ? cx + 1 - x0 : x0 - cx) * dDX;
+  let sY = (dy > 0 ? cy + 1 - y0 : y0 - cy) * dDY;
+  for (let i = 0; i < maxDist * 2; i++) {
+    let t;
+    if (sX < sY) { t = sX; sX += dDX; cx += stepX; }
+    else         { t = sY; sY += dDY; cy += stepY; }
+    if (t > maxDist) return null;
+    if (solidCell(cx, cy)) return { x: x0 + dx * (t - 0.02), y: y0 + dy * (t - 0.02), dist: t };
+  }
+  return null;
 }
 function explodeAt(x, y, radius, dmg, hurtSelf) {
   effects.push({ x, y, t: 0, kind: "boom" });
@@ -4571,33 +4668,46 @@ function update(dt) {
   updateDoors(dt);
 
   // --- player movement ---
-  const run = keys["ShiftLeft"] || keys["ShiftRight"] ? 1.7 : 1;
-  const speed = 3.2 * run * dt;
+  // No sprint key: the base pace is quick, and holding forward builds
+  // speed toward a cap - momentum you feel, without a button to hold.
+  const fwd = keys["KeyW"] || keys["ArrowUp"];
+  player.accelT = fwd ? Math.min(1, player.accelT + dt / 1.5) : Math.max(0, player.accelT - dt * 3);
+  const speed = (3.6 + 1.8 * player.accelT) * dt;
   const turn = 2.6 * dt;
   if (keys["ArrowLeft"])  player.ang -= turn;
   if (keys["ArrowRight"]) player.ang += turn;
   let mx = 0, my = 0;
   const cos = Math.cos(player.ang), sin = Math.sin(player.ang);
-  if (keys["KeyW"] || keys["ArrowUp"])   { mx += cos; my += sin; }
+  if (fwd)                               { mx += cos; my += sin; }
   if (keys["KeyS"] || keys["ArrowDown"]) { mx -= cos; my -= sin; }
   if (keys["KeyA"]) { mx += sin; my -= cos; }
   if (keys["KeyD"]) { mx -= sin; my += cos; }
   const ml = Math.hypot(mx, my);
   if (ml > 0) {
     moveWithCollision(player, mx / ml * speed, my / ml * speed, 0.25);
-    player.bob += dt * 9 * run;
+    player.bob += dt * (7 + 4 * player.accelT);
   }
   // Freezing the bob mid-stride leaves the weapon hanging off to one side.
-  // Fading its amplitude instead lets the gun settle back to centre.
-  player.bobAmp += ((ml > 0 ? 1 : 0) - player.bobAmp) * Math.min(1, dt * 8);
+  // Fading its amplitude instead lets the gun settle back to centre; a
+  // gentle walk bobs less than a full-speed run.
+  player.bobAmp += ((ml > 0 ? 0.55 + 0.45 * player.accelT : 0) - player.bobAmp) * Math.min(1, dt * 8);
   if (player.ang > Math.PI) player.ang -= 2 * Math.PI;
   else if (player.ang < -Math.PI) player.ang += 2 * Math.PI;
 
   // --- firing ---
   fireCooldown -= dt;
+  // aiming tightens the spread and eases the view in; hip fire sprays
+  aimZoom += ((adsDown && gameState === "play" ? 1 : 0) - aimZoom) * Math.min(1, dt * 10);
+  const spreadMul = 1.6 - 1.15 * aimZoom;   // 1.6x at the hip, 0.45x aimed
+  // the minigun needs its barrels spinning before rounds come out
+  const wantFire = keys["Space"] || mouseDown;
+  if (WEAPONS[player.weapon].spinup) {
+    spinT = wantFire ? Math.min(1, spinT + dt / WEAPONS[player.weapon].spinup)
+                     : Math.max(0, spinT - dt * 2.5);
+  } else spinT = 0;
   muzzle -= dt;
   gunFireT += dt;
-  if ((keys["Space"] || mouseDown) && fireCooldown <= 0) {
+  if (wantFire && fireCooldown <= 0 && !(WEAPONS[player.weapon].spinup && spinT < 1)) {
     const wp = WEAPONS[player.weapon];
     const cost = wp.use || 0;
     const free = !!LEVELS[levelIdx].infiniteAmmo;
@@ -4623,7 +4733,7 @@ function update(dt) {
       } else {
         const shots = wp.pellets || 1;
         for (let s = 0; s < shots; s++)
-          hitscanShot((wp.spread || 0.015) * (Math.random() * 2 - 1), wp.dmg + (Math.random() * wp.rnd | 0));
+          hitscanShot((wp.spread || 0.015) * spreadMul * (Math.random() * 2 - 1), wp.dmg + (Math.random() * wp.rnd | 0));
       }
     } else if (!switchToArmedWeapon()) {
       fireCooldown = 0.3;
@@ -4669,7 +4779,7 @@ function update(dt) {
   barrels = barrels.filter(b => !b.boomed);
   for (let i = effects.length - 1; i >= 0; i--) {
     effects[i].t += dt;
-    if (effects[i].t > 0.45) effects.splice(i, 1);
+    if (effects[i].t > (effects[i].kind === "spark" ? 0.18 : 0.45)) effects.splice(i, 1);
   }
 
   // --- liquid floors & teleporters ---
@@ -4732,7 +4842,11 @@ function update(dt) {
         const alreadyThere = SK().respawn &&
           pickups.some(pk => pk.spr === drop?.spr && Math.hypot(pk.x - e.x, pk.y - e.y) < 0.9);
         if (drop && !alreadyThere && Math.random() < drop.chance)
-          pickups.push({ kind: "ammo", spr: drop.spr, give: drop.give, x: e.x, y: e.y });
+          pickups.push(drop.w !== undefined
+            // a dropped weapon: take it as the gun if you lack it, as its
+            // ammo either way
+            ? { kind: "weapon", spr: drop.spr, w: drop.w, give: drop.give, x: e.x, y: e.y }
+            : { kind: "ammo", spr: drop.spr, give: drop.give, x: e.x, y: e.y });
       }
       continue;
     }
@@ -4833,6 +4947,15 @@ function update(dt) {
       if (p.kind === "medkit") {
         if (player.hp >= 100) continue;
         player.hp = Math.min(100, player.hp + 25);
+      } else if (p.kind === "armorbonus") {   // a helmet: one point, up to the cap
+        if (player.armor >= 200) continue;
+        player.armor++;
+      } else if (p.kind === "armorgreen") {   // fills to 100
+        if (player.armor >= 100) continue;
+        player.armor = 100;
+      } else if (p.kind === "armorblue") {    // rare: fills to the 200 cap
+        if (player.armor >= 200) continue;
+        player.armor = 200;
       } else if (p.kind === "ammo") {
         let took = false;
         for (const [type, n] of Object.entries(p.give)) {
@@ -4884,7 +5007,9 @@ function shade(px, f) {
 
 function renderWorld() {
   const dirX = Math.cos(player.ang), dirY = Math.sin(player.ang);
-  const planeX = -dirY * Math.tan(FOV / 2), planeY = dirX * Math.tan(FOV / 2);
+  // aiming narrows the field of view a touch - the zoom half of ADS
+  const halfTan = Math.tan((FOV * (1 - 0.3 * aimZoom)) / 2);
+  const planeX = -dirY * halfTan, planeY = dirX * halfTan;
   const posX = player.x, posY = player.y;
   const half = VIEW_H / 2;
   const bobOff = (gameState === "play" ? Math.sin(player.bob) * 3 * player.bobAmp : 0) | 0;
@@ -4894,6 +5019,13 @@ function renderWorld() {
   // texture swap. Everything projected off the floor - the floor itself,
   // the ceiling, wall tops and bottoms, sprite feet - keys off this.
   const eyeH = 0.5 - player.eyeDrop;
+
+  // Firing lights the room, and so does a fireball passing close by: a
+  // cheap omnidirectional boost that falls off with distance, not a true
+  // dynamic light (that is ROADMAP Batch 3).
+  let flashEnv = muzzle > 0 ? 0.4 : 0;
+  for (const q of projectiles)  flashEnv = Math.max(flashEnv, 0.35 * (1 - distToPlayer(q.x, q.y) / 8));
+  for (const q of pProjectiles) flashEnv = Math.max(flashEnv, 0.35 * (1 - distToPlayer(q.x, q.y) / 8));
 
   // --- floor & ceiling casting (per row) ---
   const fData = floorTex.data, cData = ceilTex.data;
@@ -4907,7 +5039,7 @@ function renderWorld() {
     const p = isFloor ? (y - horizon) : (horizon - y);
     if (p <= 0) continue;
     const rowDist = VIEW_H * (isFloor ? eyeH : 1 - eyeH) / p;
-    const fog = Math.min(1, 2.1 / rowDist) * (isFloor ? 0.8 : 0.55);
+    const fog = Math.min(1, 2.1 / rowDist * (1 + flashEnv * 2)) * (isFloor ? 0.8 : 0.55);
     const stepX = rowDist * (2 * planeX) / W;
     const stepY = rowDist * (2 * planeY) / W;
     let fx = posX + rowDist * (dirX - planeX);
@@ -5035,7 +5167,7 @@ function renderWorld() {
 
     const step = TSZ / lineH;
     let texPos = (drawStart - wallTop) * step;
-    let fog = Math.min(1, 2.8 / perpDist);
+    let fog = Math.min(1, 2.8 / perpDist + flashEnv * Math.max(0, 1 - perpDist / 7));
     if (side === 1) fog *= 0.72;
     for (let y = drawStart; y <= drawEnd; y++) {
       const texY = Math.min(TSZ - 1, texPos | 0);
@@ -5103,7 +5235,8 @@ function renderWorld() {
       const phase = walking ? (gameT * 7.7 + e.x * 7) % 1 : 0;
       img = animPick(sprites[e.idle], phase);
     }
-    if (img) items.push({ x: e.x, y: e.y, img, hScale, sink: sink + liquidSink(e.x, e.y), lightFloor: e.lightFloor });
+    if (img) items.push({ x: e.x, y: e.y, img, hScale, sink: sink + liquidSink(e.x, e.y),
+                          lightFloor: e.lightFloor, grounded: !e.float });
   }
   for (const p of pickups)     items.push({ x: p.x, y: p.y, img: sprites[p.spr || p.kind], hScale: 0.7, sink: 0.18 + liquidSink(p.x, p.y) });
   for (const p of projectiles) items.push({ x: p.x, y: p.y, img: sprites[p.img] || sprites.fireball, hScale: 0.5, sink: 0 });
@@ -5119,9 +5252,10 @@ function renderWorld() {
   for (const f of effects) items.push({
     x: f.x, y: f.y,
     img: f.kind === "telefog" ? sprites.telefog :
+         f.kind === "spark" ? sprites.spark :
          f.kind === "puff" ? sprites.boom1 :
          (f.t < 0.18 ? sprites.boom1 : sprites.boom2),
-    hScale: f.kind === "telefog" ? 1.0 : f.kind === "puff" ? 0.35 : 0.7 + f.t * 1.6,
+    hScale: f.kind === "telefog" ? 1.0 : f.kind === "spark" ? 0.22 - f.t : f.kind === "puff" ? 0.35 : 0.7 + f.t * 1.6,
     sink: 0, bright: true,
   });
 
@@ -5139,7 +5273,11 @@ function renderWorld() {
     if (transY <= 0.1) continue;
     const screenX = ((W / 2) * (1 + transX / transY)) | 0;
     const baseH = Math.abs((VIEW_H / transY)) | 0;
-    const sprH = (baseH * s.hScale) | 0;
+    // A grounded giant taller than the room pokes through the ceiling
+    // (there is no per-pixel ceiling clip). Cap it just above wall height
+    // until tall arena ceilings exist - see ROADMAP Batch 3.
+    const hClamped = s.grounded ? Math.min(s.hScale, 1.15 + Math.max(0, s.sink)) : s.hScale;
+    const sprH = (baseH * hClamped) | 0;
     const sprW = (sprH * (s.aspect || 1)) | 0;
     const vShift = (baseH * eyeH - sprH / 2 + s.sink * baseH) | 0;
     const drawStartY = Math.max(0, (horizon - sprH / 2 + vShift) | 0);
@@ -5190,7 +5328,7 @@ function renderWeapon() {
     ctx.imageSmoothingEnabled = false;
     // one uniform on-screen size for every weapon, judged by the gun
     // content itself rather than the image frame
-    const scale = (art.scale || Math.min(260 / img.width, 140 / img.height)) * (art.zoom || 1);
+    const scale = (art.scale || Math.min(215 / img.width, 115 / img.height)) * (art.zoom || 1);
     const dw = img.width * scale, dh = img.height * scale;
     const dx = W / 2 - dw / 2 + bobX, dy = VIEW_H - dh + bobY + (muzzle > 0 ? -4 : 2);
     if (muzzle > 0 && !art.fire && !animating && !WEAPONS[w].melee) {   // generic flash when no firing art exists
@@ -5323,7 +5461,7 @@ function renderHUD() {
   ctx.fillStyle = "#151515";
   ctx.fillRect(0, VIEW_H, W, 3);
   ctx.strokeStyle = "#111";
-  for (const x of [130, 240, 315, 390]) {
+  for (const x of [130, 240, 315, 390, 500]) {
     ctx.beginPath(); ctx.moveTo(x, VIEW_H + 6); ctx.lineTo(x, H - 6); ctx.stroke();
   }
   const mid = VIEW_H + HUD_H / 2;
@@ -5353,9 +5491,11 @@ function renderHUD() {
       ki++;
     }
   }
+  drawDigits("ARMOR", 400, mid - 14, 13, "#888");
+  drawDigits(player.armor + "%", 400, mid + 10, 26, player.armor > 0 ? "#40a840" : "#555");
   // no kill tally here - counting corpses mid-fight is the exit
   // screen's job; the bar carries what you act on
-  const levelMid = (390 + W) / 2;
+  const levelMid = (500 + W) / 2;
   drawDigits("LEVEL", levelMid, mid - 14, 13, "#888", "center");
   drawDigits(LEVELS[levelIdx] ? LEVELS[levelIdx].name.split(":")[0] : "", levelMid, mid + 10, 26, "#c8a020", "center");
 
@@ -5643,7 +5783,8 @@ function drawHelp() {
     "MOUSE / ARROWS . TURN",
     "CLICK / SPACE .. FIRE",
     "E .............. USE DOORS + SWITCHES",
-    "SHIFT .......... RUN",
+    "HOLD W ......... SPEED BUILDS AS YOU RUN",
+    "RIGHT MOUSE .... AIM (TIGHTER SHOTS)",
     "M .............. AUTOMAP (SIZE/OPACITY/ROTATE IN OPTIONS)",
     "N .............. MUSIC      [ ] ... PREV / NEXT TRACK",
     "ESC ............ PAUSE + OPTIONS",
