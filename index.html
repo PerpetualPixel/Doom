@@ -1577,6 +1577,7 @@ function solidCell(cx, cy) {
   }
   return true;
 }
+const bankOccupied = (d, key) => (d.bank || [key]).some(cellOccupied);
 function cellOccupied(key) {
   const cx = key % MAP_W, cy = (key / MAP_W) | 0;
   if ((player.x | 0) === cx && (player.y | 0) === cy) return true;
@@ -3605,6 +3606,7 @@ const player = {
   x: 0, y: 0, ang: 0, hp: 100, kills: 0, hurtFlash: 0, pickFlash: 0, bob: 0,
   weapon: 1, weapons: [], ammo: { bullets: 0, shells: 0, rockets: 0, cells: 0 },
   eyeDrop: 0,   // how far the camera has stepped down into a pool
+  bobAmp: 0,    // walk bob eases in and out so the gun settles when you stop
 };
 function resetLoadout() {
   player.weapon = 1;
@@ -3620,6 +3622,8 @@ let gameState = "title";   // title | play | intermission | dead | victory
 let fireCooldown = 0, muzzle = 0, showMap = false, faceTimer = 0, faceLook = 0;
 let totalEnemies = 0, pendingNext = null;
 let msg = "", msgT = 0;
+let gameT = 0;   // seconds of actual play: world animation runs off this, so
+                 // pausing freezes the monsters and the liquid too
 function showMsg(text, dur = 2.2) { msg = text; msgT = dur; }
 
 const ENEMY_TYPES = {
@@ -3680,6 +3684,7 @@ function makeEnemy(type, x, y) {
   return {
     type, x, y, homeX: x, homeY: y, ...structuredClone(ENEMY_TYPES[type]),
     state: "idle", stateT: 0, attackT: 0, dead: false, respawnT: 0,
+    detour: 1, detourT: 0,
   };
 }
 function distToPlayer(x, y) { return Math.hypot(x - player.x, y - player.y); }
@@ -3737,8 +3742,9 @@ function loadLevel() {
   }
   player.keys = { blue: false, yellow: false, red: false };
   player.kills = 0;
-  player.eyeDrop = 0;
+  player.eyeDrop = 0; player.bobAmp = 0; player.bob = 0;
   player.hurtFlash = 0; player.pickFlash = 0;
+  gameT = 0;
   applySkillToSpawns();
   totalEnemies = enemies.length;
   fireCooldown = 0; muzzle = 0; teleCooldown = 0; nukeTimer = 0;
@@ -3775,7 +3781,7 @@ function startGame(startIdx = 0, skillIdx = skill) {
   loadLevel();
   gameState = "play";
   levelMusic(levelIdx);
-  canvas.requestPointerLock();
+  Promise.resolve(canvas.requestPointerLock()).catch(() => {});
 }
 function pauseGame() {
   gameState = "paused";
@@ -3784,7 +3790,7 @@ function pauseGame() {
 }
 function resumeGame() {
   gameState = "play";
-  canvas.requestPointerLock();
+  Promise.resolve(canvas.requestPointerLock()).catch(() => {});
 }
 function goToTitle() {
   gameState = "title";
@@ -3999,10 +4005,16 @@ addEventListener("keydown", e => {
   if (gameState === "play" && e.code.startsWith("Digit")) {
     const n = +e.code.slice(5) - 1;
     if (n >= 0 && n < WEAPONS.length && player.weapons[n] && n !== player.weapon) {
-      player.weapon = n;
-      fireCooldown = Math.max(fireCooldown, 0.3);
-      gunFireT = 99;
-      sfx(n === 7 ? "sawup" : "sgcock", 0.7);
+      const w = WEAPONS[n];
+      // refuse an empty weapon outright rather than selecting it and
+      // having the auto-switch snap straight back off it
+      if (w.ammoType && player.ammo[w.ammoType] < (w.use || 0)) sfx("noway", 0.4);
+      else {
+        player.weapon = n;
+        fireCooldown = Math.max(fireCooldown, 0.3);
+        gunFireT = 99;
+        sfx(n === 7 ? "sawup" : "sgcock", 0.7);
+      }
     }
   }
   if (["Space", "ArrowUp", "ArrowDown"].includes(e.code)) e.preventDefault();
@@ -4079,10 +4091,43 @@ function hasLOS(x0, y0, x1, y1) {
   }
   return true;
 }
+// Returns how much of the requested move actually happened, 0..1, so a
+// caller can tell it has walked into something.
 function moveWithCollision(obj, dx, dy, radius) {
+  const x0 = obj.x, y0 = obj.y;
   const nx = obj.x + dx, ny = obj.y + dy;
   if (!solidCell((nx + Math.sign(dx) * radius) | 0, obj.y | 0)) obj.x = nx;
   if (!solidCell(obj.x | 0, (ny + Math.sign(dy) * radius) | 0)) obj.y = ny;
+  const want = Math.hypot(dx, dy);
+  return want < 1e-9 ? 1 : Math.hypot(obj.x - x0, obj.y - y0) / want;
+}
+// Monsters shoulder plain doors open, the way they do in the original.
+// Locked doors stay locked and secret doors stay secret.
+function monsterOpenDoor(cx, cy, distToPlayerNow) {
+  if (mapAt(cx, cy) !== 4) return;
+  const bank = doorBank(cx, cy);
+  const lead = doorRecord(bank[0], bank);
+  if (lead.state === "opening" || lead.state === "open") return;
+  for (const k of bank) doorRecord(k, bank).state = "opening";
+  // only doors within earshot make a noise, or a big level turns into a
+  // permanent racket of doors opening somewhere you cannot see
+  if (distToPlayerNow < 14) sfx("door", volAt(distToPlayerNow) * 0.7);
+}
+// The contiguous run of identical door tiles that one doorway is made of.
+function doorBank(cx, cy) {
+  const t = mapAt(cx, cy);
+  const keys = [cy * MAP_W + cx];
+  for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    let x = cx + dx, y = cy + dy;
+    while (mapAt(x, y) === t) { keys.push(y * MAP_W + x); x += dx; y += dy; }
+  }
+  return keys;
+}
+function doorRecord(key, bank) {
+  let d = doors.get(key);
+  if (!d) { d = { open: 0, state: "closed", timer: 0 }; doors.set(key, d); }
+  if (bank) d.bank = bank;
+  return d;
 }
 function tryUse() {
   const cs = Math.cos(player.ang), sn = Math.sin(player.ang);
@@ -4098,13 +4143,18 @@ function tryUse() {
         sfx("noway", 0.7);
         return;
       }
-      const key = cy * MAP_W + cx;
-      let d = doors.get(key);
-      if (!d) { d = { open: 0, state: "closed", timer: 0 }; doors.set(key, d); }
-      if (d.state === "closed" || d.state === "closing") {
+      // A doorway three cells wide is one door, not three: open the whole
+      // contiguous bank together, or a wide corridor pinches to one cell.
+      const bank = doorBank(cx, cy);
+      const lead = doorRecord(bank[0], bank);
+      if (lead.state === "closed" || lead.state === "closing") {
         if (t === 14) showMsg("A SECRET DOOR GRINDS OPEN...");
-        d.state = "opening"; sfx("door");
-      } else if (d.state === "open") { d.state = "closing"; sfx("doorClose"); }
+        for (const k of bank) doorRecord(k, bank).state = "opening";
+        sfx("door");
+      } else if (lead.state === "open") {
+        for (const k of bank) doorRecord(k, bank).state = "closing";
+        sfx("doorClose");
+      }
       return;
     }
     if (t !== 0) { sfx("noway", 0.6); return; }   // a plain wall blocks the reach
@@ -4119,7 +4169,7 @@ function updateDoors(dt) {
     } else if (d.state === "open") {
       d.timer -= dt;
       if (d.timer <= 0) {
-        if (cellOccupied(key)) d.timer = 1;
+        if (bankOccupied(d, key)) d.timer = 1;
         else {
           d.state = "closing";
           const cx = key % MAP_W + 0.5, cy = ((key / MAP_W) | 0) + 0.5;
@@ -4127,7 +4177,7 @@ function updateDoors(dt) {
         }
       }
     } else if (d.state === "closing") {
-      if (cellOccupied(key)) { d.state = "opening"; continue; }
+      if (bankOccupied(d, key)) { d.state = "opening"; continue; }
       d.open -= dt * 1.6;
       if (d.open <= 0) { d.open = 0; d.state = "closed"; }
     }
@@ -4175,6 +4225,21 @@ function nearestTarget(maxDist, maxAng) {
     if (dist < bd && Math.abs(da) < maxAng) { best = tgt; bd = dist; }
   }
   return best;
+}
+// The order the original falls back through when a weapon runs out.
+const AUTO_SWITCH = [5, 3, 2, 1, 7, 4, 6, 0];
+function switchToArmedWeapon() {
+  for (const n of AUTO_SWITCH) {
+    if (n === player.weapon || !player.weapons[n]) continue;
+    const w = WEAPONS[n];
+    if (w.ammoType && player.ammo[w.ammoType] < (w.use || 0)) continue;
+    player.weapon = n;
+    fireCooldown = Math.max(fireCooldown, 0.3);
+    gunFireT = 99;
+    sfx(n === 7 ? "sawup" : "sgcock", 0.7);
+    return true;
+  }
+  return false;
 }
 function hitscanShot(jitter, dmg) {
   const ang = player.ang + jitter;
@@ -4234,6 +4299,7 @@ function explodeBarrel(b) {
 // ---------------------------------------------------------
 function update(dt) {
   if (gameState !== "play") return;
+  gameT += dt;
 
   updateDoors(dt);
 
@@ -4254,6 +4320,11 @@ function update(dt) {
     moveWithCollision(player, mx / ml * speed, my / ml * speed, 0.25);
     player.bob += dt * 9 * run;
   }
+  // Freezing the bob mid-stride leaves the weapon hanging off to one side.
+  // Fading its amplitude instead lets the gun settle back to centre.
+  player.bobAmp += ((ml > 0 ? 1 : 0) - player.bobAmp) * Math.min(1, dt * 8);
+  if (player.ang > Math.PI) player.ang -= 2 * Math.PI;
+  else if (player.ang < -Math.PI) player.ang += 2 * Math.PI;
 
   // --- firing ---
   fireCooldown -= dt;
@@ -4267,7 +4338,9 @@ function update(dt) {
       fireCooldown = wp.rate; muzzle = 0.08; faceTimer = 0.6;
       gunFireT = 0;
       sfx(wp.sfx);
-      if (wp.name === "SHOTGUN") setTimeout(() => sfx("sgcock", 0.8), 550);
+      if (wp.name === "SHOTGUN") setTimeout(() => {
+        if (gameState === "play" && WEAPONS[player.weapon].name === "SHOTGUN") sfx("sgcock", 0.8);
+      }, 550);
       if (wp.melee) {
         const tgt = nearestTarget(1.4, 0.6);
         if (tgt) hurtTarget(tgt, wp.dmg + (Math.random() * wp.rnd | 0));
@@ -4284,11 +4357,14 @@ function update(dt) {
         for (let s = 0; s < shots; s++)
           hitscanShot((wp.spread || 0.015) * (Math.random() * 2 - 1), wp.dmg + (Math.random() * wp.rnd | 0));
       }
-    } else {
+    } else if (!switchToArmedWeapon()) {
       fireCooldown = 0.3;
       sfx("noway", 0.25);
     }
   }
+  // dry after that shot? change weapon now rather than on the next trigger
+  const held = WEAPONS[player.weapon];
+  if (held.ammoType && player.ammo[held.ammoType] < (held.use || 0)) switchToArmedWeapon();
 
   // --- player projectiles ---
   for (let i = pProjectiles.length - 1; i >= 0; i--) {
@@ -4433,12 +4509,27 @@ function update(dt) {
       const step = e.speed * dt;
       let vx = dx / dist, vy = dy / dist;
       if (!los) {
-        const wob = Math.sin(performance.now() / 400 + e.x * 7) * 0.8;
+        const wob = Math.sin(gameT * 2.5 + e.x * 7) * 0.8;
         const tx = vx * Math.cos(wob) - vy * Math.sin(wob);
         vy = vx * Math.sin(wob) + vy * Math.cos(wob);
         vx = tx;
       }
-      moveWithCollision(e, vx * step, vy * step, 0.3);
+      // Walking straight at the player wedges a monster on any corner
+      // between the two of them. When one stops making progress it picks
+      // a side and commits to it for a moment, which walks it round the
+      // obstacle instead of grinding against it.
+      if (e.detourT > 0) {
+        e.detourT -= dt;
+        const a = e.detour * 1.15;
+        const tx = vx * Math.cos(a) - vy * Math.sin(a);
+        vy = vx * Math.sin(a) + vy * Math.cos(a);
+        vx = tx;
+      }
+      monsterOpenDoor((e.x + vx * 0.55) | 0, (e.y + vy * 0.55) | 0, dist);
+      if (moveWithCollision(e, vx * step, vy * step, 0.3) < 0.35 && e.detourT <= 0) {
+        e.detour = (e.x * 7 + e.y * 13 + gameT) % 2 < 1 ? 1 : -1;
+        e.detourT = 0.5 + (e.x * 3 % 1) * 0.7;
+      }
     }
   }
 
@@ -4523,7 +4614,7 @@ function renderWorld() {
   const planeX = -dirY * Math.tan(FOV / 2), planeY = dirX * Math.tan(FOV / 2);
   const posX = player.x, posY = player.y;
   const half = VIEW_H / 2;
-  const bobOff = (gameState === "play" ? Math.sin(player.bob) * 3 : 0) | 0;
+  const bobOff = (gameState === "play" ? Math.sin(player.bob) * 3 * player.bobAmp : 0) | 0;
   const horizon = half + bobOff;
   // Eye height above the walking surface. Wading into a pool lowers it,
   // which is what makes the step down read as a step rather than a
@@ -4534,7 +4625,7 @@ function renderWorld() {
   // --- floor & ceiling casting (per row) ---
   const fData = floorTex.data, cData = ceilTex.data;
   const wLiq = waterTex.data, nLiq = nukeTex.data, pPad = padTex.data;
-  const liqT = performance.now() / 1000 * 0.35;
+  const liqT = gameT * 0.35;
   const liqAt = (x, y) => (x >= 0 && y >= 0 && x < MAP_W && y < MAP_H)
     ? (floorMap[y * MAP_W + x] === 1 || floorMap[y * MAP_W + x] === 2) : false;
   const RIM = 0.11;   // width of the shaded lip inside a pool's edge
@@ -4682,7 +4773,7 @@ function renderWorld() {
     Array.isArray(entry) ? entry[Math.min(entry.length - 1, Math.max(0, Math.floor(phase * entry.length)))] : entry;
   for (const e of enemies) {
     if (e.dead) continue;
-    const hover = e.float ? e.float + Math.sin(performance.now() / 400 + e.x * 3) * 0.05 : 0;
+    const hover = e.float ? e.float + Math.sin(gameT * 2.5 + e.x * 3) * 0.05 : 0;
     let img, hScale = e.scale, sink = hover;
     if (e.state === "dying") {
       const t = Math.min(1, e.stateT / 0.45);
@@ -4701,7 +4792,7 @@ function renderWorld() {
     else {
       // walk cycle while chasing, first frame when idle
       const walking = e.state === "chase";
-      const phase = walking ? (performance.now() / 130 + e.x * 7) % 1 : 0;
+      const phase = walking ? (gameT * 7.7 + e.x * 7) % 1 : 0;
       img = animPick(sprites[e.idle], phase);
     }
     if (img) items.push({ x: e.x, y: e.y, img, hScale, sink: sink + liquidSink(e.x, e.y), lightFloor: e.lightFloor });
@@ -4771,8 +4862,8 @@ function renderWorld() {
 // Render: weapon, HUD, overlays (canvas 2D on top)
 // ---------------------------------------------------------
 function renderWeapon() {
-  const bobX = Math.sin(player.bob) * 8;
-  const bobY = Math.abs(Math.cos(player.bob)) * 6;
+  const bobX = Math.sin(player.bob) * 8 * player.bobAmp;
+  const bobY = Math.abs(Math.cos(player.bob)) * 6 * player.bobAmp;
   const gx = W / 2 + bobX, gy = VIEW_H + bobY - (muzzle > 0 ? 6 : 0);
   const w = player.weapon;
   // real weapon art when the local Guns/gifs/ frames are loaded
