@@ -2163,6 +2163,28 @@ const MY_GUN_ART = [
   { file: "My Guns/BFG2704.png",        slot: 6, mode: "single", use: "idle" },
   { file: "My Guns/chainsaw.png",       slot: 7, mode: "grid", cols: 4, rows: 2, idle: 0, fire: [1, 2, 3, 4, 5], inset: 0.02, capBottom: 0.06 },
 ];
+// Crop an idle/fire pair to a shared content box (so the gun holds
+// its position between frames) and derive one uniform on-screen scale
+// from the idle frame's own content size.
+function finalizeSingleArt(art) {
+  const parts = art._singles;
+  if (!parts || !parts.idle) return;
+  const idle = parts.idle, fire = parts.fire;
+  if (fire && fire.canvas.width === idle.canvas.width && fire.canvas.height === idle.canvas.height) {
+    const u = {
+      x: Math.min(idle.bbox.x, fire.bbox.x),
+      y: Math.min(idle.bbox.y, fire.bbox.y),
+    };
+    u.w = Math.max(idle.bbox.x + idle.bbox.w, fire.bbox.x + fire.bbox.w) - u.x;
+    u.h = Math.max(idle.bbox.y + idle.bbox.h, fire.bbox.y + fire.bbox.h) - u.y;
+    art.idle = cropCanvas(idle.canvas, u);
+    art.fire = cropCanvas(fire.canvas, u);
+  } else {
+    art.idle = cropCanvas(idle.canvas, idle.bbox);
+    if (fire) art.fire = cropCanvas(fire.canvas, fire.bbox);
+  }
+  art.scale = Math.min(260 / idle.bbox.w, 140 / idle.bbox.h);
+}
 function loadMyGun(cfg) {
   const img = new Image();
   img.onload = () => {
@@ -2175,7 +2197,9 @@ function loadMyGun(cfg) {
       const g = c.getContext("2d");
       g.drawImage(img, 0, 0);
       keyOutGunFrame(g, c.width, c.height);
-      art[cfg.use] = c;
+      const bbox = contentBBox(g, c.width, c.height) || { x: 0, y: 0, w: c.width, h: c.height };
+      (art._singles = art._singles || {})[cfg.use] = { canvas: c, bbox };
+      finalizeSingleArt(art);
       art.frames = null;
       return;
     }
@@ -2209,6 +2233,11 @@ function loadMyGun(cfg) {
       }
     }
     if (union) frames = frames.map(fc => cropCanvas(fc, union));
+    // scale from the idle frame's own gun content, not the flames
+    const ib = contentBBox(frames[0].getContext("2d"), frames[0].width, frames[0].height);
+    art.scale = ib
+      ? Math.min(260 / ib.w, 140 / ib.h)
+      : Math.min(260 / frames[0].width, 140 / frames[0].height);
     art.frames = frames;
     art.durs = frames.map((_, i) => i === 0 ? 0.1 : 0.07);
     art.fireTotal = art.durs.slice(1).reduce((a, b) => a + b, 0);
@@ -3558,8 +3587,9 @@ function renderWeapon() {
   }
   if (img) {
     ctx.imageSmoothingEnabled = false;
-    // one uniform on-screen size for every weapon (pistol-scale)
-    const scale = Math.min(300 / img.width, 165 / img.height) * (art.zoom || 1);
+    // one uniform on-screen size for every weapon, judged by the gun
+    // content itself rather than the image frame
+    const scale = (art.scale || Math.min(260 / img.width, 140 / img.height)) * (art.zoom || 1);
     const dw = img.width * scale, dh = img.height * scale;
     const dx = W / 2 - dw / 2 + bobX, dy = VIEW_H - dh + bobY + (muzzle > 0 ? -4 : 2);
     if (muzzle > 0 && !art.fire && !animating && !WEAPONS[w].melee) {   // generic flash when no firing art exists
