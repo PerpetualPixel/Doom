@@ -3678,8 +3678,8 @@ const ENEMY_TYPES = {
 };
 function makeEnemy(type, x, y) {
   return {
-    type, x, y, ...structuredClone(ENEMY_TYPES[type]),
-    state: "idle", stateT: 0, attackT: 0, dead: false,
+    type, x, y, homeX: x, homeY: y, ...structuredClone(ENEMY_TYPES[type]),
+    state: "idle", stateT: 0, attackT: 0, dead: false, respawnT: 0,
   };
 }
 function distToPlayer(x, y) { return Math.hypot(x - player.x, y - player.y); }
@@ -3739,11 +3739,36 @@ function loadLevel() {
   player.kills = 0;
   player.eyeDrop = 0;
   player.hurtFlash = 0; player.pickFlash = 0;
+  applySkillToSpawns();
   totalEnemies = enemies.length;
   fireCooldown = 0; muzzle = 0; teleCooldown = 0; nukeTimer = 0;
   showMsg(L.name, 2.6);
 }
-function startGame(startIdx = 0) {
+// Thin the level's monsters down to the slice this skill uses, then hand
+// the survivors whatever the skill does to them. Bosses are never thinned
+// out - a boss level without its boss is not the same level.
+function applySkillToSpawns() {
+  const tier = SK().spawn, fast = SK().fast;
+  const seen = {};
+  enemies = enemies.filter(e => {
+    if (BOSSES.has(e.type)) return true;
+    const n = seen[e.type] = (seen[e.type] || 0) + 1;
+    return SPAWN_TIER[(n - 1) % SPAWN_TIER.length] <= tier;
+  });
+  if (fast > 1) for (const e of enemies) { e.speed *= fast; e.cool /= fast; }
+}
+function respawnEnemy(e) {
+  const base = ENEMY_TYPES[e.type];
+  e.hp = base.hp;
+  e.x = e.homeX; e.y = e.homeY;
+  e.dead = false; e.state = "idle"; e.stateT = 0; e.attackT = 0; e.gruntT = 0;
+  e.respawnT = 0;
+  player.kills = Math.max(0, player.kills - 1);
+  effects.push({ x: e.x, y: e.y, t: 0, kind: "telefog" });
+  sfx("teleport", volAt(distToPlayer(e.x, e.y)) * 0.8);
+}
+function startGame(startIdx = 0, skillIdx = skill) {
+  skill = Math.max(0, Math.min(SKILLS.length - 1, skillIdx));
   levelIdx = startIdx;
   player.hp = 100;
   resetLoadout();
@@ -3796,6 +3821,32 @@ overlay.classList.add("hidden");   // the canvas draws its own menus
 let menuMode = "main", menuSel = 0;
 const EPISODE_STARTS = [0, 9, 18];
 
+// ---------------------------------------------------------
+// The five skill levels, with the 1993 rules:
+//   spawn    which slice of a level's monsters shows up
+//   dmgTake  multiplier on every point of damage the player takes
+//   ammoMul  multiplier on every ammo pickup
+//   fast     monsters move and attack this many times faster
+//   respawn  monsters come back after they die
+// ---------------------------------------------------------
+const SKILLS = [
+  { name: "I'M TOO YOUNG TO DIE", tag: "ITYTD", spawn: 0, dmgTake: 0.5, ammoMul: 2, fast: 1, respawn: false },
+  { name: "HEY, NOT TOO ROUGH",   tag: "HNTR",  spawn: 0, dmgTake: 1,   ammoMul: 1, fast: 1, respawn: false },
+  { name: "HURT ME PLENTY",       tag: "HMP",   spawn: 1, dmgTake: 1,   ammoMul: 1, fast: 1, respawn: false },
+  { name: "ULTRA-VIOLENCE",       tag: "UV",    spawn: 2, dmgTake: 1,   ammoMul: 1, fast: 1, respawn: false },
+  { name: "NIGHTMARE!",           tag: "NM",    spawn: 2, dmgTake: 1,   ammoMul: 2, fast: 2, respawn: true },
+];
+let skill = 2;                       // Hurt Me Plenty, as the game's default
+const SK = () => SKILLS[skill];
+// Which skills each monster of a type shows up on, cycling down the list
+// so every type thins in proportion: 4 in 8 appear everywhere, 2 more
+// join at Hurt Me Plenty, the last 2 only on Ultra-Violence upwards.
+const SPAWN_TIER = [0, 0, 1, 0, 2, 1, 0, 2];
+const BOSSES = new Set(["cyber", "spider"]);
+const dmgToPlayer = n => Math.round(n * SK().dmgTake);
+const RESPAWN_DELAY = 12;            // seconds before a Nightmare monster returns
+const MAX_CORPSES = 96;              // corpses kept on the floor at once
+
 // player-made title key art (drawn as the menu backdrop when loaded)
 const menuArt = new Image();
 let menuArtOk = false;
@@ -3813,8 +3864,10 @@ function canvasCoords(e) {
 }
 function menuLayout() {
   const items = menuItems();
-  const lineH = 44;
-  const startY = menuMode === "audio" ? (gameState === "paused" ? 130 : 190)
+  // the skill list is six rows long, so it sits higher and tighter
+  const lineH = menuMode === "skill" ? 40 : 44;
+  const startY = menuMode === "skill" ? 128
+               : menuMode === "audio" ? (gameState === "paused" ? 130 : 190)
                                       : (gameState === "paused" ? 148 : 208);
   return items.map((it, i) => ({ ...it, i, x: W / 2 - 170, y: startY + i * lineH, w: 340, h: 36 }));
 }
@@ -3839,6 +3892,7 @@ function menuItems() {
     { label: "KNEE-DEEP IN THE DEAD" }, { label: "THE SHORES OF HELL" },
     { label: "INFERNO" }, { label: "BACK" },
   ];
+  if (menuMode === "skill") return SKILLS.map(sk => ({ label: sk.name })).concat([{ label: "BACK" }]);
   if (menuMode === "audio") return [
     { label: "MUSIC VOLUME", kind: "slider", get: () => musicVol, set: setMusicVol },
     { label: "SFX VOLUME",   kind: "slider", get: () => sfxVol,   set: setSfxVol },
@@ -3852,6 +3906,7 @@ function menuItems() {
   return [{ label: "NEW GAME" }, { label: "AUDIO OPTIONS" }, { label: "READ THIS!" }];
 }
 let audioMenuFrom = "main";   // where AUDIO OPTIONS was opened from
+let pendingEpisode = 0;       // episode chosen, waiting on a skill
 function openAudioMenu() { audioMenuFrom = menuMode; menuMode = "audio"; menuSel = 0; }
 function menuActivate() {
   sfx("switch", 0.6);
@@ -3860,8 +3915,11 @@ function menuActivate() {
     else if (menuSel === 1) openAudioMenu();
     else menuMode = "help";
   } else if (menuMode === "episodes") {
-    if (menuSel < 3) startGame(EPISODE_STARTS[menuSel]);
+    if (menuSel < 3) { pendingEpisode = menuSel; menuMode = "skill"; menuSel = skill; }
     else { menuMode = "main"; menuSel = 0; }
+  } else if (menuMode === "skill") {
+    if (menuSel < SKILLS.length) startGame(EPISODE_STARTS[pendingEpisode], menuSel);
+    else { menuMode = "episodes"; menuSel = pendingEpisode; }
   } else if (menuMode === "audio") {
     if (menuSel === 2) toggleMusic();
     else if (menuSel === 3) musicTogglePlay();
@@ -3882,6 +3940,7 @@ function menuAdjust(dir) {
 }
 function menuBack() {
   if (menuMode === "audio") { menuMode = audioMenuFrom === "paused" ? "paused" : "main"; menuSel = 0; }
+  else if (menuMode === "skill") { menuMode = "episodes"; menuSel = pendingEpisode; }
   else if (menuMode === "episodes" || menuMode === "help") { menuMode = "main"; menuSel = 0; }
   else if (menuMode === "paused") resumeGame();
 }
@@ -4144,7 +4203,7 @@ function explodeAt(x, y, radius, dmg, hurtSelf) {
   if (hurtSelf) {
     const pd = distToPlayer(x, y);
     if (pd < radius * 0.8) {
-      player.hp -= (dmg * 0.5 * (1 - pd / (radius * 0.8))) | 0;
+      player.hp -= dmgToPlayer((dmg * 0.5 * (1 - pd / (radius * 0.8))) | 0);
       player.hurtFlash = 0.35; faceTimer = 0.8;
       sfx("playerPain", 0.8);
     }
@@ -4155,7 +4214,7 @@ function explodeBarrel(b) {
   const pd = distToPlayer(b.x, b.y);
   sfx("barrel", volAt(pd));
   if (pd < 2.2) {
-    player.hp -= (50 * (1 - pd / 2.2)) | 0;
+    player.hp -= dmgToPlayer((50 * (1 - pd / 2.2)) | 0);
     player.hurtFlash = 0.4; faceTimer = 0.8;
     sfx("playerPain", 0.9);
   }
@@ -4273,7 +4332,7 @@ function update(dt) {
     nukeTimer -= dt;
     if (nukeTimer <= 0) {
       nukeTimer = 0.7;
-      player.hp -= 5;
+      player.hp -= dmgToPlayer(5);
       player.hurtFlash = Math.max(player.hurtFlash, 0.2);
       faceTimer = 0.5;
       sfx("playerPain", 0.5);
@@ -4302,15 +4361,31 @@ function update(dt) {
 
   // --- enemies ---
   for (const e of enemies) {
-    if (e.dead) continue;
+    if (e.dead) {
+      // Nightmare: they get back up where they fell in
+      if (e.respawnT > 0 && (e.respawnT -= dt) <= 0) respawnEnemy(e);
+      continue;
+    }
     e.stateT += dt;
     if (e.gruntT > 0) e.gruntT -= dt;
     if (e.state === "dying") {
       if (e.stateT > 0.45) {
         e.dead = true; player.kills++;
-        if (e.corpse && sprites[e.corpse]) decors.push({ x: e.x, y: e.y, spr: e.corpse });
+        if (SK().respawn) e.respawnT = RESPAWN_DELAY;
+        // On Nightmare the same monster dies over and over on the same
+        // tile, so cap the corpse trail and don't stack a second identical
+        // drop where one is already lying uncollected.
+        if (e.corpse && sprites[e.corpse]) {
+          decors.push({ x: e.x, y: e.y, spr: e.corpse, fromKill: true });
+          if (decors.length > MAX_CORPSES) {
+            const oldest = decors.findIndex(d => d.fromKill);
+            if (oldest >= 0) decors.splice(oldest, 1);
+          }
+        }
         const drop = ENEMY_DROPS[e.type];
-        if (drop && Math.random() < drop.chance)
+        const alreadyThere = SK().respawn &&
+          pickups.some(pk => pk.spr === drop?.spr && Math.hypot(pk.x - e.x, pk.y - e.y) < 0.9);
+        if (drop && !alreadyThere && Math.random() < drop.chance)
           pickups.push({ kind: "ammo", spr: drop.spr, give: drop.give, x: e.x, y: e.y });
       }
       continue;
@@ -4349,7 +4424,7 @@ function update(dt) {
       sfx(e.atkSfx, volAt(dist));
     } else if (!e.ranged && dist < 1.1 && e.attackT <= 0) {
       e.state = "attack"; e.stateT = 0; e.attackT = e.cool;
-      player.hp -= e.dmg;
+      player.hp -= dmgToPlayer(e.dmg);
       player.hurtFlash = 0.35; faceTimer = 0.8;
       sfx(e.atkSfx);
       sfx("playerPain", 0.9);
@@ -4378,7 +4453,7 @@ function update(dt) {
       continue;
     }
     if (Math.hypot(p.x - player.x, p.y - player.y) < 0.4) {
-      player.hp -= p.dmg;
+      player.hp -= dmgToPlayer(p.dmg);
       player.hurtFlash = 0.35; faceTimer = 0.8;
       sfx(p.img === "rocket" ? "rocketHit" : "fireballHit");
       if (p.img === "rocket") effects.push({ x: p.x, y: p.y, t: 0, kind: "boom" });
@@ -4398,14 +4473,14 @@ function update(dt) {
         let took = false;
         for (const [type, n] of Object.entries(p.give)) {
           if (player.ammo[type] < AMMO_MAX[type]) {
-            player.ammo[type] = Math.min(AMMO_MAX[type], player.ammo[type] + n);
+            player.ammo[type] = Math.min(AMMO_MAX[type], player.ammo[type] + n * SK().ammoMul);
             took = true;
           }
         }
         if (!took) continue;
       } else if (p.kind === "weapon") {
         for (const [type, n] of Object.entries(p.give))
-          player.ammo[type] = Math.min(AMMO_MAX[type], player.ammo[type] + n);
+          player.ammo[type] = Math.min(AMMO_MAX[type], player.ammo[type] + n * SK().ammoMul);
         if (!player.weapons[p.w]) {
           player.weapons[p.w] = true;
           player.weapon = p.w;
@@ -4970,10 +5045,15 @@ function renderOverlays() {
     ctx.fillStyle = "#ccc";
     ctx.fillText(`KILLS: ${player.kills} / ${totalEnemies}`, W / 2, H / 2 - 10);
     ctx.fillText(`ITEMS LEFT: ${pickups.length}`, W / 2, H / 2 + 22);
+    ctx.font = "bold 16px 'Courier New', monospace";
+    ctx.fillStyle = "#8a8a8a";
+    ctx.fillText(`SKILL: ${SK().name}`, W / 2, H / 2 + 48);
+    ctx.font = "bold 22px 'Courier New', monospace";
+    ctx.fillStyle = "#e0a020";
     ctx.fillStyle = "#e0a020";
     ctx.fillText(pendingNext !== null
       ? "PRESS SPACE FOR " + LEVELS[pendingNext].name
-      : "PRESS SPACE TO FINISH", W / 2, H / 2 + 70);
+      : "PRESS SPACE TO FINISH", W / 2, H / 2 + 78);
   } else if (gameState === "victory") {
     ctx.font = "bold 44px 'Courier New', monospace";
     ctx.fillStyle = "#e0a020";
