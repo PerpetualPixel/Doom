@@ -1636,12 +1636,7 @@ sprites.redkey = keycardSprite("#d02020");
 // local images requires http(s) - on file:// this quietly
 // keeps the fallback art.
 // -----------------------------------------------------
-const SHEET_MAP = [
-  { file: "Demon.png",         set: "pinky" },
-  { file: "Zombie.png",        set: "zombie" },
-  { file: "Cyber Demon.png",   set: "cyber" },
-  { file: "Spiderdemon.png",   set: "spider" },
-];
+const SHEET_MAP = [];   // every monster now uses the player's own art
 function sliceSheet(img) {
   const c = document.createElement("canvas");
   c.width = img.width; c.height = img.height;
@@ -1786,6 +1781,71 @@ function sliceComponents(img) {
     return new Uint32Array(od.data.buffer);
   });
 }
+
+// The player's all-in-one enemy sheet: a 6x6 grid of monster states.
+// Cells are trimmed to their content and keyed like the other custom
+// art (real transparency and baked checkerboards both work).
+const ENEMY_GRID = {
+  file: "all enemies.png", cols: 6, rows: 6,
+  map: [   // [row, col, spriteKey]
+    [1, 0, "cyberIdle"],  [1, 0, "cyberAttack"],  [1, 1, "cyberPain"],  [1, 2, "cyberCorpse"],
+    [2, 0, "spiderIdle"], [2, 1, "spiderAttack"], [2, 1, "spiderPain"], [2, 2, "spiderCorpse"],
+    [3, 0, "pinkyIdle"],  [3, 1, "pinkyAttack"],  [3, 1, "pinkyPain"],  [3, 2, "pinkyCorpse"],
+    [5, 0, "zombieIdle"], [5, 1, "zombieAttack"], [5, 0, "zombiePain"], [5, 2, "zombieCorpse"],
+  ],
+};
+(function () {
+  const img = new Image();
+  img.onload = () => {
+    const c = document.createElement("canvas");
+    c.width = img.width; c.height = img.height;
+    const g = c.getContext("2d");
+    g.drawImage(img, 0, 0);
+    let data;
+    try { data = g.getImageData(0, 0, c.width, c.height); } catch { return; }
+    const d = data.data, w = c.width, h = c.height;
+    const isBg = buildBgKeyer(d, w, h);
+    const solid = (x, y) => {
+      const i = (y * w + x) * 4;
+      return d[i + 3] >= 128 && !isBg(d[i], d[i + 1], d[i + 2]);
+    };
+    const cw = w / ENEMY_GRID.cols, ch = h / ENEMY_GRID.rows;
+    const cache = new Map();
+    const cellSprite = (row, col) => {
+      const key = row * 16 + col;
+      if (cache.has(key)) return cache.get(key);
+      const cx0 = Math.floor(col * cw), cy0 = Math.floor(row * ch);
+      const cx1 = Math.floor((col + 1) * cw) - 1, cy1 = Math.floor((row + 1) * ch) - 1;
+      let x0 = cx1, x1 = cx0, y0 = cy1, y1 = cy0;
+      for (let y = cy0; y <= cy1; y++) for (let x = cx0; x <= cx1; x++)
+        if (solid(x, y)) {
+          if (x < x0) x0 = x; if (x > x1) x1 = x;
+          if (y < y0) y0 = y; if (y > y1) y1 = y;
+        }
+      if (x1 <= x0 || y1 <= y0) { cache.set(key, null); return null; }
+      const sw = x1 - x0 + 1, sh = y1 - y0 + 1;
+      const oc = document.createElement("canvas");
+      oc.width = oc.height = SPR;
+      const og = oc.getContext("2d");
+      og.imageSmoothingEnabled = false;
+      const sc = Math.min(SPR / sw, SPR / sh);
+      og.drawImage(c, x0, y0, sw, sh, (SPR - sw * sc) / 2, SPR - sh * sc, sw * sc, sh * sc);
+      const od = og.getImageData(0, 0, SPR, SPR);
+      const p = od.data;
+      for (let i = 0; i < p.length; i += 4)
+        if (p[i + 3] > 0 && isBg(p[i], p[i + 1], p[i + 2])) p[i + 3] = 0;
+      const spr = new Uint32Array(od.data.buffer);
+      cache.set(key, spr);
+      return spr;
+    };
+    for (const [row, col, name] of ENEMY_GRID.map) {
+      const spr = cellSprite(row, col);
+      if (spr) sprites[name] = spr;
+    }
+  };
+  img.onerror = () => {};
+  img.src = "sprites/" + ENEMY_GRID.file;
+})();
 
 // hell knight fallback art: tinted reuse of the baron drawings until
 // (or unless) the custom sheet below loads
@@ -2365,7 +2425,8 @@ const ENEMY_TYPES = {
               ball: "fireball", atkSfx: "fireball",
               sfxSight: "impSight", sfxPain: "impPain", sfxDie: "impDie", sfxAct: "impAct" },
   pinky:    { hp: 150, speed: 2.6, dmg: 25, ranged: false, cool: 1.0, scale: 1.15,
-              idle: "pinkyIdle", attack: "pinkyAttack", pain: "pinkyPain", ball: "fireball", atkSfx: "bite",
+              idle: "pinkyIdle", attack: "pinkyAttack", pain: "pinkyPain", corpse: "pinkyCorpse",
+              ball: "fireball", atkSfx: "bite",
               sfxSight: "pinkySight", sfxPain: "pinkyPain", sfxDie: "pinkyDie", sfxAct: "pinkyAct" },
   baron:    { hp: 320, speed: 1.5, dmg: 22, ranged: true,  cool: 1.7, pspeed: 6, scale: 1.35,
               idle: "baronIdle", attack: "baronAttack", pain: "baronPain", corpse: "baronCorpse",
@@ -2376,7 +2437,8 @@ const ENEMY_TYPES = {
               ball: "greenball", atkSfx: "fireball",
               sfxSight: "knightSight", sfxPain: "pinkyPain", sfxDie: "knightDie", sfxAct: "baronAct" },
   zombie:   { hp: 30,  speed: 1.8, dmg: 7,  ranged: true,  cool: 1.3, pspeed: 11, scale: 0.95,
-              idle: "zombieIdle", attack: "zombieAttack", pain: "zombiePain", ball: "tracer", atkSfx: "shoot",
+              idle: "zombieIdle", attack: "zombieAttack", pain: "zombiePain", corpse: "zombieCorpse",
+              ball: "tracer", atkSfx: "shoot",
               sfxSight: "zombieSight", sfxPain: "impPain", sfxDie: "zombieDie", sfxAct: "impAct" },
   caco:     { hp: 200, speed: 1.1, dmg: 18, ranged: true,  cool: 1.9, pspeed: 6, scale: 1.25, float: -0.3,
               idle: "cacoIdle", attack: "cacoAttack", pain: "cacoPain", corpse: "cacoCorpse",
@@ -2387,10 +2449,12 @@ const ENEMY_TYPES = {
               ball: "fireball", atkSfx: "soulSight",
               sfxSight: "soulSight", sfxPain: "pinkyPain", sfxDie: "soulDie", sfxAct: "baronAct" },
   cyber:    { hp: 650, speed: 1.3, dmg: 38, ranged: true,  cool: 1.4, pspeed: 8, scale: 1.6,
-              idle: "cyberIdle", attack: "cyberAttack", pain: "cyberPain", ball: "rocket", atkSfx: "rocket",
+              idle: "cyberIdle", attack: "cyberAttack", pain: "cyberPain", corpse: "cyberCorpse",
+              ball: "rocket", atkSfx: "rocket",
               sfxSight: "cyberSight", sfxPain: "pinkyPain", sfxDie: "cyberDie", sfxAct: "baronAct" },
   spider:   { hp: 650, speed: 1.1, dmg: 9,  ranged: true,  cool: 0.55, pspeed: 12, scale: 1.7,
-              idle: "spiderIdle", attack: "spiderAttack", pain: "spiderPain", ball: "tracer", atkSfx: "shoot",
+              idle: "spiderIdle", attack: "spiderAttack", pain: "spiderPain", corpse: "spiderCorpse",
+              ball: "tracer", atkSfx: "shoot",
               sfxSight: "spiderSight", sfxPain: "pinkyPain", sfxDie: "spiderDie", sfxAct: "baronAct" },
 };
 function makeEnemy(type, x, y) {
