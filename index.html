@@ -2873,9 +2873,16 @@ addEventListener("keydown", e => {
   if (e.code === "Escape" && (gameState === "dead" || gameState === "victory")) goToTitle();
   if (e.code === "KeyE") {
     if (gameState === "play") tryUse();
-    else if (gameState === "intermission") nextLevel();
+    else if (gameState === "intermission") {
+      nextLevel();
+      fireCooldown = Math.max(fireCooldown, 0.35);
+    }
   }
-  if (e.code === "Space" && gameState === "intermission") nextLevel();
+  if (e.code === "Space" && gameState === "intermission") {
+    nextLevel();
+    keys["Space"] = false;                            // don't fire on arrival
+    fireCooldown = Math.max(fireCooldown, 0.35);
+  }
   if (e.code === "KeyR") {
     if (gameState === "dead") {
       player.hp = 100;
