@@ -13,7 +13,7 @@ out = ['// Generated: the sprite sheets and gun art inlined as data URIs.',
        '// Data URIs are exempt, so the real art works everywhere.',
        '// Rebuild with: python3 tools/embed_assets.py',
        'window.EMBEDDED_ASSETS = {']
-for folder in ('sprites', 'Guns/My Guns', 'Guns/GunsNoBackground'):
+for folder in ('sprites', 'Guns/My Guns', 'Guns/GunsNoBackground', 'textures'):
     for name in sorted(os.listdir(folder)):
         path = f'{folder}/{name}'
         mime = 'image/jpeg' if name.lower().endswith(('.jpg', '.jpeg')) else 'image/png'
