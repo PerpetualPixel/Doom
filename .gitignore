@@ -1,13 +1,12 @@
 # Local asset folders (id Software's copyrighted game assets).
-# The game auto-detects these locally and falls back to its own
-# procedural art and synthesized audio when they are absent, so
-# the hosted build works without them. They are intentionally
-# not distributed with this repo.
-SFX/
+# The game auto-detects these locally and falls back gracefully when
+# they are absent, so the hosted build works without them. They are
+# intentionally not distributed with this repo.
 Doom OST/
 Maps/
 Guns/*
 sprites/*
+SFX/*
 
 # The player's own custom weapon art IS part of the repo:
 !Guns/My Guns/
@@ -20,3 +19,29 @@ sprites/*
 !sprites/KnightCustom.jpg
 !sprites/BaronCustom.jpg
 !sprites/all enemies.png
+
+# Royalty-free sound effects ARE part of the repo (the classic ds*.wav
+# rips in the same folder stay local-only):
+!SFX/Dark server room.mp3
+!SFX/Demon moaning in distance.mp3
+!SFX/Plasma Rifle.mp3
+!SFX/Player Death SFX.mp3
+!SFX/alesiadavina-approaching-demon-growl-deep-demonic-beast-sound-effect-541930.mp3
+!SFX/alesiadavina-horror-sound-lurking-horror-monster-189948.mp3
+!SFX/alesiadavina-lurking-demon-growl-dark-cinematic-horror-drone-sfx-543183.mp3
+!SFX/big monster footstep.mp3
+!SFX/chainsaw cutting.mp3
+!SFX/chainsaw equipped.mp3
+!SFX/chainsaw idle.mp3
+!SFX/demon growl.mp3
+!SFX/diff_style-doom-riser-7-2-2-489983.mp3
+!SFX/freesound_community-horn-of-doom-101734.mp3
+!SFX/gatling gun.mp3
+!SFX/monster bite.mp3
+!SFX/monster growl 2.mp3
+!SFX/monster growl.mp3
+!SFX/pistol.mp3
+!SFX/player death sfx body ripping apart.mp3
+!SFX/rocket launcher exploding.mp3
+!SFX/rocket launcher.mp3
+!SFX/shotgun.mp3

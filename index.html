@@ -1816,25 +1816,56 @@ const ENEMY_GRID = {
       if (cache.has(key)) return cache.get(key);
       const cx0 = Math.floor(col * cw), cy0 = Math.floor(row * ch);
       const cx1 = Math.floor((col + 1) * cw) - 1, cy1 = Math.floor((row + 1) * ch) - 1;
+      const cwid = cx1 - cx0 + 1, chgt = cy1 - cy0 + 1;
+      // flood the background in from the cell perimeter: only pixels
+      // connected to the edge are cleared, so background-colored
+      // shades INSIDE the creature (pale flesh, highlights) survive
+      const cleared = new Uint8Array(cwid * chgt);
+      const bgMatch = (x, y) => {
+        const i = (y * w + x) * 4;
+        return d[i + 3] < 128 || isBg(d[i], d[i + 1], d[i + 2]);
+      };
+      const qq = [];
+      const pushCell = (x, y) => {
+        const li = (y - cy0) * cwid + (x - cx0);
+        if (cleared[li]) return;
+        if (bgMatch(x, y)) { cleared[li] = 1; qq.push([x, y]); }
+      };
+      for (let x = cx0; x <= cx1; x++) { pushCell(x, cy0); pushCell(x, cy1); }
+      for (let y = cy0; y <= cy1; y++) { pushCell(cx0, y); pushCell(cx1, y); }
+      while (qq.length) {
+        const [x, y] = qq.pop();
+        if (x > cx0) pushCell(x - 1, y);
+        if (x < cx1) pushCell(x + 1, y);
+        if (y > cy0) pushCell(x, y - 1);
+        if (y < cy1) pushCell(x, y + 1);
+      }
+      const solidAt = (x, y) =>
+        !cleared[(y - cy0) * cwid + (x - cx0)] && d[(y * w + x) * 4 + 3] >= 128;
       let x0 = cx1, x1 = cx0, y0 = cy1, y1 = cy0;
       for (let y = cy0; y <= cy1; y++) for (let x = cx0; x <= cx1; x++)
-        if (solid(x, y)) {
+        if (solidAt(x, y)) {
           if (x < x0) x0 = x; if (x > x1) x1 = x;
           if (y < y0) y0 = y; if (y > y1) y1 = y;
         }
       if (x1 <= x0 || y1 <= y0) { cache.set(key, null); return null; }
-      const sw = x1 - x0 + 1, sh = y1 - y0 + 1;
+      // native-resolution cell with the flooded background punched out
+      const nat = document.createElement("canvas");
+      nat.width = x1 - x0 + 1; nat.height = y1 - y0 + 1;
+      const ng = nat.getContext("2d");
+      ng.drawImage(c, x0, y0, nat.width, nat.height, 0, 0, nat.width, nat.height);
+      const nd = ng.getImageData(0, 0, nat.width, nat.height);
+      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++)
+        if (cleared[(y - cy0) * cwid + (x - cx0)])
+          nd.data[((y - y0) * nat.width + (x - x0)) * 4 + 3] = 0;
+      ng.putImageData(nd, 0, 0);
       const oc = document.createElement("canvas");
       oc.width = oc.height = SPR;
       const og = oc.getContext("2d");
       og.imageSmoothingEnabled = false;
-      const sc = Math.min(SPR / sw, SPR / sh);
-      og.drawImage(c, x0, y0, sw, sh, (SPR - sw * sc) / 2, SPR - sh * sc, sw * sc, sh * sc);
-      const od = og.getImageData(0, 0, SPR, SPR);
-      const p = od.data;
-      for (let i = 0; i < p.length; i += 4)
-        if (p[i + 3] > 0 && isBg(p[i], p[i + 1], p[i + 2])) p[i + 3] = 0;
-      const spr = new Uint32Array(od.data.buffer);
+      const sc = Math.min(SPR / nat.width, SPR / nat.height);
+      og.drawImage(nat, 0, 0, nat.width, nat.height, (SPR - nat.width * sc) / 2, SPR - nat.height * sc, nat.width * sc, nat.height * sc);
+      const spr = new Uint32Array(og.getImageData(0, 0, SPR, SPR).data.buffer);
       cache.set(key, spr);
       return spr;
     };
@@ -1934,22 +1965,27 @@ function keyOutGunFrame(g, w, h) {
     };
     for (let x = 0; x < w; x++) { tally(x, 0); tally(x, h - 1); }
     for (let y = 1; y < h - 1; y++) { tally(0, y); tally(w - 1, y); }
-    if (borderOpaque < 24) return;   // transparent-background art: leave it alone
+    if (!borderOpaque) return;   // fully transparent border: leave the art alone
+    // A mostly transparent border with a few opaque pixels means a
+    // panel frame line clipped into the cell - key those pixels too.
+    const shareMin = borderOpaque >= 24 ? borderOpaque * 0.06 : 1;
     const bgKeys = [];
     for (const e of counts.values()) {
-      if (e.n < borderOpaque * 0.06) continue;
+      if (e.n < shareMin) continue;
       const k = [e.sr / e.n, e.sg / e.n, e.sb / e.n];
       if (Math.max(k[0], k[1], k[2]) - Math.min(k[0], k[1], k[2]) < 40) bgKeys.push(k);   // skip an arm crossing the border
     }
     if (!bgKeys.length) return;
-    const lums = bgKeys.map(k => Math.max(k[0], k[1], k[2]));
-    const loLum = Math.min(...lums) - 34, hiLum = Math.max(...lums) + 34;
+    const hiLum = Math.max(...bgKeys.map(k => Math.max(k[0], k[1], k[2]))) + 10;
     const isBg = i => {
       if (p[i + 3] === 0) return true;
       const r = p[i], g2 = p[i + 1], b = p[i + 2];
       if (bgKeys.some(k => Math.abs(r - k[0]) < 30 && Math.abs(g2 - k[1]) < 30 && Math.abs(b - k[2]) < 30)) return true;
+      // vignettes fade the background DOWN toward black, never up -
+      // so only shades no brighter than the background qualify, and
+      // bright gun metal stays out of the flood's reach
       const mx = Math.max(r, g2, b), mn = Math.min(r, g2, b);
-      return mx - mn < 22 && mx >= loLum && mx <= hiLum;   // vignette / soft shadow shades
+      return mx - mn < 16 && mx <= hiLum;
     };
     // Flood fill from the border: only background-connected pixels are
     // cleared, so dark details enclosed inside the weapon silhouette
@@ -1972,6 +2008,23 @@ function keyOutGunFrame(g, w, h) {
       if (x < w - 1) push(x + 1, y);
       if (y > 0) push(x, y - 1);
       if (y < h - 1) push(x, y + 1);
+    }
+    // shave the anti-aliased fringe: boundary pixels still tinted
+    // toward a background shade get cleared, two rings deep at most
+    for (let pass = 0; pass < 2; pass++) {
+      const shave = [];
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        const idx = y * w + x, j = idx * 4;
+        if (p[j + 3] === 0) continue;
+        const nextToClear =
+          (x > 0 && p[(idx - 1) * 4 + 3] === 0) || (x < w - 1 && p[(idx + 1) * 4 + 3] === 0) ||
+          (y > 0 && p[(idx - w) * 4 + 3] === 0) || (y < h - 1 && p[(idx + w) * 4 + 3] === 0);
+        if (!nextToClear) continue;
+        if (bgKeys.some(k => Math.abs(p[j] - k[0]) < 60 && Math.abs(p[j + 1] - k[1]) < 60 && Math.abs(p[j + 2] - k[2]) < 60))
+          shave.push(j);
+      }
+      for (const j of shave) p[j + 3] = 0;
+      if (!shave.length) break;
     }
     g.putImageData(d, 0, 0);
   } catch {}   // file://: pixels unreadable, draw the frame as-is
@@ -2040,8 +2093,8 @@ const MY_GUN_ART = [
   { file: "fist.png",           slot: 0, mode: "single", use: "fire" },
   { file: "pistol.png",         slot: 1, mode: "single", use: "idle" },
   { file: "pistol shooting.png", slot: 1, mode: "single", use: "fire" },
-  { file: "shotgun.png",        slot: 2, mode: "single", use: "idle" },
-  { file: "chaingun.png",       slot: 3, mode: "grid", cols: 4, rows: 2, idle: 0, fire: [1, 2, 3], inset: 0.06 },
+  { file: "shotgun.png",        slot: 2, mode: "single", use: "idle", zoom: 0.62 },
+  { file: "chaingun.png",       slot: 3, mode: "grid", cols: 4, rows: 2, idle: 0, fire: [1, 2, 3], inset: 0.085 },
   { file: "rocketlauncher.png", slot: 4, mode: "grid", cols: 4, rows: 3, idle: 0, fire: [2, 3, 4], inset: 0.02 },
   { file: "plasma gun.png",     slot: 5, mode: "grid", cols: 3, rows: 2, idle: 0, fire: [1, 2, 4], inset: 0.07, capBottom: 0.09 },
   { file: "BFG2704.png",        slot: 6, mode: "single", use: "idle" },
@@ -2052,6 +2105,7 @@ function loadMyGun(cfg) {
   img.onload = () => {
     const art = gunArt[cfg.slot];
     art.custom = true;
+    if (cfg.zoom) art.zoom = cfg.zoom;
     if (cfg.mode === "single") {
       const c = document.createElement("canvas");
       c.width = img.width; c.height = img.height;
@@ -2133,20 +2187,52 @@ const SFX_FILES = {
   spiderSight: "dsspisit.wav", spiderDie: "dsspidth.wav",
   rocket: "dsrlaunc.wav",      rocketHit: "dsrxplod.wav",
 };
+// Royalty-free sounds (shipped with the repo) take priority, then the
+// optional local classic wavs, then the synthesized fallbacks.
+const RF_SFX = {
+  shoot: "pistol.mp3",
+  shotgun: "shotgun.mp3",
+  gatling: "gatling gun.mp3",
+  plasma: "Plasma Rifle.mp3",
+  rocket: "rocket launcher.mp3",
+  rocketHit: "rocket launcher exploding.mp3",
+  barrel: "rocket launcher exploding.mp3",
+  saw: "chainsaw cutting.mp3",
+  sawup: "chainsaw equipped.mp3",
+  bite: "monster bite.mp3",
+  playerDie: "Player Death SFX.mp3",
+  impSight: "monster growl.mp3",
+  pinkySight: "alesiadavina-lurking-demon-growl-dark-cinematic-horror-drone-sfx-543183.mp3",
+  baronSight: "alesiadavina-approaching-demon-growl-deep-demonic-beast-sound-effect-541930.mp3",
+  knightSight: "monster growl 2.mp3",
+  cacoSight: "alesiadavina-horror-sound-lurking-horror-monster-189948.mp3",
+  cyberSight: "freesound_community-horn-of-doom-101734.mp3",
+  spiderSight: "Demon moaning in distance.mp3",
+  impAct: "demon growl.mp3",
+  pinkyAct: "demon growl.mp3",
+  baronAct: "demon growl.mp3",
+  cyberAct: "big monster footstep.mp3",
+};
 const sfxLib = {};
-for (const [k, f] of Object.entries(SFX_FILES)) {
-  const a = new Audio("SFX/" + f);
+function addSfxSource(k, url) {
+  const a = new Audio(url);
   a.preload = "auto";
-  sfxLib[k] = { el: a, ok: false };
-  a.addEventListener("canplaythrough", () => { sfxLib[k].ok = true; }, { once: true });
+  const entry = { el: a, ok: false };
+  a.addEventListener("canplaythrough", () => { entry.ok = true; }, { once: true });
+  (sfxLib[k] = sfxLib[k] || []).push(entry);
 }
+for (const [k, f] of Object.entries(RF_SFX)) addSfxSource(k, "SFX/" + f);
+for (const [k, f] of Object.entries(SFX_FILES)) addSfxSource(k, "SFX/" + f);
 function sfx(kind, vol = 1) {
-  const s = sfxLib[kind];
-  if (s && s.ok) {
-    const c = s.el.cloneNode();
-    c.volume = Math.max(0.05, Math.min(1, vol * 0.9));
-    c.play().catch(() => {});
-    return;
+  const list = sfxLib[kind];
+  if (list) {
+    for (const s of list) {
+      if (!s.ok) continue;
+      const c = s.el.cloneNode();
+      c.volume = Math.max(0.05, Math.min(1, vol * 0.9));
+      c.play().catch(() => {});
+      return;
+    }
   }
   synthSfx(kind, vol);
 }
@@ -2169,6 +2255,7 @@ const SYNTH_ALIAS = {
   shotgun: "shoot", sgcock: "pickup", punch: "hit", plasma: "fireball", bfg: "boom",
   saw: "hit", sawup: "growl",
   menuBlip: "pickup",
+  gatling: "shoot", cyberAct: "growl",
 };
 function synthSfx(kind, vol = 1) {
   if (!audio || audio.state !== "running") return;
@@ -2424,7 +2511,7 @@ const WEAPONS = [
   { name: "FIST",            ammoType: null,      rate: 0.45, melee: true, dmg: 14, rnd: 8,  sfx: "punch" },
   { name: "PISTOL",          ammoType: "bullets", rate: 0.34, dmg: 20, rnd: 14, use: 1, sfx: "shoot" },
   { name: "SHOTGUN",         ammoType: "shells",  rate: 0.95, dmg: 7,  rnd: 5,  use: 1, pellets: 7, spread: 0.09, sfx: "shotgun" },
-  { name: "CHAINGUN",        ammoType: "bullets", rate: 0.09, dmg: 11, rnd: 7,  use: 1, spread: 0.03, sfx: "shoot" },
+  { name: "CHAINGUN",        ammoType: "bullets", rate: 0.09, dmg: 11, rnd: 7,  use: 1, spread: 0.03, sfx: "gatling" },
   { name: "ROCKET LAUNCHER", ammoType: "rockets", rate: 0.85, dmg: 110, rnd: 40, use: 1, proj: "rocket", pspeed: 12, splash: 1.9, splashDmg: 90, sfx: "rocket" },
   { name: "PLASMA RIFLE",    ammoType: "cells",   rate: 0.12, dmg: 23, rnd: 12, use: 1, proj: "plasmaball", pspeed: 14, sfx: "plasma" },
   { name: "BFG9000",         ammoType: "cells",   rate: 1.7,  dmg: 300, rnd: 100, use: 40, proj: "bfgball", pspeed: 9, splash: 3.2, splashDmg: 160, sfx: "bfg" },
@@ -2508,10 +2595,10 @@ const ENEMY_TYPES = {
   cyber:    { hp: 650, speed: 1.3, dmg: 38, ranged: true,  cool: 1.4, pspeed: 8, scale: 1.6,
               idle: "cyberIdle", attack: "cyberAttack", pain: "cyberPain", corpse: "cyberCorpse",
               ball: "rocket", atkSfx: "rocket",
-              sfxSight: "cyberSight", sfxPain: "pinkyPain", sfxDie: "cyberDie", sfxAct: "baronAct" },
+              sfxSight: "cyberSight", sfxPain: "pinkyPain", sfxDie: "cyberDie", sfxAct: "cyberAct" },
   spider:   { hp: 650, speed: 1.1, dmg: 9,  ranged: true,  cool: 0.55, pspeed: 12, scale: 1.7,
               idle: "spiderIdle", attack: "spiderAttack", pain: "spiderPain", corpse: "spiderCorpse",
-              ball: "tracer", atkSfx: "shoot",
+              ball: "tracer", atkSfx: "gatling",
               sfxSight: "spiderSight", sfxPain: "pinkyPain", sfxDie: "spiderDie", sfxAct: "baronAct" },
 };
 function makeEnemy(type, x, y) {
@@ -3385,7 +3472,7 @@ function renderWeapon() {
   }
   if (img) {
     ctx.imageSmoothingEnabled = false;
-    const scale = Math.min(340 / img.width, 260 / img.height);
+    const scale = Math.min(340 / img.width, 260 / img.height) * (art.zoom || 1);
     const dw = img.width * scale, dh = img.height * scale;
     const dx = W / 2 - dw / 2 + bobX, dy = VIEW_H - dh + bobY + (muzzle > 0 ? -4 : 2);
     if (muzzle > 0 && !art.fire && !animating && !WEAPONS[w].melee) {   // generic flash when no firing art exists
