@@ -23,6 +23,8 @@ SFX/*
 !sprites/BaronCustom.jpg
 !sprites/baron custom 2.png
 !sprites/all enemies.png
+!sprites/zombie custom 2.png
+!sprites/Zombie_Sergeant.png
 
 # Royalty-free sound effects ARE part of the repo (the classic ds*.wav
 # rips in the same folder stay local-only):

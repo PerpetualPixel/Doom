@@ -86,7 +86,7 @@ const LEVELS = [
       "#..e......T..a....T....h...#",
       "#...WW....T.......T........#",
       "#...WW....D.......D........#",
-      "#......b..T.......T........#",
+      "#......b..T....Z..T........#",
       "#.....i...T....p..T...i....#",
       "#.........T.......T........#",
       "#####D################D#####",
@@ -119,7 +119,7 @@ const LEVELS = [
       "#............................#",
       "#...TTTTTTTTTTDTTTTTTTTTTT...#",
       "#...T....................T...#",
-      "#...T..i....b........i...T...#",
+      "#...T..i....b....Z...i...T...#",
       "#...T....................T...#",
       "#...T...CCCCCCCCCCCCCC...T...#",
       "#...T...C............C...T...#",
@@ -157,7 +157,7 @@ const LEVELS = [
       "#......a......#..............#",
       "#.............D..............#",
       "#.............#..............#",
-      "#....i........#.....c...i....#",
+      "#....i........#.Z...c...i....#",
       "#.............#..............#",
       "#..........h..#....p.........#",
       "#.............#..............#",
@@ -409,7 +409,7 @@ const LEVELS = [
       "#......W...W..WWW.W...g....#",
       "#..WWWW....W......W........#",
       "#..........W.WW...WWWW.....#",
-      "#..g...WW.....WW......m....#",
+      "#..g...WW..Z..WW......m....#",
       "#......WW..............WW..#",
       "#.WW........WWWW.......WW..#",
       "#.WW...p....W..W..g........#",
@@ -449,7 +449,7 @@ const LEVELS = [
       "#..%%%%%%%%%%%%%%%%%%%%%%%%#",
       "#..%%%%%%%%%%%%%%%%%%%%%%%%#",
       "#..........................#",
-      "#...g........N.....p.......#",
+      "#...g...Z....N.....p.......#",
       "#..........................#",
       "#RRRRRRRRRRRRDRRRRRRRRRRRRR#",
       "#..........................#",
@@ -1839,9 +1839,19 @@ function sliceComponents(img) {
     }
     r.items = kept;
   }
-  const roots = rows.flatMap(r => r.items).slice(0, 64);
-  return roots.map(cp =>
-    rasterizeComponent(c, label, resolve, cp.id, w, cp.x0, cp.y0, cp.x1 - cp.x0 + 1, cp.y1 - cp.y0 + 1));
+  const rasterize = cp =>
+    rasterizeComponent(c, label, resolve, cp.id, w, cp.x0, cp.y0, cp.x1 - cp.x0 + 1, cp.y1 - cp.y0 + 1);
+  const roots = rows.flatMap(r => r.items).slice(0, 200);
+  const out = roots.map(rasterize);
+  // also expose the row layout, for sheets whose rows carry meaning
+  // (rotation views, death rows) and whose row lengths differ
+  let seen2 = 0;
+  out.rows = rows.map(r => {
+    const slice = out.slice(seen2, seen2 + r.items.length);
+    seen2 += r.items.length;
+    return slice;
+  }).filter(r => r.length);
+  return out;
 }
 
 // The player's all-in-one enemy sheet: a 6x6 grid of monster states.
@@ -1949,6 +1959,24 @@ sprites.knightIdle = sprites.baronIdle;
 sprites.knightAttack = sprites.baronAttack;
 sprites.knightPain = sprites.baronPain;
 
+// Doom-style rotation sheet: leading rows are facing angles (front
+// view first, walk frames then aim/fire), the second-to-last row is
+// the death fall, and the last row is the gib burst.
+function applyRotationSheet(fr, set) {
+  const rows = fr.rows && fr.rows.length >= 3 ? fr.rows : null;
+  if (!rows) { sprites[set + "Idle"] = fr[0]; return; }
+  const front = rows[0], death = rows[rows.length - 2], gibs = rows[rows.length - 1];
+  const walk = front.length > 4 ? front.slice(0, front.length - 2) : front;
+  sprites[set + "Idle"] = walk.length > 1 ? walk : walk[0];
+  sprites[set + "Attack"] = front[front.length - 1];
+  sprites[set + "Pain"] = front[Math.max(0, front.length - 2)];
+  if (death.length) {
+    sprites[set + "Death"] = death;
+    sprites[set + "Corpse"] = death[death.length - 1];
+  }
+  if (gibs.length) sprites[set + "Gibs"] = gibs;
+}
+
 // custom monster art (user-made): frames applied per file; corpse
 // frames are left behind on the floor when the monster dies
 const CUSTOM_ART = [
@@ -1966,6 +1994,10 @@ const CUSTOM_ART = [
       sprites.cacoAttack = fr[Math.min(1, fr.length - 1)];
       if (fr.length > 2) sprites.cacoCorpse = fr[2];
   } },
+  // Rotation sheets: rows are facing angles, then a death row and a
+  // gib row. Only the front-facing row is used for live states.
+  { file: "zombie custom 2.png", apply: fr => applyRotationSheet(fr, "zombie") },
+  { file: "Zombie_Sergeant.png", apply: fr => applyRotationSheet(fr, "sergeant") },
   { file: "SoulCustom.jpg", apply: fr => {   // idle | scream | husk
       sprites.soulIdle = fr[0]; sprites.soulPain = fr[0];
       sprites.soulAttack = fr[Math.min(1, fr.length - 1)];
@@ -2670,7 +2702,8 @@ const WEAPONS = [
 ];
 const AMMO_MAX = { bullets: 200, shells: 50, rockets: 50, cells: 300 };
 const ENEMY_DROPS = {   // clearing a fight always pays something
-  zombie: { chance: 1.0, spr: "clip",      give: { bullets: 10 } },
+  zombie:   { chance: 1.0, spr: "clip",     give: { bullets: 10 } },
+  sergeant: { chance: 1.0, spr: "shellbox", give: { shells: 4 } },
   imp:    { chance: 0.5, spr: "clip",      give: { bullets: 10 } },
   pinky:  { chance: 0.5, spr: "shellbox",  give: { shells: 4 } },
   caco:   { chance: 0.6, spr: "shellbox",  give: { shells: 4 } },
@@ -2735,9 +2768,15 @@ const ENEMY_TYPES = {
               ball: "greenball", atkSfx: "fireball",
               sfxSight: "knightSight", sfxPain: "pinkyPain", sfxDie: "knightDie", sfxAct: "baronAct" },
   zombie:   { hp: 30,  speed: 1.8, dmg: 7,  ranged: true,  cool: 1.3, pspeed: 11, scale: 0.95,
-              idle: "zombieIdle", attack: "zombieAttack", pain: "zombiePain", corpse: "zombieCorpse",
+              idle: "zombieIdle", attack: "zombieAttack", pain: "zombiePain",
+              death: "zombieDeath", corpse: "zombieCorpse",
               ball: "tracer", atkSfx: "shoot",
               sfxSight: "zombieSight", sfxPain: "impPain", sfxDie: "zombieDie", sfxAct: "impAct" },
+  sergeant: { hp: 50,  speed: 1.7, dmg: 6,  ranged: true,  cool: 1.7, pspeed: 11, scale: 1.0, volley: 3, spread: 0.13,
+              idle: "sergeantIdle", attack: "sergeantAttack", pain: "sergeantPain",
+              death: "sergeantDeath", corpse: "sergeantCorpse",
+              ball: "tracer", atkSfx: "shotgun",
+              sfxSight: "pinkySight", sfxPain: "impPain", sfxDie: "zombieDie", sfxAct: "impAct" },
   caco:     { hp: 200, speed: 1.1, dmg: 18, ranged: true,  cool: 1.9, pspeed: 6, scale: 1.25, float: -0.3,
               idle: "cacoIdle", attack: "cacoAttack", pain: "cacoPain", corpse: "cacoCorpse",
               ball: "fireball", atkSfx: "fireball",
@@ -2785,6 +2824,7 @@ function loadLevel() {
     else if (ch === "n") enemies.push(makeEnemy("baron", cx, cy));
     else if (ch === "N") enemies.push(makeEnemy("knight", cx, cy));
     else if (ch === "g") enemies.push(makeEnemy("zombie", cx, cy));
+    else if (ch === "Z") enemies.push(makeEnemy("sergeant", cx, cy));
     else if (ch === "o") enemies.push(makeEnemy("caco", cx, cy));
     else if (ch === "m") enemies.push(makeEnemy("lostsoul", cx, cy));
     else if (ch === "y") enemies.push(makeEnemy("cyber", cx, cy));
@@ -3335,9 +3375,13 @@ function update(dt) {
     e.attackT -= dt;
     if (e.ranged && los && dist > 2.5 && e.attackT <= 0) {
       e.state = "attack"; e.stateT = 0; e.attackT = e.cool + Math.random() * 0.6;
-      const pa = Math.atan2(dy, dx) + (Math.random() - 0.5) * 0.12;
+      const base = Math.atan2(dy, dx);
       const ps = e.pspeed || 6;
-      projectiles.push({ x: e.x, y: e.y, vx: Math.cos(pa) * ps, vy: Math.sin(pa) * ps, dmg: e.dmg, img: e.ball });
+      const shots = e.volley || 1, spread = e.spread || 0.12;
+      for (let s = 0; s < shots; s++) {
+        const pa = base + (shots === 1 ? (Math.random() - 0.5) * spread : (s - (shots - 1) / 2) * spread);
+        projectiles.push({ x: e.x, y: e.y, vx: Math.cos(pa) * ps, vy: Math.sin(pa) * ps, dmg: e.dmg, img: e.ball });
+      }
       sfx(e.atkSfx, volAt(dist));
     } else if (!e.ranged && dist < 1.1 && e.attackT <= 0) {
       e.state = "attack"; e.stateT = 0; e.attackT = e.cool;
