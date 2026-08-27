@@ -2105,6 +2105,7 @@ const SFX_FILES = {
   shotgun: "dsshotgn.wav", sgcock: "dssgcock.wav",
   punch: "dspunch.wav", plasma: "dsplasma.wav", bfg: "dsbfg.wav",
   saw: "dssawhit.wav", sawup: "dssawup.wav",
+  menuBlip: "dspstop.wav",
   zombieSight: "dsposit1.wav", zombieDie: "dspodth1.wav",
   cacoSight: "dscacsit.wav",   cacoDie: "dscacdth.wav",
   soulSight: "dssklatk.wav",   soulDie: "dsskldth.wav",
@@ -2148,6 +2149,7 @@ const SYNTH_ALIAS = {
   rocket: "fireball", rocketHit: "boom",
   shotgun: "shoot", sgcock: "pickup", punch: "hit", plasma: "fireball", bfg: "boom",
   saw: "hit", sawup: "growl",
+  menuBlip: "pickup",
 };
 function synthSfx(kind, vol = 1) {
   if (!audio || audio.state !== "running") return;
@@ -2576,6 +2578,34 @@ function nextLevel() {
 overlay.classList.add("hidden");   // the canvas draws its own menus
 let menuMode = "main", menuSel = 0;
 const EPISODE_STARTS = [0, 9, 18];
+
+// player-made title key art (drawn as the menu backdrop when loaded)
+const menuArt = new Image();
+let menuArtOk = false;
+menuArt.onload = () => { menuArtOk = true; };
+menuArt.onerror = () => {};
+menuArt.src = "Art/lucid-origin_Title_menu_key_art_inspired_by_the_classic_1993_Doom_cover_art_painted_by_Don_Pu-0.jpg";
+
+// button layout + mouse hit testing (canvas is letterboxed by CSS)
+function canvasCoords(e) {
+  const r = canvas.getBoundingClientRect();
+  const scale = Math.min(r.width / W, r.height / H);
+  const ox = r.left + (r.width - W * scale) / 2;
+  const oy = r.top + (r.height - H * scale) / 2;
+  return [(e.clientX - ox) / scale, (e.clientY - oy) / scale];
+}
+function menuLayout() {
+  const items = menuItems();
+  const lineH = 44;
+  const startY = gameState === "paused" ? 148 : 208;
+  return items.map((label, i) => ({ label, i, x: W / 2 - 170, y: startY + i * lineH, w: 340, h: 36 }));
+}
+function menuHitTest(mx, my) {
+  if ((gameState !== "title" && gameState !== "paused") || menuMode === "help") return -1;
+  for (const b of menuLayout())
+    if (mx >= b.x && mx <= b.x + b.w && my >= b.y && my <= b.y + b.h) return b.i;
+  return -1;
+}
 function menuItems() {
   if (menuMode === "episodes") return ["KNEE-DEEP IN THE DEAD", "THE SHORES OF HELL", "INFERNO", "BACK"];
   if (menuMode === "paused")   return ["RESUME", "RESTART LEVEL", "MUSIC: " + (musicOn ? "ON" : "OFF"), "END GAME"];
@@ -2612,8 +2642,8 @@ addEventListener("keydown", e => {
   if (gameState === "title" || gameState === "paused") {
     if (menuMode === "help") { menuMode = "main"; menuSel = 0; e.preventDefault(); return; }
     const n = menuItems().length;
-    if (e.code === "ArrowUp" || e.code === "KeyW")   { menuSel = (menuSel + n - 1) % n; sfx("pickup", 0.35); }
-    if (e.code === "ArrowDown" || e.code === "KeyS") { menuSel = (menuSel + 1) % n; sfx("pickup", 0.35); }
+    if (e.code === "ArrowUp" || e.code === "KeyW")   { menuSel = (menuSel + n - 1) % n; sfx("menuBlip", 0.7); }
+    if (e.code === "ArrowDown" || e.code === "KeyS") { menuSel = (menuSel + 1) % n; sfx("menuBlip", 0.7); }
     if (e.code === "Enter" || e.code === "Space") menuActivate();
     if (e.code === "Escape") menuBack();
     e.preventDefault();
@@ -2653,7 +2683,7 @@ addEventListener("keydown", e => {
 });
 addEventListener("keyup", e => keys[e.code] = false);
 
-canvas.addEventListener("click", () => {
+canvas.addEventListener("click", e => {
   initAudio();
   maybeTitleMusic();
   if (gameState === "play") {
@@ -2661,15 +2691,28 @@ canvas.addEventListener("click", () => {
   } else if (gameState === "intermission") {
     nextLevel();
   } else if (gameState === "title" || gameState === "paused") {
-    menuActivate();
+    if (menuMode === "help") { menuMode = "main"; menuSel = 0; return; }
+    const [mx, my] = canvasCoords(e);
+    const hit = menuHitTest(mx, my);
+    if (hit >= 0) { menuSel = hit; menuActivate(); }
   }
 });
 document.addEventListener("pointerlockchange", () => {
   if (document.pointerLockElement !== canvas && gameState === "play") pauseGame();
 });
 addEventListener("mousemove", e => {
-  if (document.pointerLockElement === canvas && gameState === "play")
+  if (document.pointerLockElement === canvas && gameState === "play") {
     player.ang += e.movementX * 0.0022;
+    return;
+  }
+  if ((gameState === "title" || gameState === "paused") && menuMode !== "help") {
+    const [mx, my] = canvasCoords(e);
+    const hit = menuHitTest(mx, my);
+    canvas.style.cursor = hit >= 0 ? "pointer" : "crosshair";
+    if (hit >= 0 && hit !== menuSel) { menuSel = hit; sfx("menuBlip", 0.7); }
+  } else {
+    canvas.style.cursor = "crosshair";
+  }
 });
 let mouseDown = false;
 addEventListener("mousedown", e => {
@@ -3570,20 +3613,35 @@ function drawSkull(x, y) {
   ctx.fillStyle = "#8a8070";
   for (let i = 0; i < 3; i++) ctx.fillRect(x + 4 + i * 3, y + 13 + bob, 2, 3);
 }
-function drawMenuList(startY, lineH = 34) {
-  const items = menuItems();
+function drawMenuButtons() {
   ctx.textAlign = "center";
-  for (let i = 0; i < items.length; i++) {
-    const y = startY + i * lineH;
-    ctx.font = "bold 26px Impact, 'Arial Black', sans-serif";
-    ctx.fillStyle = "#500";
-    ctx.fillText(items[i], W / 2 + 2, y + 2);
-    ctx.fillStyle = i === menuSel ? "#ff3020" : "#b01010";
-    ctx.fillText(items[i], W / 2, y);
-    if (i === menuSel) {
-      const tw = ctx.measureText(items[i]).width;
-      drawSkull(W / 2 - tw / 2 - 34, y - 18);
+  for (const b of menuLayout()) {
+    const sel = b.i === menuSel;
+    // riveted metal plate
+    const grad = ctx.createLinearGradient(0, b.y, 0, b.y + b.h);
+    if (sel) {
+      grad.addColorStop(0, "#6a2418"); grad.addColorStop(0.5, "#8a2e1a"); grad.addColorStop(1, "#40140c");
+    } else {
+      grad.addColorStop(0, "#3c3c42"); grad.addColorStop(0.5, "#2a2a2f"); grad.addColorStop(1, "#17171a");
     }
+    ctx.fillStyle = grad;
+    ctx.fillRect(b.x, b.y, b.w, b.h);
+    // bevel
+    ctx.fillStyle = sel ? "#b8542e" : "#55555e";
+    ctx.fillRect(b.x, b.y, b.w, 2); ctx.fillRect(b.x, b.y, 2, b.h);
+    ctx.fillStyle = "#0b0b0d";
+    ctx.fillRect(b.x, b.y + b.h - 2, b.w, 2); ctx.fillRect(b.x + b.w - 2, b.y, 2, b.h);
+    // corner rivets
+    ctx.fillStyle = sel ? "#d8834a" : "#63636c";
+    for (const [rx, ry] of [[b.x + 6, b.y + 6], [b.x + b.w - 9, b.y + 6], [b.x + 6, b.y + b.h - 9], [b.x + b.w - 9, b.y + b.h - 9]])
+      ctx.fillRect(rx, ry, 3, 3);
+    // label
+    ctx.font = "bold 22px Impact, 'Arial Black', sans-serif";
+    ctx.fillStyle = "#300";
+    ctx.fillText(b.label, W / 2 + 2, b.y + b.h / 2 + 8 + 2);
+    ctx.fillStyle = sel ? "#ff4a2a" : "#c01812";
+    ctx.fillText(b.label, W / 2, b.y + b.h / 2 + 8);
+    if (sel) drawSkull(b.x - 28, b.y + 9);
   }
   ctx.textAlign = "left";
 }
@@ -3613,36 +3671,49 @@ function drawHelp() {
   ctx.textAlign = "left";
 }
 function renderTitle() {
-  const grad = ctx.createLinearGradient(0, 0, 0, H);
-  grad.addColorStop(0, "#1a0202");
-  grad.addColorStop(0.45, "#4a0a02");
-  grad.addColorStop(1, "#0e0000");
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, W, H);
-  // jagged hell-scape silhouette
-  ctx.fillStyle = "#180404";
-  ctx.beginPath();
-  ctx.moveTo(0, H);
-  for (let x = 0; x <= W; x += 40) ctx.lineTo(x, H - 40 - ((x * 7919) % 53));
-  ctx.lineTo(W, H);
-  ctx.closePath(); ctx.fill();
+  if (menuArtOk) {
+    // player-made key art, cover-fit and top-anchored so the marine stays framed
+    const s = Math.max(W / menuArt.width, H / menuArt.height);
+    const dw = menuArt.width * s, dh = menuArt.height * s;
+    ctx.drawImage(menuArt, (W - dw) / 2, 0, dw, dh);
+    // darken toward the bottom so the buttons stay readable
+    const shade = ctx.createLinearGradient(0, 120, 0, H);
+    shade.addColorStop(0, "rgba(0,0,0,0.05)");
+    shade.addColorStop(1, "rgba(0,0,0,0.8)");
+    ctx.fillStyle = shade;
+    ctx.fillRect(0, 0, W, H);
+  } else {
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, "#1a0202");
+    grad.addColorStop(0.45, "#4a0a02");
+    grad.addColorStop(1, "#0e0000");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = "#180404";
+    ctx.beginPath();
+    ctx.moveTo(0, H);
+    for (let x = 0; x <= W; x += 40) ctx.lineTo(x, H - 40 - ((x * 7919) % 53));
+    ctx.lineTo(W, H);
+    ctx.closePath(); ctx.fill();
+  }
   // logo
   ctx.textAlign = "center";
-  ctx.font = "bold 108px Impact, 'Arial Black', sans-serif";
+  const logoSize = menuArtOk ? 84 : 108, logoY = menuArtOk ? 96 : 115;
+  ctx.font = `bold ${logoSize}px Impact, 'Arial Black', sans-serif`;
   ctx.fillStyle = "#2a0000";
-  ctx.fillText("DOOM", W / 2 + 7, 122);
-  const lg = ctx.createLinearGradient(0, 20, 0, 130);
+  ctx.fillText("DOOM", W / 2 + 6, logoY + 6);
+  const lg = ctx.createLinearGradient(0, logoY - 80, 0, logoY + 12);
   lg.addColorStop(0, "#ff6a20");
   lg.addColorStop(0.45, "#d01010");
   lg.addColorStop(1, "#500000");
   ctx.fillStyle = lg;
-  ctx.fillText("DOOM", W / 2, 115);
-  ctx.font = "bold 14px 'Courier New', monospace";
-  ctx.fillStyle = "#a08060";
-  ctx.fillText("A FAN-MADE HTML TRIBUTE", W / 2, 143);
+  ctx.fillText("DOOM", W / 2, logoY);
+  ctx.font = "bold 13px 'Courier New', monospace";
+  ctx.fillStyle = "#c8a880";
+  ctx.fillText("A FAN-MADE HTML TRIBUTE", W / 2, logoY + 24);
   ctx.textAlign = "left";
   if (menuMode === "help") drawHelp();
-  else drawMenuList(205, 40);
+  else drawMenuButtons();
 }
 function renderPauseMenu() {
   ctx.textAlign = "center";
@@ -3650,7 +3721,7 @@ function renderPauseMenu() {
   ctx.fillStyle = "#500"; ctx.fillText("PAUSED", W / 2 + 3, 103);
   ctx.fillStyle = "#d01010"; ctx.fillText("PAUSED", W / 2, 100);
   ctx.textAlign = "left";
-  drawMenuList(160, 38);
+  drawMenuButtons();
 }
 
 // ---------------------------------------------------------
