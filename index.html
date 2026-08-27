@@ -59,6 +59,10 @@ const W = 640, H = 400;          // internal render resolution
 const HUD_H = 64;                // HUD bar height
 const VIEW_H = H - HUD_H;        // 3D viewport height
 const FOV = Math.PI / 3;         // 60 degrees
+// Water and nukage sit in a pit this far below the walking surface, so a
+// pool reads as sunk into the floor rather than painted onto it. Wall
+// height is 1, so this is roughly a knee-high step.
+const LIQUID_DROP = 0.18;
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
@@ -3600,6 +3604,7 @@ const AMMO_PICKUPS = {   // map char -> ammo pickup
 const player = {
   x: 0, y: 0, ang: 0, hp: 100, kills: 0, hurtFlash: 0, pickFlash: 0, bob: 0,
   weapon: 1, weapons: [], ammo: { bullets: 0, shells: 0, rockets: 0, cells: 0 },
+  eyeDrop: 0,   // how far the camera has stepped down into a pool
 };
 function resetLoadout() {
   player.weapon = 1;
@@ -3732,6 +3737,7 @@ function loadLevel() {
   }
   player.keys = { blue: false, yellow: false, red: false };
   player.kills = 0;
+  player.eyeDrop = 0;
   player.hurtFlash = 0; player.pickFlash = 0;
   totalEnemies = enemies.length;
   fireCooldown = 0; muzzle = 0; teleCooldown = 0; nukeTimer = 0;
@@ -4289,6 +4295,11 @@ function update(dt) {
   }
   msgT = Math.max(0, msgT - dt);
 
+  // Step down into a pool and back out again, rather than snapping.
+  const standingIn = floorMap[(player.y | 0) * MAP_W + (player.x | 0)];
+  const wantDrop = (standingIn === 1 || standingIn === 2) ? LIQUID_DROP : 0;
+  player.eyeDrop += (wantDrop - player.eyeDrop) * Math.min(1, dt * 12);
+
   // --- enemies ---
   for (const e of enemies) {
     if (e.dead) continue;
@@ -4439,16 +4450,24 @@ function renderWorld() {
   const half = VIEW_H / 2;
   const bobOff = (gameState === "play" ? Math.sin(player.bob) * 3 : 0) | 0;
   const horizon = half + bobOff;
+  // Eye height above the walking surface. Wading into a pool lowers it,
+  // which is what makes the step down read as a step rather than a
+  // texture swap. Everything projected off the floor - the floor itself,
+  // the ceiling, wall tops and bottoms, sprite feet - keys off this.
+  const eyeH = 0.5 - player.eyeDrop;
 
   // --- floor & ceiling casting (per row) ---
   const fData = floorTex.data, cData = ceilTex.data;
   const wLiq = waterTex.data, nLiq = nukeTex.data, pPad = padTex.data;
   const liqT = performance.now() / 1000 * 0.35;
+  const liqAt = (x, y) => (x >= 0 && y >= 0 && x < MAP_W && y < MAP_H)
+    ? (floorMap[y * MAP_W + x] === 1 || floorMap[y * MAP_W + x] === 2) : false;
+  const RIM = 0.11;   // width of the shaded lip inside a pool's edge
   for (let y = 0; y < VIEW_H; y++) {
     const isFloor = y > horizon;
     const p = isFloor ? (y - horizon) : (horizon - y);
     if (p <= 0) continue;
-    const rowDist = half / p;
+    const rowDist = VIEW_H * (isFloor ? eyeH : 1 - eyeH) / p;
     const fog = Math.min(1, 2.1 / rowDist) * (isFloor ? 0.8 : 0.55);
     const stepX = rowDist * (2 * planeX) / W;
     const stepY = rowDist * (2 * planeY) / W;
@@ -4463,17 +4482,57 @@ function renderWorld() {
         fx += stepX; fy += stepY;
       }
     } else {
+      // The sunken plane is further away for the same screen row, so the
+      // same pixel is cast twice: once against the surface you walk on,
+      // once against the bottom of the pit. Ground wins wherever there is
+      // ground, because it is nearer. Over a pool the ray carries on down
+      // to the liquid - and where it runs out past the far edge of the
+      // pool before it gets there, what we are looking at is the inside
+      // wall of the pit.
+      const sunkDist = VIEW_H * (eyeH + LIQUID_DROP) / p;
+      const sStepX = sunkDist * (2 * planeX) / W;
+      const sStepY = sunkDist * (2 * planeY) / W;
+      let sx = posX + sunkDist * (dirX - planeX);
+      let sy = posY + sunkDist * (dirY - planeY);
+      const sunkFog = Math.min(1, 2.1 / sunkDist) * 0.8;
       for (let x = 0; x < W; x++) {
         const cx = fx | 0, cy = fy | 0;
         const ft = (cx >= 0 && cy >= 0 && cx < MAP_W && cy < MAP_H) ? floorMap[cy * MAP_W + cx] : 0;
         let tex = fData, u = fx, v = fy, br = fog;
-        if (ft === 1)      { tex = wLiq; u += liqT; v += liqT * 0.6; br = Math.min(1, fog * 1.5); }
-        else if (ft === 2) { tex = nLiq; u += liqT; v += liqT * 0.6; br = Math.min(1, fog * 1.5); }
-        else if (ft === 3) { tex = pPad; br = Math.min(1, fog * 1.4); }
+        if (ft === 3) { tex = pPad; br = Math.min(1, fog * 1.4); }
+        else if (ft === 0) {
+          // a shaded curb on the dry side of every pool edge, so the pool
+          // is visibly walled off from the floor it sits in
+          const cu = fx - cx, cv = fy - cy;
+          if ((cu < RIM && liqAt(cx - 1, cy)) || (cu > 1 - RIM && liqAt(cx + 1, cy)) ||
+              (cv < RIM && liqAt(cx, cy - 1)) || (cv > 1 - RIM && liqAt(cx, cy + 1)))
+            br *= 0.5;
+        }
+        else if (ft === 1 || ft === 2) {
+          const scx = sx | 0, scy = sy | 0;
+          const fs = (scx >= 0 && scy >= 0 && scx < MAP_W && scy < MAP_H) ? floorMap[scy * MAP_W + scx] : 0;
+          if (fs === 1 || fs === 2) {
+            tex = fs === 1 ? wLiq : nLiq;
+            u = sx + liqT; v = sy + liqT * 0.6;
+            br = Math.min(1, sunkFog * 1.5);
+            // a shaded lip just inside the pool's edge, so the pool reads
+            // as contained rather than as a puddle lying on the floor
+            const eu = sx - scx, ev = sy - scy;
+            if ((eu < RIM && !liqAt(scx - 1, scy)) || (eu > 1 - RIM && !liqAt(scx + 1, scy)) ||
+                (ev < RIM && !liqAt(scx, scy - 1)) || (ev > 1 - RIM && !liqAt(scx, scy + 1)))
+              br *= 0.45;
+          } else {
+            // the inside wall of the pit, on its far side: stained by
+            // whatever is pooled in it, so a narrow channel still reads as
+            // liquid in shadow rather than as a black slot in the floor
+            tex = ft === 1 ? wLiq : nLiq;
+            u = sx; v = sy; br = fog * 0.42;
+          }
+        }
         const tx = ((u - Math.floor(u)) * TEX) | 0;
         const ty = ((v - Math.floor(v)) * TEX) | 0;
         fb[rowBase + x] = shade(tex[ty * TEX + tx], br);
-        fx += stepX; fy += stepY;
+        fx += stepX; fy += stepY; sx += sStepX; sy += sStepY;
       }
     }
   }
@@ -4516,8 +4575,9 @@ function renderWorld() {
     zBuffer[x] = perpDist;
 
     const lineH = (VIEW_H / perpDist) | 0;
-    let drawStart = Math.max(0, (horizon - lineH / 2) | 0);
-    let drawEnd = Math.min(VIEW_H - 1, (horizon + lineH / 2) | 0);
+    const wallTop = horizon - lineH * (1 - eyeH), wallBot = horizon + lineH * eyeH;
+    let drawStart = Math.max(0, wallTop | 0);
+    let drawEnd = Math.min(VIEW_H - 1, wallBot | 0);
 
     let wallX = side === 0 ? posY + perpDist * rdY : posX + perpDist * rdX;
     wallX -= Math.floor(wallX);
@@ -4528,7 +4588,7 @@ function renderWorld() {
     const texEntry = textures[hit === 14 ? 1 : hit] || textures[1];   // secret doors look like stone
     const tex = texEntry.data;
     const step = TEX / lineH;
-    let texPos = (drawStart - horizon + lineH / 2) * step;
+    let texPos = (drawStart - wallTop) * step;
     let fog = Math.min(1, 2.8 / perpDist);
     if (side === 1) fog *= 0.72;
     for (let y = drawStart; y <= drawEnd; y++) {
@@ -4539,6 +4599,9 @@ function renderWorld() {
   }
 
   // --- sprites (enemies, pickups, projectiles), far to near ---
+  // Anything standing in a pool stands on the bottom of it, not on the
+  // rim, so it drops by the same step the floor does.
+  const liquidSink = (x, y) => liqAt(x | 0, y | 0) ? LIQUID_DROP : 0;
   const items = [];
   const animPick = (entry, phase) =>
     Array.isArray(entry) ? entry[Math.min(entry.length - 1, Math.max(0, Math.floor(phase * entry.length)))] : entry;
@@ -4566,18 +4629,18 @@ function renderWorld() {
       const phase = walking ? (performance.now() / 130 + e.x * 7) % 1 : 0;
       img = animPick(sprites[e.idle], phase);
     }
-    if (img) items.push({ x: e.x, y: e.y, img, hScale, sink, lightFloor: e.lightFloor });
+    if (img) items.push({ x: e.x, y: e.y, img, hScale, sink: sink + liquidSink(e.x, e.y), lightFloor: e.lightFloor });
   }
-  for (const p of pickups)     items.push({ x: p.x, y: p.y, img: sprites[p.spr || p.kind], hScale: 0.7, sink: 0.18 });
+  for (const p of pickups)     items.push({ x: p.x, y: p.y, img: sprites[p.spr || p.kind], hScale: 0.7, sink: 0.18 + liquidSink(p.x, p.y) });
   for (const p of projectiles) items.push({ x: p.x, y: p.y, img: sprites[p.img] || sprites.fireball, hScale: 0.5, sink: 0 });
   for (const p of pProjectiles) items.push({ x: p.x, y: p.y, img: sprites[p.wp.proj], hScale: p.wp.proj === "bfgball" ? 0.8 : 0.45, sink: 0, bright: true });
-  for (const b of barrels)     items.push({ x: b.x, y: b.y, img: sprites.barrel, hScale: 0.8, sink: 0.12 });
+  for (const b of barrels)     items.push({ x: b.x, y: b.y, img: sprites.barrel, hScale: 0.8, sink: 0.12 + liquidSink(b.x, b.y) });
   // enemy corpses draw squashed low and wide, flat against the floor
   // enemy corpses draw squashed low and wide, flat against the floor
   for (const d of decors) {
     const raw = sprites[d.spr] || sprites.corpse;
     const img = Array.isArray(raw) ? raw[raw.length - 1] : raw;
-    if (img) items.push({ x: d.x, y: d.y, img, hScale: d.spr ? 0.34 : 0.6, aspect: d.spr ? 1.9 : 1, sink: d.spr ? 0.03 : 0.3 });
+    if (img) items.push({ x: d.x, y: d.y, img, hScale: d.spr ? 0.34 : 0.6, aspect: d.spr ? 1.9 : 1, sink: (d.spr ? 0.03 : 0.3) + liquidSink(d.x, d.y) });
   }
   for (const f of effects) items.push({
     x: f.x, y: f.y,
@@ -4604,7 +4667,7 @@ function renderWorld() {
     const baseH = Math.abs((VIEW_H / transY)) | 0;
     const sprH = (baseH * s.hScale) | 0;
     const sprW = (sprH * (s.aspect || 1)) | 0;
-    const vShift = ((baseH - sprH) / 2 + s.sink * baseH) | 0;
+    const vShift = (baseH * eyeH - sprH / 2 + s.sink * baseH) | 0;
     const drawStartY = Math.max(0, (horizon - sprH / 2 + vShift) | 0);
     const drawEndY = Math.min(VIEW_H - 1, (horizon + sprH / 2 + vShift) | 0);
     const drawStartX = Math.max(0, (screenX - sprW / 2) | 0);
