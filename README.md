@@ -3,7 +3,9 @@
 A Doom-style FPS recreated in a single HTML file. No build step, no dependencies,
 no bundled assets — every texture and sprite is generated in code at runtime.
 
-**Play it:** open `index.html` in any modern browser. That's it.
+**Play it now:** [perpetualpixel.github.io/Doom](https://perpetualpixel.github.io/Doom/)
+
+Or run it locally: open `index.html` in any modern browser. That's it.
 
 ## Levels
 
