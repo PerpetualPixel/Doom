@@ -1176,7 +1176,13 @@ const SPR = 64;
 // background shade is sampled around the image border, so banded
 // checkers key out too without touching interior grays.
 function buildBgKeyer(d, w, h) {
-  const near = (r, g, b, k) => Math.abs(r - k[0]) < 26 && Math.abs(g - k[1]) < 26 && Math.abs(b - k[2]) < 26;
+  // saturated chroma-key backgrounds (magenta, chroma green) get a
+  // wider tolerance: no sprite colour sits near them, and the extra
+  // room removes anti-aliased fringe pixels
+  const near = (r, g, b, k) => {
+    const tol = Math.max(k[0], k[1], k[2]) - Math.min(k[0], k[1], k[2]) > 60 ? 70 : 26;
+    return Math.abs(r - k[0]) < tol && Math.abs(g - k[1]) < tol && Math.abs(b - k[2]) < tol;
+  };
   const bgKeys = [];
   if (d[3] > 200) {
     bgKeys.push([d[0], d[1], d[2]]);
@@ -1998,10 +2004,17 @@ const CUSTOM_ART = [
   // gib row. Only the front-facing row is used for live states.
   { file: "zombie custom 2.png", apply: fr => applyRotationSheet(fr, "zombie") },
   { file: "Zombie_Sergeant.png", apply: fr => applyRotationSheet(fr, "sergeant") },
-  { file: "SoulCustom.jpg", apply: fr => {   // idle | scream | husk
-      sprites.soulIdle = fr[0]; sprites.soulPain = fr[0];
-      sprites.soulAttack = fr[Math.min(1, fr.length - 1)];
-      if (fr.length > 2) sprites.soulCorpse = fr[2];
+  { file: "hell skill custom 2.png", apply: fr => {
+      // rows: skull sizes | scream + cracks | burst, burn, debris | remains
+      const rows = fr.rows || [];
+      const last = a => a[a.length - 1];
+      if (rows.length < 3) { sprites.soulIdle = fr[0]; return; }
+      sprites.soulIdle = last(rows[0]);          // largest, most detailed skull
+      sprites.soulAttack = rows[1][0];           // screaming lunge
+      sprites.soulPain = rows[1][Math.min(1, rows[1].length - 1)];
+      sprites.soulDeath = [...rows[1].slice(2), ...rows[2]];
+      const remains = rows[3] || rows[2];
+      sprites.soulCorpse = remains.length > 1 ? remains[remains.length - 2] : last(remains);
   } },
   { file: "Knight Custom 2.png", apply: fr => {
       // row-major: walk cycle | lunge + fall | fall + gib piles
@@ -2782,7 +2795,8 @@ const ENEMY_TYPES = {
               ball: "fireball", atkSfx: "fireball",
               sfxSight: "cacoSight", sfxPain: "pinkyPain", sfxDie: "cacoDie", sfxAct: "baronAct" },
   lostsoul: { hp: 50,  speed: 3.4, dmg: 10, ranged: false, cool: 0.9, scale: 0.7, float: -0.25,
-              idle: "soulIdle", attack: "soulAttack", pain: "soulPain", corpse: "soulCorpse",
+              idle: "soulIdle", attack: "soulAttack", pain: "soulPain",
+              death: "soulDeath", corpse: "soulCorpse",
               ball: "fireball", atkSfx: "soulSight",
               sfxSight: "soulSight", sfxPain: "pinkyPain", sfxDie: "soulDie", sfxAct: "baronAct" },
   cyber:    { hp: 650, speed: 1.3, dmg: 38, ranged: true,  cool: 1.4, pspeed: 8, scale: 1.6,
