@@ -15,6 +15,7 @@ SFX/*
 # The player's own custom monster art IS part of the repo:
 !sprites/ImpCustom.jpg
 !sprites/ImpCorpse.jpg
+!sprites/imp_custom_2.png
 !sprites/CacoCustom.jpg
 !sprites/SoulCustom.jpg
 !sprites/KnightCustom.jpg

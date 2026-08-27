@@ -1784,7 +1784,10 @@ function sliceComponents(img) {
     comps.push({ id, x0, x1, y0, y1, area, alias: id });
   }
   if (!comps.length) return null;
-  // absorb small fragments (blood spray etc.) into nearby components
+  // Absorb pieces that belong to a neighbouring sprite: tiny specks
+  // (blood spray) near a body, and mid-sized attachments whose centre
+  // sits inside a bigger sprite's box (a held fireball, a muzzle
+  // flash). Separate sprites in a sheet never satisfy either test.
   const bigArea = Math.max(...comps.map(cp => cp.area));
   const pad = 14;
   let mergedAny = true;
@@ -1793,14 +1796,18 @@ function sliceComponents(img) {
     for (const a of comps) {
       if (a.alias !== a.id) continue;
       for (const b of comps) {
-        if (b === a || b.alias !== b.id || b.area >= bigArea * 0.08) continue;
-        if (a.x0 - pad < b.x1 && b.x0 - pad < a.x1 && a.y0 - pad < b.y1 && b.y0 - pad < a.y1) {
-          b.alias = a.id;
-          a.x0 = Math.min(a.x0, b.x0); a.x1 = Math.max(a.x1, b.x1);
-          a.y0 = Math.min(a.y0, b.y0); a.y1 = Math.max(a.y1, b.y1);
-          a.area += b.area;
-          mergedAny = true;
-        }
+        if (b === a || b.alias !== b.id || b.area >= a.area) continue;
+        const speck = b.area < bigArea * 0.08 &&
+          a.x0 - pad < b.x1 && b.x0 - pad < a.x1 && a.y0 - pad < b.y1 && b.y0 - pad < a.y1;
+        const bcx = (b.x0 + b.x1) / 2, bcy = (b.y0 + b.y1) / 2;
+        const attached = b.area < bigArea * 0.5 &&
+          bcx >= a.x0 - pad && bcx <= a.x1 + pad && bcy >= a.y0 - pad && bcy <= a.y1 + pad;
+        if (!speck && !attached) continue;
+        b.alias = a.id;
+        a.x0 = Math.min(a.x0, b.x0); a.x1 = Math.max(a.x1, b.x1);
+        a.y0 = Math.min(a.y0, b.y0); a.y1 = Math.max(a.y1, b.y1);
+        a.area += b.area;
+        mergedAny = true;
       }
     }
   }
@@ -1927,11 +1934,15 @@ sprites.knightPain = sprites.baronPain;
 // custom monster art (user-made): frames applied per file; corpse
 // frames are left behind on the floor when the monster dies
 const CUSTOM_ART = [
-  { file: "ImpCustom.jpg", apply: fr => {
-      sprites.impIdle = fr[0]; sprites.impPain = fr[0];
-      sprites.impAttack = fr[Math.min(1, fr.length - 1)];
+  { file: "imp_custom_2.png", apply: fr => {
+      // row-major: walk cycle | fireball charge | collapse + gibs
+      const n = fr.length, at = i => fr[Math.min(i, n - 1)];
+      sprites.impIdle = n >= 8 ? fr.slice(0, 8) : fr[0];        // animated walk
+      sprites.impAttack = n >= 16 ? fr.slice(8, 16) : at(1);    // charging fireball
+      sprites.impPain = at(16);
+      if (n >= 20) sprites.impDeath = fr.slice(16, n);
+      sprites.impCorpse = fr[n - 1];
   } },
-  { file: "ImpCorpse.jpg", apply: fr => { sprites.impCorpse = fr[0]; } },
   { file: "CacoCustom.jpg", apply: fr => {   // idle | bite | corpse
       sprites.cacoIdle = fr[0]; sprites.cacoPain = fr[0];
       sprites.cacoAttack = fr[Math.min(1, fr.length - 1)];
@@ -2683,7 +2694,8 @@ function showMsg(text, dur = 2.2) { msg = text; msgT = dur; }
 
 const ENEMY_TYPES = {
   imp:      { hp: 60,  speed: 1.6, dmg: 12, ranged: true,  cool: 1.6, pspeed: 6,  scale: 1.0,
-              idle: "impIdle", attack: "impAttack", pain: "impPain", corpse: "impCorpse",
+              idle: "impIdle", attack: "impAttack", pain: "impPain",
+              death: "impDeath", corpse: "impCorpse",
               ball: "fireball", atkSfx: "fireball",
               sfxSight: "impSight", sfxPain: "impPain", sfxDie: "impDie", sfxAct: "impAct" },
   pinky:    { hp: 150, speed: 2.6, dmg: 25, ranged: false, cool: 1.0, scale: 1.15,
@@ -3526,7 +3538,7 @@ function renderWorld() {
         sink = t * 0.5 + hover * (1 - t);   // floaters drop as they die
       }
     }
-    else if (e.state === "attack") img = animPick(sprites[e.attack], 0);
+    else if (e.state === "attack") img = animPick(sprites[e.attack], Math.min(0.999, e.stateT / 0.4));
     else if (e.state === "pain")   img = animPick(sprites[e.pain], 0);
     else {
       // walk cycle while chasing, first frame when idle
