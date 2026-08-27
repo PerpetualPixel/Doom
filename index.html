@@ -1705,6 +1705,47 @@ for (const { file, set } of SHEET_MAP) {
   img.onerror = () => {};
   img.src = "sprites/" + file;
 }
+// Rasterize one labeled component into a 64x64 sprite. Pixels outside
+// the component are flooded in from the bounding-box edges only, so
+// background-colored pixels ENCLOSED inside the sprite body survive.
+function rasterizeComponent(srcCanvas, label, resolve, rootId, w, x0, y0, bw, bh) {
+  const nat = document.createElement("canvas");
+  nat.width = bw; nat.height = bh;
+  const ng = nat.getContext("2d");
+  ng.drawImage(srcCanvas, x0, y0, bw, bh, 0, 0, bw, bh);
+  const nd = ng.getImageData(0, 0, bw, bh);
+  const out = new Uint8Array(bw * bh);
+  const isOther = (x, y) => {
+    const li = label[(y0 + y) * w + (x0 + x)];
+    return li === -1 || resolve(li) !== rootId;
+  };
+  const q = [];
+  const push = (x, y) => {
+    const i = y * bw + x;
+    if (out[i]) return;
+    if (isOther(x, y)) { out[i] = 1; q.push(i); }
+  };
+  for (let x = 0; x < bw; x++) { push(x, 0); push(x, bh - 1); }
+  for (let y = 0; y < bh; y++) { push(0, y); push(bw - 1, y); }
+  while (q.length) {
+    const i = q.pop();
+    const x = i % bw, y = (i / bw) | 0;
+    if (x > 0) push(x - 1, y);
+    if (x < bw - 1) push(x + 1, y);
+    if (y > 0) push(x, y - 1);
+    if (y < bh - 1) push(x, y + 1);
+  }
+  for (let i = 0; i < bw * bh; i++) if (out[i]) nd.data[i * 4 + 3] = 0;
+  ng.putImageData(nd, 0, 0);
+  const oc = document.createElement("canvas");
+  oc.width = oc.height = SPR;
+  const og = oc.getContext("2d");
+  og.imageSmoothingEnabled = false;
+  const sc = Math.min(SPR / bw, SPR / bh);
+  og.drawImage(nat, 0, 0, bw, bh, (SPR - bw * sc) / 2, SPR - bh * sc, bw * sc, bh * sc);
+  return new Uint32Array(og.getImageData(0, 0, SPR, SPR).data.buffer);
+}
+
 // Component-based slicing for custom art: flood-fills each sprite as
 // its own blob, so frames may overlap in rows or columns. Small
 // fragments (blood spray etc.) merge into the nearest large sprite.
@@ -1719,13 +1760,14 @@ function sliceComponents(img) {
   const d = data.data, w = c.width, h = c.height;
   const isBg = buildBgKeyer(d, w, h);
   const solid = i => d[i * 4 + 3] >= 128 && !isBg(d[i * 4], d[i * 4 + 1], d[i * 4 + 2]);
-  const seen = new Uint8Array(w * h);
-  let comps = [];
+  const label = new Int32Array(w * h).fill(-1);
+  const comps = [];
   for (let start = 0; start < w * h; start++) {
-    if (seen[start] || !solid(start)) continue;
+    if (label[start] !== -1 || !solid(start)) continue;
+    const id = comps.length;
     let x0 = start % w, x1 = x0, y0 = (start / w) | 0, y1 = y0, area = 0;
     const q = [start];
-    seen[start] = 1;
+    label[start] = id;
     while (q.length) {
       const i = q.pop();
       const cx = i % w, cy = (i / w) | 0;
@@ -1736,50 +1778,38 @@ function sliceComponents(img) {
         const nx = cx + dx, ny = cy + dy;
         if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
         const ni = ny * w + nx;
-        if (!seen[ni] && solid(ni)) { seen[ni] = 1; q.push(ni); }
+        if (label[ni] === -1 && solid(ni)) { label[ni] = id; q.push(ni); }
       }
     }
-    comps.push({ x0, x1, y0, y1, area });
+    comps.push({ id, x0, x1, y0, y1, area, alias: id });
   }
   if (!comps.length) return null;
-  // merge small fragments into overlapping/nearby large components
+  // absorb small fragments (blood spray etc.) into nearby components
   const bigArea = Math.max(...comps.map(cp => cp.area));
   const pad = 14;
-  let merged = true;
-  while (merged) {
-    merged = false;
-    outer:
-    for (let i = 0; i < comps.length; i++) for (let j = 0; j < comps.length; j++) {
-      if (i === j) continue;
-      const a = comps[i], b = comps[j];
-      if (b.area >= bigArea * 0.08) continue;   // only fragments get absorbed
-      if (a.x0 - pad < b.x1 && b.x0 - pad < a.x1 && a.y0 - pad < b.y1 && b.y0 - pad < a.y1) {
-        a.x0 = Math.min(a.x0, b.x0); a.x1 = Math.max(a.x1, b.x1);
-        a.y0 = Math.min(a.y0, b.y0); a.y1 = Math.max(a.y1, b.y1);
-        a.area += b.area;
-        comps.splice(j, 1);
-        merged = true;
-        break outer;
+  let mergedAny = true;
+  while (mergedAny) {
+    mergedAny = false;
+    for (const a of comps) {
+      if (a.alias !== a.id) continue;
+      for (const b of comps) {
+        if (b === a || b.alias !== b.id || b.area >= bigArea * 0.08) continue;
+        if (a.x0 - pad < b.x1 && b.x0 - pad < a.x1 && a.y0 - pad < b.y1 && b.y0 - pad < a.y1) {
+          b.alias = a.id;
+          a.x0 = Math.min(a.x0, b.x0); a.x1 = Math.max(a.x1, b.x1);
+          a.y0 = Math.min(a.y0, b.y0); a.y1 = Math.max(a.y1, b.y1);
+          a.area += b.area;
+          mergedAny = true;
+        }
       }
     }
   }
-  comps = comps.filter(cp => cp.area > 300)
-               .sort((a, b) => (a.x0 + a.x1) - (b.x0 + b.x1))
-               .slice(0, 4);
-  return comps.map(cp => {
-    const cw = cp.x1 - cp.x0 + 1, ch = cp.y1 - cp.y0 + 1;
-    const oc = document.createElement("canvas");
-    oc.width = oc.height = SPR;
-    const og = oc.getContext("2d");
-    og.imageSmoothingEnabled = false;
-    const sc = Math.min(SPR / cw, SPR / ch);
-    og.drawImage(c, cp.x0, cp.y0, cw, ch, (SPR - cw * sc) / 2, SPR - ch * sc, cw * sc, ch * sc);
-    const od = og.getImageData(0, 0, SPR, SPR);
-    const p = od.data;
-    for (let i = 0; i < p.length; i += 4)
-      if (p[i + 3] > 0 && isBg(p[i], p[i + 1], p[i + 2])) p[i + 3] = 0;
-    return new Uint32Array(od.data.buffer);
-  });
+  const resolve = id => { let cp = comps[id]; while (cp.alias !== cp.id) cp = comps[cp.alias]; return cp.id; };
+  const roots = comps.filter(cp => cp.alias === cp.id && cp.area > 300)
+                     .sort((a, b) => (a.x0 + a.x1) - (b.x0 + b.x1))
+                     .slice(0, 4);
+  return roots.map(cp =>
+    rasterizeComponent(c, label, resolve, cp.id, w, cp.x0, cp.y0, cp.x1 - cp.x0 + 1, cp.y1 - cp.y0 + 1));
 }
 
 // The player's all-in-one enemy sheet: a 6x6 grid of monster states.
@@ -1805,67 +1835,70 @@ const ENEMY_GRID = {
     try { data = g.getImageData(0, 0, c.width, c.height); } catch { return; }
     const d = data.data, w = c.width, h = c.height;
     const isBg = buildBgKeyer(d, w, h);
-    const solid = (x, y) => {
-      const i = (y * w + x) * 4;
-      return d[i + 3] >= 128 && !isBg(d[i], d[i + 1], d[i + 2]);
-    };
+    const solid = i4 => d[i4 + 3] >= 128 && !isBg(d[i4], d[i4 + 1], d[i4 + 2]);
+    // Label every connected creature blob on the sheet (grid cells on
+    // this art are not perfectly aligned, so blind cell cuts shred
+    // sprites; blobs are exact regardless of layout).
+    const label = new Int32Array(w * h).fill(-1);
+    const comps = [];
+    for (let start = 0; start < w * h; start++) {
+      if (label[start] !== -1 || !solid(start * 4)) continue;
+      const id = comps.length;
+      let x0 = start % w, x1 = x0, y0 = (start / w) | 0, y1 = y0, area = 0;
+      const q = [start];
+      label[start] = id;
+      while (q.length) {
+        const i = q.pop();
+        const cx = i % w, cy = (i / w) | 0;
+        area++;
+        if (cx < x0) x0 = cx; if (cx > x1) x1 = cx;
+        if (cy < y0) y0 = cy; if (cy > y1) y1 = cy;
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+          const nx = cx + dx, ny = cy + dy;
+          if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+          const ni = ny * w + nx;
+          if (label[ni] === -1 && solid(ni * 4)) { label[ni] = id; q.push(ni); }
+        }
+      }
+      comps.push({ id, x0, x1, y0, y1, area, alias: id });
+    }
+    // absorb small fragments (gore flecks, sparks) into nearby blobs
+    const bigArea = Math.max(1, ...comps.map(c2 => c2.area));
+    let mergedAny = true;
+    while (mergedAny) {
+      mergedAny = false;
+      for (const a of comps) {
+        if (a.alias !== a.id) continue;
+        for (const b of comps) {
+          if (b === a || b.alias !== b.id || b.area >= bigArea * 0.05) continue;
+          const pad = 16;
+          if (a.x0 - pad < b.x1 && b.x0 - pad < a.x1 && a.y0 - pad < b.y1 && b.y0 - pad < a.y1) {
+            b.alias = a.id;
+            a.x0 = Math.min(a.x0, b.x0); a.x1 = Math.max(a.x1, b.x1);
+            a.y0 = Math.min(a.y0, b.y0); a.y1 = Math.max(a.y1, b.y1);
+            a.area += b.area;
+            mergedAny = true;
+          }
+        }
+      }
+    }
+    const resolve = id => { let c2 = comps[id]; while (c2.alias !== c2.id) c2 = comps[c2.alias]; return c2.id; };
+    const roots = comps.filter(c2 => c2.alias === c2.id && c2.area > 500);
     const cw = w / ENEMY_GRID.cols, ch = h / ENEMY_GRID.rows;
     const cache = new Map();
     const cellSprite = (row, col) => {
       const key = row * 16 + col;
       if (cache.has(key)) return cache.get(key);
-      const cx0 = Math.floor(col * cw), cy0 = Math.floor(row * ch);
-      const cx1 = Math.floor((col + 1) * cw) - 1, cy1 = Math.floor((row + 1) * ch) - 1;
-      const cwid = cx1 - cx0 + 1, chgt = cy1 - cy0 + 1;
-      // flood the background in from the cell perimeter: only pixels
-      // connected to the edge are cleared, so background-colored
-      // shades INSIDE the creature (pale flesh, highlights) survive
-      const cleared = new Uint8Array(cwid * chgt);
-      const bgMatch = (x, y) => {
-        const i = (y * w + x) * 4;
-        return d[i + 3] < 128 || isBg(d[i], d[i + 1], d[i + 2]);
-      };
-      const qq = [];
-      const pushCell = (x, y) => {
-        const li = (y - cy0) * cwid + (x - cx0);
-        if (cleared[li]) return;
-        if (bgMatch(x, y)) { cleared[li] = 1; qq.push([x, y]); }
-      };
-      for (let x = cx0; x <= cx1; x++) { pushCell(x, cy0); pushCell(x, cy1); }
-      for (let y = cy0; y <= cy1; y++) { pushCell(cx0, y); pushCell(cx1, y); }
-      while (qq.length) {
-        const [x, y] = qq.pop();
-        if (x > cx0) pushCell(x - 1, y);
-        if (x < cx1) pushCell(x + 1, y);
-        if (y > cy0) pushCell(x, y - 1);
-        if (y < cy1) pushCell(x, y + 1);
+      // nearest blob to where this cell's sprite should sit
+      const ex = (col + 0.5) * cw, ey = (row + 0.5) * ch;
+      let best = null, bd = Infinity;
+      for (const r2 of roots) {
+        const dd = ((r2.x0 + r2.x1) / 2 - ex) ** 2 + ((r2.y0 + r2.y1) / 2 - ey) ** 2;
+        if (dd < bd) { bd = dd; best = r2; }
       }
-      const solidAt = (x, y) =>
-        !cleared[(y - cy0) * cwid + (x - cx0)] && d[(y * w + x) * 4 + 3] >= 128;
-      let x0 = cx1, x1 = cx0, y0 = cy1, y1 = cy0;
-      for (let y = cy0; y <= cy1; y++) for (let x = cx0; x <= cx1; x++)
-        if (solidAt(x, y)) {
-          if (x < x0) x0 = x; if (x > x1) x1 = x;
-          if (y < y0) y0 = y; if (y > y1) y1 = y;
-        }
-      if (x1 <= x0 || y1 <= y0) { cache.set(key, null); return null; }
-      // native-resolution cell with the flooded background punched out
-      const nat = document.createElement("canvas");
-      nat.width = x1 - x0 + 1; nat.height = y1 - y0 + 1;
-      const ng = nat.getContext("2d");
-      ng.drawImage(c, x0, y0, nat.width, nat.height, 0, 0, nat.width, nat.height);
-      const nd = ng.getImageData(0, 0, nat.width, nat.height);
-      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++)
-        if (cleared[(y - cy0) * cwid + (x - cx0)])
-          nd.data[((y - y0) * nat.width + (x - x0)) * 4 + 3] = 0;
-      ng.putImageData(nd, 0, 0);
-      const oc = document.createElement("canvas");
-      oc.width = oc.height = SPR;
-      const og = oc.getContext("2d");
-      og.imageSmoothingEnabled = false;
-      const sc = Math.min(SPR / nat.width, SPR / nat.height);
-      og.drawImage(nat, 0, 0, nat.width, nat.height, (SPR - nat.width * sc) / 2, SPR - nat.height * sc, nat.width * sc, nat.height * sc);
-      const spr = new Uint32Array(og.getImageData(0, 0, SPR, SPR).data.buffer);
+      if (!best) { cache.set(key, null); return null; }
+      const spr = rasterizeComponent(c, label, resolve, best.id, w,
+        best.x0, best.y0, best.x1 - best.x0 + 1, best.y1 - best.y0 + 1);
       cache.set(key, spr);
       return spr;
     };
@@ -3435,7 +3468,8 @@ function renderWorld() {
   for (const p of projectiles) items.push({ x: p.x, y: p.y, img: sprites[p.img] || sprites.fireball, hScale: 0.5, sink: 0 });
   for (const p of pProjectiles) items.push({ x: p.x, y: p.y, img: sprites[p.wp.proj], hScale: p.wp.proj === "bfgball" ? 0.8 : 0.45, sink: 0, bright: true });
   for (const b of barrels)     items.push({ x: b.x, y: b.y, img: sprites.barrel, hScale: 0.8, sink: 0.12 });
-  for (const d of decors)      items.push({ x: d.x, y: d.y, img: sprites[d.spr] || sprites.corpse, hScale: d.spr ? 0.75 : 0.6, sink: d.spr ? 0.22 : 0.3 });
+  // enemy corpses draw squashed low and wide, flat against the floor
+  for (const d of decors)      items.push({ x: d.x, y: d.y, img: sprites[d.spr] || sprites.corpse, hScale: d.spr ? 0.34 : 0.6, aspect: d.spr ? 1.9 : 1, sink: d.spr ? 0.03 : 0.3 });
   for (const f of effects) items.push({
     x: f.x, y: f.y,
     img: f.kind === "telefog" ? sprites.telefog :
@@ -3460,7 +3494,7 @@ function renderWorld() {
     const screenX = ((W / 2) * (1 + transX / transY)) | 0;
     const baseH = Math.abs((VIEW_H / transY)) | 0;
     const sprH = (baseH * s.hScale) | 0;
-    const sprW = sprH;
+    const sprW = (sprH * (s.aspect || 1)) | 0;
     const vShift = ((baseH - sprH) / 2 + s.sink * baseH) | 0;
     const drawStartY = Math.max(0, (horizon - sprH / 2 + vShift) | 0);
     const drawEndY = Math.min(VIEW_H - 1, (horizon + sprH / 2 + vShift) | 0);
