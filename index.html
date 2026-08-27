@@ -2151,16 +2151,17 @@ let gunFireT = 99;   // seconds since the current weapon last fired
 // become firing animations. Always outranks the gif art.
 // -----------------------------------------------------
 const MY_GUN_ART = [
-  { file: "hand idle.png",      slot: 0, mode: "single", use: "idle" },
-  { file: "fist.png",           slot: 0, mode: "single", use: "fire" },
-  { file: "pistol.png",         slot: 1, mode: "single", use: "idle" },
-  { file: "pistol shooting.png", slot: 1, mode: "single", use: "fire" },
-  { file: "shotgun.png",        slot: 2, mode: "single", use: "idle" },
-  { file: "chaingun.png",       slot: 3, mode: "grid", cols: 4, rows: 2, idle: 0, fire: [1, 2, 3], inset: 0.085 },
-  { file: "rocketlauncher.png", slot: 4, mode: "grid", cols: 4, rows: 3, idle: 0, fire: [2, 3, 4], inset: 0.02 },
-  { file: "plasma gun.png",     slot: 5, mode: "grid", cols: 3, rows: 2, idle: 0, fire: [1, 2, 4], inset: 0.07, capBottom: 0.09 },
-  { file: "BFG2704.png",        slot: 6, mode: "single", use: "idle" },
-  { file: "chainsaw.png",       slot: 7, mode: "grid", cols: 4, rows: 2, idle: 0, fire: [1, 2, 3, 4, 5], inset: 0.02, capBottom: 0.06 },
+  { file: "My Guns/hand idle.png",      slot: 0, mode: "single", use: "idle" },
+  { file: "My Guns/fist.png",           slot: 0, mode: "single", use: "fire" },
+  { file: "GunsNoBackground/Pistol.png",           slot: 1, mode: "single", use: "idle" },
+  { file: "GunsNoBackground/Pistol shooting.png",  slot: 1, mode: "single", use: "fire" },
+  { file: "GunsNoBackground/Shotgun.png",          slot: 2, mode: "single", use: "idle" },
+  { file: "GunsNoBackground/shotgun shooting.png", slot: 2, mode: "single", use: "fire" },
+  { file: "GunsNoBackground/Chaingun.png",         slot: 3, mode: "grid", cols: 4, rows: 2, idle: 0, fire: [1, 2, 3], inset: 0.01 },
+  { file: "My Guns/rocketlauncher.png", slot: 4, mode: "grid", cols: 4, rows: 3, idle: 0, fire: [2, 3, 4], inset: 0.02 },
+  { file: "My Guns/plasma gun.png",     slot: 5, mode: "grid", cols: 3, rows: 2, idle: 0, fire: [1, 2, 4], inset: 0.07, capBottom: 0.09 },
+  { file: "My Guns/BFG2704.png",        slot: 6, mode: "single", use: "idle" },
+  { file: "My Guns/chainsaw.png",       slot: 7, mode: "grid", cols: 4, rows: 2, idle: 0, fire: [1, 2, 3, 4, 5], inset: 0.02, capBottom: 0.06 },
 ];
 function loadMyGun(cfg) {
   const img = new Image();
@@ -2215,7 +2216,7 @@ function loadMyGun(cfg) {
     art.fire = null;
   };
   img.onerror = () => {};
-  img.src = "Guns/My Guns/" + cfg.file;
+  img.src = "Guns/" + cfg.file;
 }
 MY_GUN_ART.forEach(loadMyGun);
 

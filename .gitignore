@@ -10,6 +10,7 @@ SFX/*
 
 # The player's own custom weapon art IS part of the repo:
 !Guns/My Guns/
+!Guns/GunsNoBackground/
 
 # The player's own custom monster art IS part of the repo:
 !sprites/ImpCustom.jpg
