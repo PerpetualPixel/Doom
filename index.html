@@ -56,6 +56,7 @@
 // (e.g. on the hosted version, which ships no audio files).
 // ============================================================
 
+const GAME_VERSION = "1.0";
 const W = 640, H = 400;          // internal render resolution
 const HUD_H = 64;                // HUD bar height
 const VIEW_H = H - HUD_H;        // 3D viewport height
@@ -5659,6 +5660,20 @@ function drawHelp() {
   lines.forEach((ln, i) => ctx.fillText(ln, W / 2, 156 + i * 16));
   ctx.textAlign = "left";
 }
+// The version watermark: bright enough to read on the menus, faint in
+// the corner of the view during play so it never fights the action.
+function drawVersion(alpha) {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.font = "bold 11px 'Courier New', monospace";
+  ctx.textAlign = "right";
+  ctx.fillStyle = "#000";
+  ctx.fillText("v" + GAME_VERSION, W - 7, VIEW_H - 7);
+  ctx.fillStyle = "#cfcfcf";
+  ctx.fillText("v" + GAME_VERSION, W - 8, VIEW_H - 8);
+  ctx.restore();
+  ctx.textAlign = "left";
+}
 function renderTitle() {
   if (menuArtOk) {
     // player-made key art, cover-fit and top-anchored so the marine stays framed
@@ -5703,6 +5718,7 @@ function renderTitle() {
   ctx.textAlign = "left";
   if (menuMode === "help") drawHelp();
   else drawMenuButtons();
+  drawVersion(0.8);
 }
 function renderPauseMenu() {
   ctx.textAlign = "center";
@@ -5730,6 +5746,7 @@ function loop(now) {
     if (showMap) renderMinimap();
     renderOverlays();
     if (gameState === "paused") renderPauseMenu();
+    drawVersion(0.3);
   }
   requestAnimationFrame(loop);
 }
