@@ -1821,7 +1821,25 @@ function sliceComponents(img) {
     if (row) { row.items.push(cp); row.y1 = Math.max(row.y1, cp.y1); }
     else rows.push({ y0: cp.y0, y1: cp.y1, items: [cp] });
   }
-  const roots = rows.flatMap(r => r.items.sort((a, b) => (a.x0 + a.x1) - (b.x0 + b.x1))).slice(0, 64);
+  // Within a row, pieces whose horizontal ranges overlap belong to the
+  // same frame - a charged fireball, a plasma ball bigger than its
+  // owner, blood spray. Distinct frames always sit in their own
+  // horizontal band, so this never fuses two sprites together.
+  for (const r of rows) {
+    r.items.sort((a, b) => a.x0 - b.x0);
+    const kept = [];
+    for (const cp of r.items) {
+      const last = kept[kept.length - 1];
+      if (last && cp.x0 <= last.x1 + 2) {
+        cp.alias = last.id;
+        last.x0 = Math.min(last.x0, cp.x0); last.x1 = Math.max(last.x1, cp.x1);
+        last.y0 = Math.min(last.y0, cp.y0); last.y1 = Math.max(last.y1, cp.y1);
+        last.area += cp.area;
+      } else kept.push(cp);
+    }
+    r.items = kept;
+  }
+  const roots = rows.flatMap(r => r.items).slice(0, 64);
   return roots.map(cp =>
     rasterizeComponent(c, label, resolve, cp.id, w, cp.x0, cp.y0, cp.x1 - cp.x0 + 1, cp.y1 - cp.y0 + 1));
 }
@@ -1962,10 +1980,14 @@ const CUSTOM_ART = [
       if (n >= 15) sprites.knightDeath = fr.slice(11, Math.min(17, n));
       sprites.knightCorpse = fr[n - 1];
   } },
-  { file: "BaronCustom.jpg", apply: fr => {   // idle | death recoil | gibs
-      sprites.baronIdle = fr[0]; sprites.baronAttack = fr[0];
-      sprites.baronPain = fr[Math.min(1, fr.length - 1)];
-      if (fr.length > 2) sprites.baronCorpse = fr[2];
+  { file: "baron custom 2.png", apply: fr => {
+      // row-major: walk cycle | plasma charge | fall + gibs
+      const n = fr.length, at = i => fr[Math.min(i, n - 1)];
+      sprites.baronIdle = n >= 5 ? fr.slice(0, 5) : fr[0];       // animated walk
+      sprites.baronAttack = n >= 10 ? fr.slice(5, 10) : at(1);   // charging plasma
+      sprites.baronPain = at(10);
+      if (n >= 12) sprites.baronDeath = fr.slice(10, n);
+      sprites.baronCorpse = fr[n - 1];
   } },
 ];
 for (const { file, apply } of CUSTOM_ART) {
@@ -2703,7 +2725,8 @@ const ENEMY_TYPES = {
               ball: "fireball", atkSfx: "bite",
               sfxSight: "pinkySight", sfxPain: "pinkyPain", sfxDie: "pinkyDie", sfxAct: "pinkyAct" },
   baron:    { hp: 320, speed: 1.5, dmg: 22, ranged: true,  cool: 1.7, pspeed: 6, scale: 1.35,
-              idle: "baronIdle", attack: "baronAttack", pain: "baronPain", corpse: "baronCorpse",
+              idle: "baronIdle", attack: "baronAttack", pain: "baronPain",
+              death: "baronDeath", corpse: "baronCorpse",
               ball: "greenball", atkSfx: "fireball",
               sfxSight: "baronSight", sfxPain: "baronPain", sfxDie: "baronDie", sfxAct: "baronAct" },
   knight:   { hp: 200, speed: 1.7, dmg: 18, ranged: true,  cool: 1.5, pspeed: 6.5, scale: 1.3,
