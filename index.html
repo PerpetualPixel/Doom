@@ -2277,25 +2277,59 @@ const OST_DIR = "Doom OST/";
 const MUSIC_TITLE = "01. INTRO - Title Music.mp3";
 const MUSIC_INTER = "14. E2M3; INTER - Intermission From Doom.mp3";
 const MUSIC_VICTORY = "23. VICTOR - The End Of Doom.mp3";
-let musicOn = true, musicRealOk = true;
+// The shipped soundtrack: royalty-free metal tracks from Pixabay
+// (Alec Koff, NickPanek, Emmraan, The_Mountain), committed with the
+// repo. The local id OST remains a fallback, then the synth loop.
+const MUSIC_DIR = "Music/";
+const TRACKS = {
+  title:   "alec_koff-doom-metal-trailer-493404.mp3",
+  inter:   "alec_koff-doom-metal-trailer-493404.mp3",
+  victory: "emmraan-escape-from-hell-dark-heavy-metal-solo-guitar-261215.mp3",
+  boss:    "nickpanek-intense-black-metal-instrumental-304729.mp3",
+  rotation: [
+    "alec_koff-first-person-shooter-484516.mp3",
+    "alec_koff-fps-metal-doom-493400.mp3",
+    "the_mountain-metal-doom-317789.mp3",
+    "nickpanek-heavy-doom-metal-instrumental-288971.mp3",
+    "nickpanek-70s-doom-metal-instrumental-dark-amp-heavy-riffs-309467.mp3",
+    "emmraan-escape-from-hell-dark-heavy-metal-solo-guitar-261215.mp3",
+  ],
+};
+const BOSS_LEVELS = new Set([7, 16, 25]);   // E1M8, E2M8, E3M8
+function levelMusicChain(idx) {
+  const mine = BOSS_LEVELS.has(idx) ? TRACKS.boss : TRACKS.rotation[idx % TRACKS.rotation.length];
+  return [MUSIC_DIR + mine, OST_DIR + LEVELS[idx].music];
+}
+const titleMusicChain   = () => [MUSIC_DIR + TRACKS.title,   OST_DIR + MUSIC_TITLE];
+const interMusicChain   = () => [MUSIC_DIR + TRACKS.inter,   OST_DIR + MUSIC_INTER];
+const victoryMusicChain = () => [MUSIC_DIR + TRACKS.victory, OST_DIR + MUSIC_VICTORY];
+
+let musicOn = true, musicSynth = false;
+let musicChain = [], musicChainIdx = 0;
 const musicEl = new Audio();
 musicEl.loop = true;
 musicEl.volume = 0.45;
-musicEl.addEventListener("error", () => { musicRealOk = false; });
-function playMusic(file) {
-  if (!musicRealOk) return;   // synth loop covers it
-  const url = encodeURI(OST_DIR + file);
-  if (musicEl.src && musicEl.src.endsWith(url)) {
+musicEl.addEventListener("error", () => { musicChainIdx++; tryMusicChain(); });
+function tryMusicChain() {
+  if (musicChainIdx >= musicChain.length) { musicSynth = true; return; }
+  musicSynth = false;
+  musicEl.src = encodeURI(musicChain[musicChainIdx]);
+  musicEl.loop = true;
+  if (musicOn) musicEl.play().catch(() => {});
+}
+function playMusic(candidates) {
+  const url = encodeURI(candidates[0]);
+  if (!musicSynth && musicEl.src && musicEl.src.endsWith(url)) {
     if (musicOn && musicEl.paused) musicEl.play().catch(() => {});
     return;
   }
-  musicEl.src = url;
-  musicEl.loop = true;
-  if (musicOn) musicEl.play().catch(() => { musicRealOk = false; });
+  musicChain = candidates;
+  musicChainIdx = 0;
+  tryMusicChain();
 }
 function toggleMusic() {
   musicOn = !musicOn;
-  if (musicRealOk) {
+  if (!musicSynth) {
     if (musicOn) musicEl.play().catch(() => {});
     else musicEl.pause();
   }
@@ -2359,7 +2393,7 @@ function musicScheduleStep(step, t, slow) {
 }
 setInterval(() => {
   const wantsMusic = gameState === "play" || gameState === "title" || gameState === "paused";
-  if (!audio || audio.state !== "running" || !musicOn || musicRealOk || !wantsMusic) { musicNext = 0; return; }
+  if (!audio || audio.state !== "running" || !musicOn || !musicSynth || !wantsMusic) { musicNext = 0; return; }
   if (!musicGain) {
     musicGain = audio.createGain();
     musicGain.gain.value = 0.35;
@@ -2551,7 +2585,7 @@ function startGame(startIdx = 0) {
   resetLoadout();
   loadLevel();
   gameState = "play";
-  playMusic(LEVELS[levelIdx].music);
+  playMusic(levelMusicChain(levelIdx));
   canvas.requestPointerLock();
 }
 function pauseGame() {
@@ -2566,7 +2600,7 @@ function resumeGame() {
 function goToTitle() {
   gameState = "title";
   menuMode = "main"; menuSel = 0;
-  playMusic(MUSIC_TITLE);
+  playMusic(titleMusicChain());
 }
 function exitLevel(secret) {
   const L = LEVELS[levelIdx];
@@ -2574,18 +2608,18 @@ function exitLevel(secret) {
   if (pendingNext !== null && (pendingNext === undefined || pendingNext >= LEVELS.length)) pendingNext = null;
   sfx("switch");
   gameState = "intermission";
-  playMusic(MUSIC_INTER);
+  playMusic(interMusicChain());
 }
 function nextLevel() {
   if (pendingNext === null) {
     gameState = "victory";
-    playMusic(MUSIC_VICTORY);
+    playMusic(victoryMusicChain());
     return;
   }
   levelIdx = pendingNext;
   loadLevel();
   gameState = "play";
-  playMusic(LEVELS[levelIdx].music);
+  playMusic(levelMusicChain(levelIdx));
 }
 
 // ---------------------------------------------------------
@@ -2651,7 +2685,7 @@ function menuBack() {
   else if (menuMode === "paused") resumeGame();
 }
 function maybeTitleMusic() {
-  if (gameState === "title" && audio) playMusic(MUSIC_TITLE);
+  if (gameState === "title" && audio) playMusic(titleMusicChain());
 }
 
 const keys = {};
@@ -2684,7 +2718,7 @@ addEventListener("keydown", e => {
       resetLoadout();
       loadLevel();
       gameState = "play";
-      playMusic(LEVELS[levelIdx].music);
+      playMusic(levelMusicChain(levelIdx));
     } else if (gameState === "victory") {
       goToTitle();
     }

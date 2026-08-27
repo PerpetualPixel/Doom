@@ -42,7 +42,17 @@ and ammo carry over between levels; dying restarts the current level.
 ## Menus
 
 A classic-styled main menu (episode select, music toggle, help) with skull
-cursor, and a pause menu on `Esc` (resume, restart level, music, end game).
+cursor and clickable buttons, and a pause menu on `Esc` (resume, restart
+level, music, end game).
+
+## Soundtrack
+
+The shipped soundtrack is royalty-free metal from Pixabay Music — tracks by
+**Alec Koff**, **NickPanek**, **Emmraan**, and **The_Mountain** (`Music/`).
+The title screen, the three boss levels, and the victory screen each have
+dedicated tracks; other levels rotate through the rest. When the optional
+local `Doom OST/` folder is present it serves as a fallback, and a
+synthesized loop backs everything as a last resort.
 
 ## Optional local assets
 
