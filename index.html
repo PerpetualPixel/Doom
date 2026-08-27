@@ -593,13 +593,13 @@ const LEVELS = [
       "#...BB..............BB.....#",
       "#....Z................Z....#",
       "#...r.....a....h......E....#",
-      "#..........................#",
+      "#.....F..........F.........#",
       "#......b......N.......b....#",
       "#..F....................F..#",
       "#............y.............#",
       "#..A....................E..#",
       "#......b......N.......b....#",
-      "#..........................#",
+      "#.....E..........A.........#",
       "#...BB..............BB.....#",
       "#...BB..............BB.....#",
       "#....Z................Z....#",
@@ -857,7 +857,7 @@ const LEVELS = [
       "#...BB...............BB....#",
       "#....N................N....#",
       "#........h.....a....G......#",
-      "#...h..................h...#",
+      "#...h.....F......F.....h...#",
       "#......b.....F.....b.......#",
       "#...n.................n....#",
       "#..A....................A..#",
@@ -865,7 +865,7 @@ const LEVELS = [
       "#..F....................F..#",
       "#...n.................n....#",
       "#......b.....F.....b.......#",
-      "#...h..................h...#",
+      "#...h.....E......A.....h...#",
       "#....a.....h......a...E....#",
       "#....N................N....#",
       "#...BB...............BB....#",
@@ -3014,15 +3014,15 @@ const ENEMY_TYPES = {
               death: "soulDeath", corpse: "soulCorpse",
               ball: "fireball", atkSfx: "soulAtk",
               sfxSight: "soulSight", sfxPain: "soulPain", sfxDie: "soulDie", sfxAct: "soulAct" },
-  // The two bosses: they tower over the room, they barely flinch, they
+  // The two bosses: they tower over the room, they never flinch, they
   // fire in bursts, and they keep firing while you are stood on them.
   cyber:    { hp: 3000, speed: 1.5, dmg: 26, ranged: true,  cool: 0.8, pspeed: 9, scale: 2.1,
-              volley: 3, spread: 0.1, painChance: 0.08, minRange: 0.9, lightFloor: 0.5,
+              volley: 3, spread: 0.1, painChance: 0, minRange: 0.9, lightFloor: 0.5,
               idle: "cyberIdle", attack: "cyberAttack", pain: "cyberPain", corpse: "cyberCorpse",
               ball: "rocket", atkSfx: "rocket",
               sfxSight: "cyberSight", sfxPain: "cyberPain", sfxDie: "cyberDie", sfxAct: "cyberAct" },
   spider:   { hp: 2600, speed: 1.35, dmg: 10, ranged: true,  cool: 0.3, pspeed: 14, scale: 2.0,
-              volley: 3, spread: 0.05, painChance: 0.12, minRange: 0.9, lightFloor: 0.5,
+              volley: 3, spread: 0.05, painChance: 0, minRange: 0.9, lightFloor: 0.5,
               idle: "spiderIdle", attack: "spiderAttack", pain: "spiderPain", corpse: "spiderCorpse",
               ball: "tracer", atkSfx: "gatling",
               sfxSight: "spiderSight", sfxPain: "spiderPain", sfxDie: "spiderDie", sfxAct: "spiderAct" },
@@ -3431,10 +3431,12 @@ function damageEnemy(e, amt, dist) {
   if (e.hp <= 0) { e.state = "dying"; e.stateT = 0; sfx(e.sfxDie, volAt(dist)); return; }
   // Every hit staggers an ordinary monster for 0.3s. A boss with that
   // rule is a statue: chaingun or plasma re-triggers the flinch faster
-  // than it wears off, so it never gets a shot away. Bosses shrug most
-  // of it off - but a hit always wakes them.
+  // than it wears off, so it never gets a shot away. painChance 0 means
+  // it never flinches - it still grunts, so hits read, and a hit still
+  // wakes it.
   if (e.painChance !== undefined && Math.random() >= e.painChance) {
     if (e.state === "idle") { e.state = "chase"; e.stateT = 0; sfx(e.sfxSight, volAt(dist)); }
+    else if (!(e.gruntT > 0)) { e.gruntT = 0.7; sfx(e.sfxPain, volAt(dist) * 0.7); }
     return;
   }
   e.state = "pain"; e.stateT = 0; sfx(e.sfxPain, volAt(dist));
@@ -3647,6 +3649,7 @@ function update(dt) {
   for (const e of enemies) {
     if (e.dead) continue;
     e.stateT += dt;
+    if (e.gruntT > 0) e.gruntT -= dt;
     if (e.state === "dying") {
       if (e.stateT > 0.45) {
         e.dead = true; player.kills++;
@@ -4094,11 +4097,13 @@ function renderWeapon() {
   ctx.restore();
 }
 
-function drawDigits(text, x, y, size, color) {
+function drawDigits(text, x, y, size, color, align) {
   ctx.fillStyle = color;
   ctx.font = `bold ${size}px 'Courier New', monospace`;
   ctx.textBaseline = "middle";
+  ctx.textAlign = align || "left";
   ctx.fillText(text, x, y);
+  ctx.textAlign = "left";
 }
 
 function renderFace(cx, cy) {
@@ -4137,7 +4142,7 @@ function renderHUD() {
   ctx.fillStyle = "#151515";
   ctx.fillRect(0, VIEW_H, W, 3);
   ctx.strokeStyle = "#111";
-  for (const x of [130, 240, 315, 390, 500]) {
+  for (const x of [130, 240, 315, 390]) {
     ctx.beginPath(); ctx.moveTo(x, VIEW_H + 6); ctx.lineTo(x, H - 6); ctx.stroke();
   }
   const mid = VIEW_H + HUD_H / 2;
@@ -4166,10 +4171,11 @@ function renderHUD() {
       ki++;
     }
   }
-  drawDigits("KILLS", 405, mid - 14, 13, "#888");
-  drawDigits(`${player.kills}/${totalEnemies}`, 405, mid + 10, 26, "#e03030");
-  drawDigits("LEVEL", 520, mid - 14, 13, "#888");
-  drawDigits(LEVELS[levelIdx] ? LEVELS[levelIdx].name.split(":")[0] : "", 520, mid + 10, 26, "#c8a020");
+  // no kill tally here - counting corpses mid-fight is the exit
+  // screen's job; the bar carries what you act on
+  const levelMid = (390 + W) / 2;
+  drawDigits("LEVEL", levelMid, mid - 14, 13, "#888", "center");
+  drawDigits(LEVELS[levelIdx] ? LEVELS[levelIdx].name.split(":")[0] : "", levelMid, mid + 10, 26, "#c8a020", "center");
 
   // crosshair
   ctx.fillStyle = "rgba(255,255,255,0.7)";
