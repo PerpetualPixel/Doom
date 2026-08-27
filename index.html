@@ -2379,16 +2379,41 @@ const SFX_FILES = {
   saw: "dssawhit.wav", sawup: "dssawup.wav",
   menuBlip: "dspstop.wav",
   zombieSight: "dsposit1.wav", zombieDie: "dspodth1.wav",
+  zombieAct: "dsposact.wav",   zombiePain: "dspopain.wav",
+  sergeantSight: "dssgtsit.wav", sergeantDie: "dssgtdth.wav",
+  sergeantAct: "dsbgact.wav",    sergeantPain: "dspopain.wav",
   cacoSight: "dscacsit.wav",   cacoDie: "dscacdth.wav",
+  cacoAct: "dsdmact.wav",      cacoPain: "dsdmpain.wav",  cacoAtk: "dsfirsht.wav",
   soulSight: "dssklatk.wav",   soulDie: "dsskldth.wav",
+  soulAct: "dssklatk.wav",     soulPain: "dsdmpain.wav",  soulAtk: "dssklatk.wav",
   knightSight: "dskntsit.wav", knightDie: "dskntdth.wav",
-  cyberSight: "dscybsit.wav",  cyberDie: "dscybdth.wav",
+  knightAct: "dsdmact.wav",    knightPain: "dsdmpain.wav", knightAtk: "dsfirsht.wav",
+  baronAtk: "dsfirsht.wav",
+  cyberSight: "dscybsit.wav",  cyberDie: "dscybdth.wav",  cyberPain: "dsdmpain.wav",
   spiderSight: "dsspisit.wav", spiderDie: "dsspidth.wav",
+  spiderAct: "dsbspact.wav",   spiderPain: "dsdmpain.wav",
   rocket: "dsrlaunc.wav",      rocketHit: "dsrxplod.wav",
 };
 // Royalty-free sounds (shipped with the repo) take priority, then the
 // optional local classic wavs, then the synthesized fallbacks.
+// Every monster gets its own voice, so an unseen growl identifies what
+// is coming. An entry is a filename, or {f, rate, vol} - replaying one
+// source at another speed yields a distinct bigger/smaller creature,
+// which is how relatives (imp/zombie, knight/baron) stay recognisable
+// as kin while still being told apart.
+const GRUNT = "freesound_community-gruntmp3-14723.mp3";
+const SCREAM = "freesound_community-short-monster-scream-105026.mp3";
+const PIG = "mollyroselee-pig-grunting-playing-in-mud-sound-effect-440220.mp3";
+const BEAST_GRUNT = "dragon-studio-animal-grunt-382728.mp3";
+const SCREECH = "freesound_community-high-quality-monster-screech-65012.mp3";
+const FLYSCREECH = "53439420-flying-monster-screech-02-461220.mp3";
+const LOWROAR = "freesound_community-low-monster-roar-97413.mp3";
+const HOWL = "freesound_community-monster-howl-85304.mp3";
+const DRAGON = "phatphrogstudio-dragon-voice-roar-477831.mp3";
+const BIGROAR = "yodguard-aggressive-monster-roar-1-533009.mp3";
+const WHOOSH = "floraphonic-fireball-whoosh-5-179129.mp3";
 const RF_SFX = {
+  // weapons and world
   shoot: "pistol.mp3",
   shotgun: "shotgun.mp3",
   gatling: "gatling gun.mp3",
@@ -2399,36 +2424,94 @@ const RF_SFX = {
   saw: "chainsaw cutting.mp3",
   sawup: "chainsaw equipped.mp3",
   bite: "monster bite.mp3",
+  fireball: WHOOSH,
+  fireballHit: "koiroylers-fireball-impact-351961.mp3",
+  playerPain: { f: GRUNT, rate: 0.9 },
   playerDie: "Player Death SFX.mp3",
+
+  // zombieman - human grunts, dies screaming
+  zombieSight: GRUNT,
+  zombieAct:   { f: GRUNT, rate: 0.85, vol: 0.6 },
+  zombiePain:  { f: GRUNT, rate: 1.3 },
+  zombieDie:   SCREAM,
+
+  // sergeant - the same soldier, one size deeper
+  sergeantSight: BEAST_GRUNT,
+  sergeantAct:   { f: BEAST_GRUNT, rate: 0.8, vol: 0.6 },
+  sergeantPain:  { f: GRUNT, rate: 0.8 },
+  sergeantDie:   { f: SCREAM, rate: 0.82 },
+
+  // imp - snarling, throws fire
   impSight: "monster growl.mp3",
-  pinkySight: "alesiadavina-lurking-demon-growl-dark-cinematic-horror-drone-sfx-543183.mp3",
-  baronSight: "alesiadavina-approaching-demon-growl-deep-demonic-beast-sound-effect-541930.mp3",
-  knightSight: "monster growl 2.mp3",
-  cacoSight: "alesiadavina-horror-sound-lurking-horror-monster-189948.mp3",
+  impAct:   { f: "demon growl.mp3", vol: 0.6 },
+  impPain:  { f: "monster growl.mp3", rate: 1.4 },
+  impDie:   "monster growl 2.mp3",
+
+  // pinky - unmistakably porcine, bites
+  pinkySight: PIG,
+  pinkyAct:   { f: BEAST_GRUNT, vol: 0.6 },
+  pinkyPain:  { f: PIG, rate: 1.35 },
+  pinkyDie:   LOWROAR,
+
+  // cacodemon - high screech from a floating mouth
+  cacoSight: SCREECH,
+  cacoAct:   { f: "alesiadavina-horror-sound-lurking-horror-monster-189948.mp3", vol: 0.55 },
+  cacoPain:  { f: SCREAM, rate: 1.25 },
+  cacoDie:   { f: SCREECH, rate: 0.78 },
+  cacoAtk:   { f: WHOOSH, rate: 0.85 },
+
+  // lost soul - thin flying screech, bursts on death
+  soulSight: FLYSCREECH,
+  soulAct:   { f: FLYSCREECH, rate: 1.25, vol: 0.5 },
+  soulPain:  { f: FLYSCREECH, rate: 1.45 },
+  soulDie:   "koiroylers-fireball-impact-351961.mp3",
+  soulAtk:   "freesound_community-monster-attack-100270.mp3",
+
+  // hell knight - howling
+  knightSight: HOWL,
+  knightAct:   { f: LOWROAR, vol: 0.55 },
+  knightPain:  { f: LOWROAR, rate: 1.3 },
+  knightDie:   { f: HOWL, rate: 0.8 },
+  knightAtk:   { f: WHOOSH, rate: 0.8 },
+
+  // baron - the knight's big brother: deeper everything
+  baronSight: DRAGON,
+  baronAct:   { f: "alesiadavina-approaching-demon-growl-deep-demonic-beast-sound-effect-541930.mp3", vol: 0.5 },
+  baronPain:  { f: LOWROAR, rate: 0.85 },
+  baronDie:   { f: DRAGON, rate: 0.75 },
+  baronAtk:   { f: WHOOSH, rate: 0.68 },
+
+  // cyberdemon - a horn, then hoofbeats you can hear through walls
   cyberSight: "freesound_community-horn-of-doom-101734.mp3",
+  cyberAct:   "big monster footstep.mp3",
+  cyberPain:  { f: BIGROAR, rate: 1.2 },
+  cyberDie:   BIGROAR,
+
+  // spider mastermind - distant moan and a low drone
   spiderSight: "Demon moaning in distance.mp3",
-  impAct: "demon growl.mp3",
-  pinkyAct: "demon growl.mp3",
-  baronAct: "demon growl.mp3",
-  cyberAct: "big monster footstep.mp3",
+  spiderAct:   { f: "alesiadavina-lurking-demon-growl-dark-cinematic-horror-drone-sfx-543183.mp3", vol: 0.5 },
+  spiderPain:  { f: BIGROAR, rate: 1.4 },
+  spiderDie:   { f: BIGROAR, rate: 0.78 },
 };
 const sfxLib = {};
-function addSfxSource(k, url) {
-  const a = new Audio(url);
+function addSfxSource(k, spec) {
+  const cfg = typeof spec === "string" ? { f: spec } : spec;
+  const a = new Audio("SFX/" + cfg.f);
   a.preload = "auto";
-  const entry = { el: a, ok: false };
+  const entry = { el: a, ok: false, rate: cfg.rate || 1, gain: cfg.vol == null ? 1 : cfg.vol };
   a.addEventListener("canplaythrough", () => { entry.ok = true; }, { once: true });
   (sfxLib[k] = sfxLib[k] || []).push(entry);
 }
-for (const [k, f] of Object.entries(RF_SFX)) addSfxSource(k, "SFX/" + f);
-for (const [k, f] of Object.entries(SFX_FILES)) addSfxSource(k, "SFX/" + f);
+for (const [k, spec] of Object.entries(RF_SFX)) addSfxSource(k, spec);
+for (const [k, f] of Object.entries(SFX_FILES)) addSfxSource(k, f);
 function sfx(kind, vol = 1) {
   const list = sfxLib[kind];
   if (list) {
     for (const s of list) {
       if (!s.ok) continue;
       const c = s.el.cloneNode();
-      c.volume = Math.max(0.05, Math.min(1, vol * 0.9));
+      c.playbackRate = s.rate;
+      c.volume = Math.max(0.05, Math.min(1, vol * s.gain * 0.9));
       c.play().catch(() => {});
       return;
     }
@@ -2449,7 +2532,14 @@ const SYNTH_ALIAS = {
   zombieSight: "sight", cacoSight: "sight", cyberSight: "sight", spiderSight: "sight",
   knightSight: "sight", soulSight: "hit",
   zombieDie: "die", cacoDie: "die", soulDie: "die", cyberDie: "die", spiderDie: "die",
-  knightDie: "die",
+  knightDie: "die", sergeantDie: "die",
+  sergeantSight: "sight", sergeantAct: "growl", sergeantPain: "hit",
+  zombieAct: "growl", zombiePain: "hit",
+  cacoAct: "growl", cacoPain: "hit", cacoAtk: "fireball",
+  soulAct: "growl", soulPain: "hit", soulAtk: "hit",
+  knightAct: "growl", knightPain: "hit", knightAtk: "fireball",
+  baronAtk: "fireball",
+  cyberPain: "hit", spiderAct: "growl", spiderPain: "hit",
   rocket: "fireball", rocketHit: "boom",
   shotgun: "shoot", sgcock: "pickup", punch: "hit", plasma: "fireball", bfg: "boom",
   saw: "hit", sawup: "growl",
@@ -2777,40 +2867,40 @@ const ENEMY_TYPES = {
   baron:    { hp: 320, speed: 1.5, dmg: 22, ranged: true,  cool: 1.7, pspeed: 6, scale: 1.35,
               idle: "baronIdle", attack: "baronAttack", pain: "baronPain",
               death: "baronDeath", corpse: "baronCorpse",
-              ball: "greenball", atkSfx: "fireball",
+              ball: "greenball", atkSfx: "baronAtk",
               sfxSight: "baronSight", sfxPain: "baronPain", sfxDie: "baronDie", sfxAct: "baronAct" },
   knight:   { hp: 200, speed: 1.7, dmg: 18, ranged: true,  cool: 1.5, pspeed: 6.5, scale: 1.3,
               idle: "knightIdle", attack: "knightAttack", pain: "knightPain",
               death: "knightDeath", corpse: "knightCorpse",
-              ball: "greenball", atkSfx: "fireball",
-              sfxSight: "knightSight", sfxPain: "pinkyPain", sfxDie: "knightDie", sfxAct: "baronAct" },
+              ball: "greenball", atkSfx: "knightAtk",
+              sfxSight: "knightSight", sfxPain: "knightPain", sfxDie: "knightDie", sfxAct: "knightAct" },
   zombie:   { hp: 30,  speed: 1.8, dmg: 7,  ranged: true,  cool: 1.3, pspeed: 11, scale: 0.95,
               idle: "zombieIdle", attack: "zombieAttack", pain: "zombiePain",
               death: "zombieDeath", corpse: "zombieCorpse",
               ball: "tracer", atkSfx: "shoot",
-              sfxSight: "zombieSight", sfxPain: "impPain", sfxDie: "zombieDie", sfxAct: "impAct" },
+              sfxSight: "zombieSight", sfxPain: "zombiePain", sfxDie: "zombieDie", sfxAct: "zombieAct" },
   sergeant: { hp: 50,  speed: 1.7, dmg: 6,  ranged: true,  cool: 1.7, pspeed: 11, scale: 1.0, volley: 3, spread: 0.13,
               idle: "sergeantIdle", attack: "sergeantAttack", pain: "sergeantPain",
               death: "sergeantDeath", corpse: "sergeantCorpse",
               ball: "tracer", atkSfx: "shotgun",
-              sfxSight: "pinkySight", sfxPain: "impPain", sfxDie: "zombieDie", sfxAct: "impAct" },
+              sfxSight: "sergeantSight", sfxPain: "sergeantPain", sfxDie: "sergeantDie", sfxAct: "sergeantAct" },
   caco:     { hp: 200, speed: 1.1, dmg: 18, ranged: true,  cool: 1.9, pspeed: 6, scale: 1.25, float: -0.3,
               idle: "cacoIdle", attack: "cacoAttack", pain: "cacoPain", corpse: "cacoCorpse",
-              ball: "fireball", atkSfx: "fireball",
-              sfxSight: "cacoSight", sfxPain: "pinkyPain", sfxDie: "cacoDie", sfxAct: "baronAct" },
+              ball: "fireball", atkSfx: "cacoAtk",
+              sfxSight: "cacoSight", sfxPain: "cacoPain", sfxDie: "cacoDie", sfxAct: "cacoAct" },
   lostsoul: { hp: 50,  speed: 3.4, dmg: 10, ranged: false, cool: 0.9, scale: 0.7, float: -0.25,
               idle: "soulIdle", attack: "soulAttack", pain: "soulPain",
               death: "soulDeath", corpse: "soulCorpse",
-              ball: "fireball", atkSfx: "soulSight",
-              sfxSight: "soulSight", sfxPain: "pinkyPain", sfxDie: "soulDie", sfxAct: "baronAct" },
+              ball: "fireball", atkSfx: "soulAtk",
+              sfxSight: "soulSight", sfxPain: "soulPain", sfxDie: "soulDie", sfxAct: "soulAct" },
   cyber:    { hp: 650, speed: 1.3, dmg: 38, ranged: true,  cool: 1.4, pspeed: 8, scale: 1.6,
               idle: "cyberIdle", attack: "cyberAttack", pain: "cyberPain", corpse: "cyberCorpse",
               ball: "rocket", atkSfx: "rocket",
-              sfxSight: "cyberSight", sfxPain: "pinkyPain", sfxDie: "cyberDie", sfxAct: "cyberAct" },
+              sfxSight: "cyberSight", sfxPain: "cyberPain", sfxDie: "cyberDie", sfxAct: "cyberAct" },
   spider:   { hp: 650, speed: 1.1, dmg: 9,  ranged: true,  cool: 0.55, pspeed: 12, scale: 1.7,
               idle: "spiderIdle", attack: "spiderAttack", pain: "spiderPain", corpse: "spiderCorpse",
               ball: "tracer", atkSfx: "gatling",
-              sfxSight: "spiderSight", sfxPain: "pinkyPain", sfxDie: "spiderDie", sfxAct: "baronAct" },
+              sfxSight: "spiderSight", sfxPain: "spiderPain", sfxDie: "spiderDie", sfxAct: "spiderAct" },
 };
 function makeEnemy(type, x, y) {
   return {
