@@ -91,15 +91,21 @@ original metal-style music loop.
 
 ## Controls
 
+Every action below can be re-bound in the Controls menu, which also has a
+mouse sensitivity slider.
+
 | Input | Action |
 |---|---|
 | Click | Lock mouse / fire |
 | `WASD` | Move / strafe |
-| Mouse or `←` `→` | Turn |
+| Mouse | Turn, and look up/down |
+| Scroll wheel / `1`–`9` | Change weapon (`9` is the super shotgun) |
 | Hold `W` | Speed builds toward a sprint |
 | Right mouse | Aim down sights (tighter shots) |
 | `Space` | Fire (or continue, on intermission) |
-| `E` | Use doors and exit switches |
+| `E` | Use doors, switches and exits |
+| `F` | Flashlight |
 | `N` | Toggle music |
 | `M` | Toggle map |
+| `Esc` | Pause — save/load lives here (5 slots) |
 | `R` | Restart level (after death) / new game (after victory) |
