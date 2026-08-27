@@ -13,18 +13,13 @@ SFX/*
 !Guns/GunsNoBackground/
 
 # The player's own custom monster art IS part of the repo:
-!sprites/ImpCustom.jpg
-!sprites/ImpCorpse.jpg
-!sprites/imp_custom_2.png
-!sprites/CacoCustom.jpg
-!sprites/SoulCustom.jpg
-!sprites/hell_skill_custom_2.png
-!sprites/KnightCustom.jpg
-!sprites/Knight Custom 2.png
-!sprites/BaronCustom.jpg
-!sprites/baron custom 2.png
 !sprites/all enemies.png
-!sprites/pinky custom.png
+!sprites/imp_custom_2.png
+!sprites/pinky.png
+!sprites/CacoCustom 2.jpg
+!sprites/hell_skill_custom_2.png
+!sprites/Knight Custom 2.png
+!sprites/baron custom 2.png
 !sprites/zombie custom 2.png
 !sprites/Zombie_Sergeant.png
 

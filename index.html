@@ -1865,11 +1865,12 @@ function sliceComponents(img) {
 // art (real transparency and baked checkerboards both work).
 const ENEMY_GRID = {
   file: "all enemies.png", cols: 6, rows: 6,
+  // Only the two bosses come from this sheet - the pinky and the
+  // zombieman have dedicated animated sheets of their own, and
+  // claiming their keys here would race those loads.
   map: [   // [row, col, spriteKey]
     [1, 0, "cyberIdle"],  [1, 0, "cyberAttack"],  [1, 1, "cyberPain"],  [1, 2, "cyberCorpse"],
     [2, 0, "spiderIdle"], [2, 1, "spiderAttack"], [2, 1, "spiderPain"], [2, 2, "spiderCorpse"],
-    [3, 0, "pinkyIdle"],  [3, 1, "pinkyAttack"],  [3, 1, "pinkyPain"],  [3, 2, "pinkyCorpse"],
-    [5, 0, "zombieIdle"], [5, 1, "zombieAttack"], [5, 0, "zombiePain"], [5, 2, "zombieCorpse"],
   ],
 };
 (function () {
@@ -1997,16 +1998,22 @@ const CUSTOM_ART = [
       if (n >= 20) sprites.impDeath = fr.slice(16, n);
       sprites.impCorpse = fr[n - 1];
   } },
-  { file: "CacoCustom.jpg", apply: fr => {   // idle | bite | corpse
-      sprites.cacoIdle = fr[0]; sprites.cacoPain = fr[0];
-      sprites.cacoAttack = fr[Math.min(1, fr.length - 1)];
-      if (fr.length > 2) sprites.cacoCorpse = fr[2];
+  { file: "CacoCustom 2.jpg", apply: fr => {
+      // rows: size studies + portraits | float, bite, bleed | gibs
+      const rows = fr.rows || [];
+      if (rows.length < 3) { sprites.cacoIdle = fr[0]; return; }
+      const live = rows[1], gibs = rows[rows.length - 1];
+      sprites.cacoIdle = live.length >= 3 ? live.slice(0, 3) : live[0];
+      sprites.cacoAttack = live[Math.min(2, live.length - 1)];
+      sprites.cacoPain = live[Math.min(3, live.length - 1)];
+      sprites.cacoDeath = [...live.slice(3), ...gibs.slice(0, 3)];
+      sprites.cacoCorpse = gibs[gibs.length - 1];
   } },
   // Rotation sheets: rows are facing angles, then a death row and a
   // gib row. Only the front-facing row is used for live states.
   { file: "zombie custom 2.png", apply: fr => applyRotationSheet(fr, "zombie") },
   { file: "Zombie_Sergeant.png", apply: fr => applyRotationSheet(fr, "sergeant") },
-  { file: "pinky custom.png",    apply: fr => applyRotationSheet(fr, "pinky", { deathLast: true }) },
+  { file: "pinky.png",           apply: fr => applyRotationSheet(fr, "pinky") },
   { file: "hell_skill_custom_2.png", apply: fr => {
       // rows: skull sizes | scream + cracks | burst, burn, debris | remains
       const rows = fr.rows || [];
@@ -2885,7 +2892,8 @@ const ENEMY_TYPES = {
               ball: "tracer", atkSfx: "shotgun",
               sfxSight: "sergeantSight", sfxPain: "sergeantPain", sfxDie: "sergeantDie", sfxAct: "sergeantAct" },
   caco:     { hp: 200, speed: 1.1, dmg: 18, ranged: true,  cool: 1.9, pspeed: 6, scale: 1.25, float: -0.3,
-              idle: "cacoIdle", attack: "cacoAttack", pain: "cacoPain", corpse: "cacoCorpse",
+              idle: "cacoIdle", attack: "cacoAttack", pain: "cacoPain",
+              death: "cacoDeath", corpse: "cacoCorpse",
               ball: "fireball", atkSfx: "cacoAtk",
               sfxSight: "cacoSight", sfxPain: "cacoPain", sfxDie: "cacoDie", sfxAct: "cacoAct" },
   lostsoul: { hp: 50,  speed: 3.4, dmg: 10, ranged: false, cool: 0.9, scale: 0.7, float: -0.25,
