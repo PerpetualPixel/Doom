@@ -4,7 +4,7 @@ The working plan for the post-1.0 feature notes. Batches run easiest → hardest
 each batch ships playable. Items marked **needs asset** have a procedural
 placeholder in the meantime — drop the real art in and it takes over.
 
-## Batch 1 — mechanics & feel (IN PROGRESS)
+## Batch 1 — mechanics & feel (DONE)
 
 - [x] **Armor system** — armor stat capped at 200, soaks 1/3 of every hit until it
   breaks. Pickups: helmet (+1), green armor (fills to 100), blue armor (fills
@@ -33,32 +33,39 @@ placeholder in the meantime — drop the real art in and it takes over.
   nothing; now audible everywhere. *Needs asset: real door sfx if wanted.*
 - [x] **Gun size** — first-person weapons scaled down ~15%.
 
-## Batch 2 — systems (code-only, no assets required)
+## Batch 2 — systems (DONE)
 
-- [ ] **Save/load, 5 slots** — snapshot of level, skill, player stats,
-  progress; save/load screens in the menu. Open question: checkpoint-at-level
-  vs full mid-level snapshot.
-- [ ] **Custom key binds** — menu that records keys/mouse buttons per action;
-  mouse sensitivity slider.
-- [ ] **Flashlight** — toggleable cone of light in the view.
-- [ ] **Super shotgun** — double-barrel on key 9: huge burst, wide spread,
-  slow reload. *Needs asset: gun sprite/sheet; placeholder art until then.*
-- [ ] **Green wall switches** — switch tiles that open a linked door
-  elsewhere. Map format gains a switch→door pairing.
-- [ ] **Vertical aim** — mouse pitch via y-shear (Doom-style look up/down);
-  the gun visually tracks.
-- [ ] **Wall monitors** — still screens as wall tiles. *Needs asset: Mars
-  imagery for the screens; procedural static until then.*
-- [ ] **Brutal deaths** — procedural blood spray, gib chunks on overkill,
-  harder death sounds. *Needs asset: death/gib sprite sheets + sounds for the
-  full effect.*
-- [ ] **Exit door** — the iconic exit-sign doorway as a distinct texture/prop.
-  *Needs asset or procedural.*
+- [x] **Save/load, 5 slots** — full mid-level snapshot (position, health,
+  armor, arsenal, every monster, every door, thrown switches, automap fog).
+  Save from the pause menu, load from the title or pause menu.
+- [x] **Custom key binds** — controls menu records a new key per action
+  (clashing keys swap); mouse sensitivity slider. Stored with the other prefs.
+- [x] **Flashlight** — F toggles a cone of light around the view centre.
+- [x] **Super shotgun** — double-barrel on key 9: 16 pellets, wide spread,
+  two shells a pull, slow reload. One sergeant in four from E2 on drops it.
+  *Placeholder art; needs asset: gun sprite/sheet.*
+- [x] **Scroll wheel** — cycles the arsenal in slot order, skipping empty guns.
+- [x] **Green wall switches** — V/Y map tiles: throwing the switch (it stays
+  thrown) raises every switch door in the level, permanently. Switch vaults
+  live on E1M1, E2M2, E3M3.
+- [x] **Vertical aim** — mouse pitch via y-shear; walls stay vertical, the
+  crosshair rides the horizon, the gun tracks.
+- [x] **Wall monitors** — Mars on animated-static screens, dressed onto tech
+  walls procedurally (hash-picked, so they never move). *Needs asset: real
+  monitor imagery.*
+- [x] **Brutal deaths** — blood spray on every hit; overkill gibs the monster
+  into flying chunks and leaves a floor stain instead of a corpse, with a wet
+  synth burst. *Needs asset: death/gib sheets + sounds for the full effect.*
+- [x] **Exit door** — the exit is now a recessed doorway under a glowing red
+  EXIT sign.
 
 ## Batch 3 — renderer (the hard ones)
 
 - [ ] **Variable ceiling heights** — per-area ceiling levels; tall boss
-  arenas (the real fix for the boss/roof clamp).
+  arenas (the real fix for the boss/roof clamp). The plan, per Pixel: every
+  map distinct — some rooms with no ceiling at all, big rooms with open
+  strips or one big hole, small corridors reading as tunnels, high perches
+  with windows; variety in wall/ceiling dressing per area.
 - [ ] **Open-sky areas** — zones with no ceiling showing a hell skybox, plus
   distance terrain on the horizon. *Needs asset: skybox art; procedural sky
   until then.*
