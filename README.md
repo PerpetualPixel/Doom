@@ -96,7 +96,8 @@ original metal-style music loop.
 | Click | Lock mouse / fire |
 | `WASD` | Move / strafe |
 | Mouse or `←` `→` | Turn |
-| `Shift` | Run |
+| Hold `W` | Speed builds toward a sprint |
+| Right mouse | Aim down sights (tighter shots) |
 | `Space` | Fire (or continue, on intermission) |
 | `E` | Use doors and exit switches |
 | `N` | Toggle music |
