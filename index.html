@@ -2006,21 +2006,29 @@ function keyOutGunFrame(g, w, h) {
     for (const e of counts.values()) {
       if (e.n < shareMin) continue;
       const k = [e.sr / e.n, e.sg / e.n, e.sb / e.n];
-      if (Math.max(k[0], k[1], k[2]) - Math.min(k[0], k[1], k[2]) < 40) bgKeys.push(k);   // skip an arm crossing the border
+      const lum = Math.max(k[0], k[1], k[2]);
+      if (lum - Math.min(k[0], k[1], k[2]) >= 40) continue;   // an arm crossing the border
+      // mid-gray shades (gun-metal territory) only count as background
+      // when they truly dominate the border - stray JPEG compression
+      // bands must never poison the key set
+      if (lum >= 100 && lum <= 200 && e.n < borderOpaque * 0.3) continue;
+      bgKeys.push(k);
     }
     if (!bgKeys.length) return;
-    const keyLum = Math.max(...bgKeys.map(k => Math.max(k[0], k[1], k[2])));
-    const darkBg = keyLum < 128;
+    // dark and bright backgrounds fade independently: dark vignettes
+    // run down toward black, bright ones cast light-gray shadows just
+    // below themselves; mid-tone metal is out of reach of both
+    const lums = bgKeys.map(k => Math.max(k[0], k[1], k[2]));
+    const darkLums = lums.filter(l => l < 100), brightLums = lums.filter(l => l > 200);
+    const darkCap = darkLums.length ? Math.max(...darkLums) + 10 : -1;
+    const brightFloor = brightLums.length ? Math.min(...brightLums) - 34 : 999;
     const isBg = i => {
       if (p[i + 3] === 0) return true;
       const r = p[i], g2 = p[i + 1], b = p[i + 2];
       if (bgKeys.some(k => Math.abs(r - k[0]) < 30 && Math.abs(g2 - k[1]) < 30 && Math.abs(b - k[2]) < 30)) return true;
-      // fades follow the background's direction: a dark background
-      // vignettes down toward black (anything darker qualifies), a
-      // bright one only casts light gray shadows just below itself -
-      // either way, mid-tone gun metal stays out of the flood's reach
       const mx = Math.max(r, g2, b), mn = Math.min(r, g2, b);
-      return mx - mn < 16 && (darkBg ? mx <= keyLum + 10 : mx >= keyLum - 34);
+      if (mx - mn >= 16) return false;
+      return mx <= darkCap || mx >= brightFloor;
     };
     // Flood fill from the border: only background-connected pixels are
     // cleared, so dark details enclosed inside the weapon silhouette
