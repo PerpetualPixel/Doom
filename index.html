@@ -73,6 +73,11 @@ const CEIL_TUNNEL = 0.8;    // narrow corridors
 const CEIL_ARENA = 2.6;     // indoor boss arenas
 const SKY_WALL = 1.35;      // silhouette height of walls open to the sky
 const SKY = 0;              // ceilMap value meaning "no ceiling at all"
+// Floors rise too: knee-high daises you can walk straight up onto, and
+// waist-high perches that need their step. A walker climbs at most
+// STEP_UP in one stride - and steps down any distance freely.
+const FLOOR_DAIS = 0.25, FLOOR_PERCH = 0.5;
+const STEP_UP = 0.3;
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
@@ -1657,6 +1662,7 @@ const TELE_PAIRS = [["t", "u"], ["v", "w"], ["x", "z"]];   // pad -> destination
 let MAP = [], MAP_W = 0, MAP_H = 0, levelIdx = 0;
 const mapAt = (x, y) => (x < 0 || y < 0 || x >= MAP_W || y >= MAP_H) ? 1 : MAP[y * MAP_W + x];
 const ceilAt = (x, y) => (x < 0 || y < 0 || x >= MAP_W || y >= MAP_H) ? 1 : ceilMap[y * MAP_W + x];
+const floorAt = (x, y) => (x < 0 || y < 0 || x >= MAP_W || y >= MAP_H) ? 0 : floorH[y * MAP_W + x];
 // sky counts as "taller than anything" when heights are compared
 const ceilEff = c => c === SKY ? 99 : c;
 
@@ -4052,6 +4058,7 @@ const player = {
   armor: 0,     // soaks a third of incoming damage until it breaks (cap 200)
   accelT: 0,    // how long forward has been held: speed builds toward a cap
   pitch: 0,     // mouselook, as a fraction of the view height (y-shear)
+  z: 0,         // foot height above ground level, eased as floors rise
 };
 function resetLoadout() {
   player.armor = 0;
@@ -4064,6 +4071,7 @@ let enemies = [], pickups = [], projectiles = [], pProjectiles = [], barrels = [
 let floorMap = null;   // per-cell floor type: 0 plate, 1 water, 2 nukage, 3 teleporter pad
 let explored = null;   // automap fog of war: cells the player has actually seen
 let ceilMap = null;    // per-cell ceiling height in wall units; SKY (0) = open air
+let floorH = null;     // per-cell floor height: 0 ground, 0.25 dais, 0.5 perch
 let lightMap = null;   // per-cell light: low bits color 1 white / 2 red / 3 blue,
                        // bit 7 = ceiling fixture drawn, bit 6 = it flickers
 let litCells = [];     // indices into lightMap that hold any light
@@ -4247,6 +4255,78 @@ function placeLights() {
     }
   }
 }
+// ---------------------------------------------------------
+// Raised floors, dressed on after everything else: knee-high
+// daises out on the big floors, and waist-high perches
+// against the walls - each with its step, each holding
+// something worth the climb, and biased toward window walls
+// so a perch with a view actually happens.
+// ---------------------------------------------------------
+function computeFloors() {
+  floorH = new Float32Array(MAP_W * MAP_H);
+  const open = (x, y) => mapAt(x, y) === 0;
+  // cells that must stay flat: anything beside a door, window, switch,
+  // exit, teleporter or liquid, and the player's first few steps
+  const frozen = new Uint8Array(MAP_W * MAP_H);
+  const freeze = (x, y) => {
+    for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++)
+      if (x + i >= 0 && y + j >= 0 && x + i < MAP_W && y + j < MAP_H)
+        frozen[(y + j) * MAP_W + (x + i)] = 1;
+  };
+  for (let y = 0; y < MAP_H; y++) for (let x = 0; x < MAP_W; x++) {
+    const idx = y * MAP_W + x;
+    const t = MAP[idx];
+    // windows are NOT frozen: a perch under a window is the whole point
+    if (DOOR_TILES.has(t) || t === 9 || t === 10 || t === 15) freeze(x, y);
+    if (t === 0 && floorMap[idx] !== 0) freeze(x, y);
+  }
+  freeze(player.x | 0, player.y | 0);
+  const usable = (x, y) => open(x, y) && !frozen[y * MAP_W + x] && floorH[y * MAP_W + x] === 0;
+  // daises: a knee-high platform out on a big floor, walkable up from
+  // every side so it never gates anything
+  let daises = 0;
+  for (let y = 3; y < MAP_H - 3 && daises < 3; y++) for (let x = 3; x < MAP_W - 3; x++) {
+    if (daises >= 3) break;
+    if (!usable(x, y) || !(ceilMap[y * MAP_W + x] > 1 || ceilMap[y * MAP_W + x] === SKY)) continue;
+    if ((x * 41 + y * 59 + levelIdx * 23) % 149 !== 0) continue;
+    let placed = 0;
+    for (let j = -2; j <= 2; j++) for (let i = -2; i <= 2; i++)
+      if (usable(x + i, y + j)) { floorH[(y + j) * MAP_W + (x + i)] = FLOOR_DAIS; placed++; }
+    if (placed) daises++;
+  }
+  // perches: waist-high, against a wall, one step cell to climb by, and
+  // a prize on top. A wall with a window makes the best perch of all.
+  let perches = 0;
+  for (const wantWindow of [true, false]) {
+    if (perches >= 4) break;
+    for (let y = 2; y < MAP_H - 2 && perches < 4; y++) for (let x = 2; x < MAP_W - 2; x++) {
+      if (perches >= 4) break;
+      if (!usable(x, y)) continue;
+      const idx = y * MAP_W + x;
+      if (ceilMap[idx] < 1) continue;   // not in a tunnel
+      const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+      const wallN = dirs.filter(([dx, dy]) => mapAt(x + dx, y + dy) !== 0);
+      if (wallN.length < 1 || wallN.length > 2) continue;   // against a wall, not in a nook
+      const winAdj = wallN.some(([dx, dy]) => mapAt(x + dx, y + dy) === 18);
+      if (winAdj !== wantWindow) continue;
+      if ((x * 29 + y * 53 + levelIdx * 31) % (wantWindow ? 3 : 97) !== 0) continue;
+      // its step: an open ground neighbor that itself has ground around it
+      const step = dirs.find(([dx, dy]) => usable(x + dx, y + dy) &&
+        dirs.some(([dx2, dy2]) => usable(x + dx + dx2, y + dy + dy2)));
+      if (!step) continue;
+      floorH[idx] = FLOOR_PERCH;
+      floorH[(y + step[1]) * MAP_W + (x + step[0])] = FLOOR_DAIS;
+      const prize = [
+        { kind: "ammo", spr: "shellbox", give: { shells: 8 } },
+        { kind: "medkit", spr: "medkit" },
+        { kind: "armorbonus", spr: "helmet" },
+        { kind: "ammo", spr: "clip", give: { bullets: 20 } },
+      ][(x + y + levelIdx) % 4];
+      pickups.push({ ...prize, x: x + 0.5, y: y + 0.5 });
+      perches++;
+    }
+  }
+}
 function loadLevel() {
   const L = LEVELS[levelIdx];
   MAP_W = L.rows[0].length;
@@ -4355,9 +4435,10 @@ function loadLevel() {
   }
   computeCeilings();
   placeLights();
+  computeFloors();
   player.keys = { blue: false, yellow: false, red: false };
   player.kills = 0;
-  player.eyeDrop = 0; player.bobAmp = 0; player.bob = 0; player.pitch = 0;
+  player.eyeDrop = 0; player.bobAmp = 0; player.bob = 0; player.pitch = 0; player.z = 0;
   player.hurtFlash = 0; player.pickFlash = 0;
   gameT = 0;
   applyDoorTextures();
@@ -4563,7 +4644,7 @@ function makeSnapshot() {
       x: player.x, y: player.y, ang: player.ang, pitch: player.pitch,
       hp: player.hp, armor: player.armor, kills: player.kills,
       weapon: player.weapon, weapons: [...player.weapons],
-      ammo: { ...player.ammo }, keys: { ...player.keys }, eyeDrop: player.eyeDrop,
+      ammo: { ...player.ammo }, keys: { ...player.keys }, eyeDrop: player.eyeDrop, z: player.z,
     },
     // a monster caught mid-death is saved dead: replaying the fall would
     // pay its drop out twice
@@ -5029,9 +5110,13 @@ function hasLOS(x0, y0, x1, y1, blockWindows) {
 // caller can tell it has walked into something.
 function moveWithCollision(obj, dx, dy, radius) {
   const x0 = obj.x, y0 = obj.y;
+  // a wall blocks outright; a floor more than a step above blocks too -
+  // dropping down is always free
+  const here = floorAt(obj.x | 0, obj.y | 0);
+  const canGo = (cx, cy) => !solidCell(cx, cy) && floorAt(cx, cy) - here <= STEP_UP;
   const nx = obj.x + dx, ny = obj.y + dy;
-  if (!solidCell((nx + Math.sign(dx) * radius) | 0, obj.y | 0)) obj.x = nx;
-  if (!solidCell(obj.x | 0, (ny + Math.sign(dy) * radius) | 0)) obj.y = ny;
+  if (canGo((nx + Math.sign(dx) * radius) | 0, obj.y | 0)) obj.x = nx;
+  if (canGo(obj.x | 0, (ny + Math.sign(dy) * radius) | 0)) obj.y = ny;
   const want = Math.hypot(dx, dy);
   return want < 1e-9 ? 1 : Math.hypot(obj.x - x0, obj.y - y0) / want;
 }
@@ -5195,6 +5280,8 @@ function nearestTarget(maxDist, maxAng) {
     let da = Math.atan2(dy, dx) - player.ang;
     while (da >  Math.PI) da -= 2 * Math.PI;
     while (da < -Math.PI) da += 2 * Math.PI;
+    // a fist doesn't reach a perch from the floor below it
+    if (Math.abs(floorAt(tgt.o.x | 0, tgt.o.y | 0) - floorAt(player.x | 0, player.y | 0)) > 0.35) continue;
     if (dist < bd && Math.abs(da) < maxAng && hasLOS(player.x, player.y, tgt.o.x, tgt.o.y, true)) { best = tgt; bd = dist; }
   }
   return best;
@@ -5460,10 +5547,13 @@ function update(dt) {
   }
   msgT = Math.max(0, msgT - dt);
 
-  // Step down into a pool and back out again, rather than snapping.
+  // Step down into a pool and back out again, rather than snapping - and
+  // rise onto a dais or a perch the same smooth way.
   const standingIn = floorMap[(player.y | 0) * MAP_W + (player.x | 0)];
   const wantDrop = (standingIn === 1 || standingIn === 2) ? LIQUID_DROP : 0;
   player.eyeDrop += (wantDrop - player.eyeDrop) * Math.min(1, dt * 12);
+  const standH = floorAt(player.x | 0, player.y | 0);
+  player.z += (standH - player.z) * Math.min(1, dt * 10);
 
   // --- enemies ---
   for (const e of enemies) {
@@ -5543,7 +5633,9 @@ function update(dt) {
         projectiles.push({ x: e.x, y: e.y, vx: Math.cos(pa) * ps, vy: Math.sin(pa) * ps, dmg: e.dmg, img: e.ball });
       }
       sfx(e.atkSfx, volAt(dist));
-    } else if (!e.ranged && dist < 1.1 && e.attackT <= 0 && hasLOS(e.x, e.y, player.x, player.y, true)) {
+    } else if (!e.ranged && dist < 1.1 && e.attackT <= 0 &&
+               Math.abs(floorAt(e.x | 0, e.y | 0) - floorAt(player.x | 0, player.y | 0)) <= 0.35 &&
+               hasLOS(e.x, e.y, player.x, player.y, true)) {
       e.state = "attack"; e.stateT = 0; e.attackT = e.cool;
       player.hp -= dmgToPlayer(e.dmg);
       player.hurtFlash = 0.35; faceTimer = 0.8;
@@ -5604,6 +5696,8 @@ function update(dt) {
   // --- pickups ---
   for (let i = pickups.length - 1; i >= 0; i--) {
     const p = pickups[i];
+    // no reaching through a perch face: the prize wants climbing for
+    if (Math.abs(floorAt(p.x | 0, p.y | 0) - floorAt(player.x | 0, player.y | 0)) > 0.35) continue;
     if (Math.hypot(p.x - player.x, p.y - player.y) < 0.6) {
       if (p.kind === "medkit") {
         if (player.hp >= 100) continue;
@@ -5700,7 +5794,7 @@ function renderWorld() {
   // which is what makes the step down read as a step rather than a
   // texture swap. Everything projected off the floor - the floor itself,
   // the ceiling, wall tops and bottoms, sprite feet - keys off this.
-  const eyeH = 0.5 - player.eyeDrop;
+  const eyeH = 0.5 + player.z - player.eyeDrop;
 
   // Firing lights the room, and so does a fireball passing close by: a
   // cheap omnidirectional boost that falls off with distance, not a true
@@ -5770,7 +5864,9 @@ function renderWorld() {
     const isFloor = y > horizon;
     const p = isFloor ? (y - horizon) : (horizon - y);
     if (p <= 0) continue;
-    const rowDist = VIEW_H * (isFloor ? eyeH : 1 - eyeH) / p;
+    // a raised eye can sit at or above a plane; clamp so nothing divides
+    // toward zero (those pixels are edge-on and covered by faces anyway)
+    const rowDist = VIEW_H * (isFloor ? eyeH : Math.max(0.04, 1 - eyeH)) / p;
     const fog = Math.min(1, 2.1 / rowDist * (1 + flashEnv * 2)) * (isFloor ? 0.8 : 0.55);
     const flRow = flOn ? Math.min(0.85, 3.5 / (1 + rowDist)) : 0;
     const stepX = rowDist * (2 * planeX) / W;
@@ -5783,7 +5879,7 @@ function renderWorld() {
       // all of them at once - the pressed-down tunnel plane, the standard
       // one, the high one - and each pixel keeps whichever its cell says.
       // A cell with no ceiling at all shows the sky.
-      const dT = VIEW_H * (CEIL_TUNNEL - eyeH) / p;
+      const dT = VIEW_H * Math.max(0.04, CEIL_TUNNEL - eyeH) / p;
       const dH = VIEW_H * (CEIL_HIGH - eyeH) / p;
       const tStepX = dT * (2 * planeX) / W, tStepY = dT * (2 * planeY) / W;
       const hStepX = dH * (2 * planeX) / W, hStepY = dH * (2 * planeY) / W;
@@ -5848,13 +5944,40 @@ function renderWorld() {
       let sx = posX + sunkDist * (dirX - planeX);
       let sy = posY + sunkDist * (dirY - planeY);
       const sunkFog = Math.min(1, 2.1 / sunkDist) * 0.8;
+      // the raised tiers get their own planes, meaningful only while the
+      // eye is above them - at or below, their side faces do the talking
+      const d1ok = eyeH - FLOOR_DAIS > 0.04, d2ok = eyeH - FLOOR_PERCH > 0.04;
+      const dD = VIEW_H * Math.max(0.04, eyeH - FLOOR_DAIS) / p;
+      const dP = VIEW_H * Math.max(0.04, eyeH - FLOOR_PERCH) / p;
+      const dStepX1 = dD * (2 * planeX) / W, dStepY1 = dD * (2 * planeY) / W;
+      const dStepX2 = dP * (2 * planeX) / W, dStepY2 = dP * (2 * planeY) / W;
+      let d1x = posX + dD * (dirX - planeX), d1y = posY + dD * (dirY - planeY);
+      let d2x = posX + dP * (dirX - planeX), d2y = posY + dP * (dirY - planeY);
+      const fogD1 = Math.min(1, 2.1 / dD * (1 + flashEnv * 2)) * 0.92;
+      const fogD2 = Math.min(1, 2.1 / dP * (1 + flashEnv * 2)) * 0.98;
       for (let x = 0; x < W; x++) {
         const cx = fx | 0, cy = fy | 0;
         const inb = cx >= 0 && cy >= 0 && cx < MAP_W && cy < MAP_H;
         const ft = inb ? floorMap[cy * MAP_W + cx] : 0;
         // light pooling on the floor under a fixture or a lamp
         let tex = fData, u = fx, v = fy, br = fog + (inb ? lightNow[cy * MAP_W + cx] * 0.9 : 0);
-        if (ft === 3) { tex = pPad; br = Math.min(1, fog * 1.4); }
+        const fHc = inb ? floorH[cy * MAP_W + cx] : 0;
+        if (fHc > 0) {
+          // a raised top: cast against its own plane; where the plane's
+          // cell disagrees we are looking at the front face, which the
+          // wall pass draws - the ground sample stands in underneath
+          const high = fHc > 0.3;
+          if (high ? d2ok : d1ok) {
+            const px3 = high ? d2x : d1x, py3 = high ? d2y : d1y;
+            const pcx = px3 | 0, pcy = py3 | 0;
+            if (pcx >= 0 && pcy >= 0 && pcx < MAP_W && pcy < MAP_H &&
+                floorH[pcy * MAP_W + pcx] === fHc) {
+              u = px3; v = py3;
+              br = (high ? fogD2 : fogD1) + lightNow[pcy * MAP_W + pcx] * 0.9;
+            }
+          }
+        }
+        else if (ft === 3) { tex = pPad; br = Math.min(1, fog * 1.4); }
         else if (ft === 0) {
           // a shaded curb on the dry side of every pool edge, so the pool
           // is visibly walled off from the floor it sits in
@@ -5888,6 +6011,7 @@ function renderWorld() {
         const ty = ((v - Math.floor(v)) * TEX) | 0;
         fb[rowBase + x] = shade(tex[ty * TEX + tx], br + flRow * flBeam[x]);
         fx += stepX; fy += stepY; sx += sStepX; sy += sStepY;
+        d1x += dStepX1; d1y += dStepY1; d2x += dStepX2; d2y += dStepY2;
       }
     }
   }
@@ -5916,7 +6040,8 @@ function renderWorld() {
     // as tall as the room they face, and every drop in ceiling along the
     // way is a visible upper face
     let curCeil = ceilEff(ceilAt(mapX, mapY));
-    const uppers = [];
+    let curFloor = floorAt(mapX, mapY);
+    const uppers = [], lowers = [];
     while (!hit) {
       if (sideX < sideY) { sideX += dX; mapX += stepX; side = 0; }
       else               { sideY += dY; mapY += stepY; side = 1; }
@@ -5925,17 +6050,23 @@ function renderWorld() {
       const t = mapAt(mapX, mapY);
       if (!t) {
         const cEff = ceilEff(ceilMap[mapY * MAP_W + mapX]);
-        if (cEff < curCeil - 0.01) {
+        const cF = floorH[mapY * MAP_W + mapX];
+        if (cEff < curCeil - 0.01 || cF > curFloor + 0.01) {
           const pd = side === 0 ? sideX - dX : sideY - dY;
           let wx = side === 0 ? posY + pd * rdY : posX + pd * rdX;
           wx -= Math.floor(wx);
+          const flip = (side === 0 && rdX > 0) || (side === 1 && rdY < 0);
           // coming in from under the sky, the face above the opening is a
           // building silhouette rather than an infinite slab
-          uppers.push({ d: pd, hi: curCeil > 10 ? Math.max(SKY_WALL, cEff + 0.35) : curCeil,
-                        lo: cEff, wx, side,
-                        flip: (side === 0 && rdX > 0) || (side === 1 && rdY < 0) });
+          if (cEff < curCeil - 0.01)
+            uppers.push({ d: pd, hi: curCeil > 10 ? Math.max(SKY_WALL, cEff + 0.35) : curCeil,
+                          lo: cEff, wx, side, flip });
+          // and where the floor steps up, the riser is a visible face
+          if (cF > curFloor + 0.01)
+            lowers.push({ d: pd, hi: cF, lo: curFloor, wx, side, flip });
         }
         curCeil = cEff;
+        curFloor = cF;
         continue;
       }
       if (t === 18) {
@@ -5945,7 +6076,7 @@ function renderWorld() {
           const pd = side === 0 ? sideX - dX : sideY - dY;
           let wx = side === 0 ? posY + pd * rdY : posX + pd * rdX;
           wx -= Math.floor(wx);
-          winOver = { dist: pd, wx, side,
+          winOver = { dist: pd, wx, side, floor: curFloor,
                       flip: (side === 0 && rdX > 0) || (side === 1 && rdY < 0) };
         }
         continue;
@@ -5986,7 +6117,8 @@ function renderWorld() {
       }
     }
     const lineH = (VIEW_H / perpDist) | 0;   // pixels per wall unit
-    const wallTop = horizon - lineH * (hWall - eyeH), wallBot = horizon + lineH * eyeH;
+    // a wall behind a platform starts at the platform top
+    const wallTop = horizon - lineH * (hWall - eyeH), wallBot = horizon + lineH * (eyeH - curFloor);
     let drawStart = Math.max(0, wallTop | 0);
     let drawEnd = Math.min(VIEW_H - 1, wallBot | 0);
 
@@ -6030,6 +6162,26 @@ function renderWorld() {
       }
     }
 
+    // risers where the floor stepped up along the ray - the same idea as
+    // the upper faces, mirrored below the horizon
+    for (const lw of lowers) {
+      const u2 = VIEW_H / lw.d;
+      const y0 = Math.max(0, (horizon + u2 * (eyeH - lw.hi)) | 0);
+      const y1 = Math.min(VIEW_H - 1, (horizon + u2 * (eyeH - lw.lo)) | 0);
+      if (y1 < y0) continue;
+      let lTexX = (lw.wx * TEX) | 0;
+      if (lw.flip) lTexX = TEX - lTexX - 1;
+      let lFog = Math.min(1, 2.8 / lw.d + dynAt(x, lw.d)
+                           + (flOn ? flBeam[x] * Math.min(0.85, 4 / (1 + lw.d)) : 0));
+      if (lw.side === 1) lFog *= 0.72;
+      for (let y = y0; y <= y1; y++) {
+        const z = eyeH - (y - horizon) / u2;      // world height at this row
+        const zf = z - Math.floor(z);
+        const ty = Math.min(TEX - 1, ((1 - zf) * TEX) | 0);
+        fb[y * W + x] = shade(upperTexData[ty * TEX + lTexX], lFog);
+      }
+    }
+
     if (doorOver) {
       // The slab has risen o of the way into the ceiling: its bottom
       // (1 - o) is still in the doorway, showing the bottom (1 - o) of
@@ -6068,7 +6220,7 @@ function renderWorld() {
       const wTop = horizon - uLine * (1 - eyeH);
       const slitTop = horizon - uLine * (WIN_HI - eyeH);
       const slitBot = horizon - uLine * (WIN_LO - eyeH);
-      const ws = Math.max(0, wTop | 0), we = Math.min(VIEW_H - 1, (horizon + uLine * eyeH) | 0);
+      const ws = Math.max(0, wTop | 0), we = Math.min(VIEW_H - 1, (horizon + uLine * (eyeH - winOver.floor)) | 0);
       let nearDoorBot = -1;
       if (doorOver && doorOver.dist < winOver.dist) {
         const dLine = (VIEW_H / doorOver.dist) | 0;
@@ -6092,9 +6244,10 @@ function renderWorld() {
   }
 
   // --- sprites (enemies, pickups, projectiles), far to near ---
-  // Anything standing in a pool stands on the bottom of it, not on the
-  // rim, so it drops by the same step the floor does.
-  const liquidSink = (x, y) => liqAt(x | 0, y | 0) ? LIQUID_DROP : 0;
+  // Anything standing in a pool stands on the bottom of it, and anything
+  // on a dais or a perch stands on top of that: one signed offset from
+  // ground level, negative meaning risen.
+  const liquidSink = (x, y) => liqAt(x | 0, y | 0) ? LIQUID_DROP : -floorAt(x | 0, y | 0);
   const items = [];
   const animPick = (entry, phase) =>
     Array.isArray(entry) ? entry[Math.min(entry.length - 1, Math.max(0, Math.floor(phase * entry.length)))] : entry;
@@ -6159,8 +6312,9 @@ function renderWorld() {
     hScale: f.kind === "telefog" ? 1.0 : f.kind === "spark" ? 0.22 - f.t :
             f.kind === "blood" ? 0.13 : f.kind === "gib" ? 0.2 :
             f.kind === "puff" ? 0.35 : 0.7 + f.t * 1.6,
-    // meat rides its own arc; everything else hangs where it spawned
-    sink: f.h !== undefined ? 0.45 - f.h : 0,
+    // meat rides its own arc (off whatever floor it's over); everything
+    // else hangs where it spawned
+    sink: f.h !== undefined ? 0.45 - f.h + liquidSink(f.x, f.y) : 0,
     bright: f.kind !== "blood" && f.kind !== "gib",
   });
 
@@ -6181,7 +6335,7 @@ function renderWorld() {
     // (there is no per-pixel ceiling clip), so cap it against the ceiling
     // where it stands - under a tall arena or the open sky, no cap at all.
     const hClamped = s.grounded
-      ? Math.min(s.hScale, ceilEff(ceilAt(s.x | 0, s.y | 0)) + 0.15 + Math.max(0, s.sink))
+      ? Math.min(s.hScale, ceilEff(ceilAt(s.x | 0, s.y | 0)) - floorAt(s.x | 0, s.y | 0) + 0.15 + Math.max(0, s.sink))
       : s.hScale;
     const sprH = (baseH * hClamped) | 0;
     const sprW = (sprH * (s.aspect || 1)) | 0;

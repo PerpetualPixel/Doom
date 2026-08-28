@@ -59,7 +59,7 @@ placeholder in the meantime — drop the real art in and it takes over.
 - [x] **Exit door** — the exit is now a recessed doorway under a glowing red
   EXIT sign.
 
-## Batch 3 — renderer (DONE, except stairs)
+## Batch 3 — renderer (DONE)
 
 - [x] **Variable ceiling heights** — every cell now has one, derived from
   the level's own shape: squeezed corridors press down into tunnels, big
@@ -84,11 +84,16 @@ placeholder in the meantime — drop the real art in and it takes over.
 - [x] **Tall standing lights** — pole lamps ring the big and open-air rooms
   (where there's no ceiling to hang a fixture from), glowing and guttering
   in step with the light they cast.
-- [ ] **Stairs / slopes** — the one Batch 3 item still open. Feasibility
-  read: the ceiling pass proves the multi-plane approach works, so a
-  floor-height pass (raised platforms, real perches) is doable the same
-  way — but it touches movement, collision, projectiles and sprite
-  anchoring everywhere, so it's a batch of its own.
+- [x] **Stairs & raised floors** (the floor-height batch) — per-cell floor
+  heights: knee-high daises out on the big floors (walk straight up from
+  any side), waist-high perches against the walls, each with its step
+  cell and a prize on top — most of them under a window, so a perch with
+  a view actually happens. A walker climbs at most a step's height per
+  stride and drops any distance freely; monsters obey the same rule.
+  Melee and pickups respect height, platform tops cast on their own
+  planes, risers draw as real faces, walls start at the platform behind
+  them, and everything standing on a platform rides it. True slopes
+  remain out of scope for a grid raycaster.
 - [x] **True dynamic lights** — every flying shot projects to the screen
   and lights the walls, doors and sprites near its column, strongest at
   its own depth. Rockets and BFG bursts light rooms as they cross them.
